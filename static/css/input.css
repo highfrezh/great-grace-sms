@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+@theme {
+  --color-school-blue: #1F4E79;
+  --color-school-light: #2E75B6;
+  --color-school-accent: #D6E4F0;
+  --font-sans: "Inter", sans-serif;
+}
