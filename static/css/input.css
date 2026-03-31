@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
 @theme {
-  --color-school-blue: #1F4E79;
-  --color-school-light: #2E75B6;
-  --color-school-accent: #D6E4F0;
-  --font-sans: "Inter", sans-serif;
+  --color-primary: #C2B0A1;
+  --color-secondary: #635E57;
+  --color-accent: #851A10;
+  --color-accent-hover: #6e1509;
+  --color-light: #f8f9fa;
+  --color-dark: #343a40;
+  --font-sans: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
