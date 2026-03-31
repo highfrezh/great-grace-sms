@@ -36,11 +36,12 @@ def logout_view(request):
 @login_required
 def dashboard_view(request):
     user = request.user
+    primary = user.primary_role if not user.is_superuser else 'PRINCIPAL'
 
-    # Route to role-specific dashboard
-    if user.is_student:
+    if primary == 'STUDENT':
         return render(request, 'accounts/dashboard_student.html')
-    elif user.is_parent:
+    elif primary == 'PARENT':
         return render(request, 'accounts/dashboard_parent.html')
     else:
+        # Principal, VP, Examiner, Class Teacher, Subject Teacher
         return render(request, 'accounts/dashboard.html')

@@ -96,17 +96,36 @@ class User(AbstractUser):
                self.has_role(Role.RoleName.PRINCIPAL) or \
                self.has_role(Role.RoleName.VICE_PRINCIPAL)
 
+    # @property
+    # def primary_role(self):
+    #     """Returns highest authority role for display"""
+    #     priority = [
+    #         Role.RoleName.PRINCIPAL,
+    #         Role.RoleName.VICE_PRINCIPAL,
+    #         Role.RoleName.EXAMINER,
+    #         Role.RoleName.CLASS_TEACHER,
+    #         Role.RoleName.SUBJECT_TEACHER,
+    #         Role.RoleName.PARENT,
+    #         Role.RoleName.STUDENT,
+    #     ]
+    #     for role_name in priority:
+    #         if self.has_role(role_name):
+    #             return role_name
+    #     return None
+
     @property
     def primary_role(self):
-        """Returns highest authority role for display"""
+        """Always returns highest authority role"""
+        if self.is_superuser:
+            return 'PRINCIPAL'
         priority = [
-            Role.RoleName.PRINCIPAL,
-            Role.RoleName.VICE_PRINCIPAL,
-            Role.RoleName.EXAMINER,
-            Role.RoleName.CLASS_TEACHER,
-            Role.RoleName.SUBJECT_TEACHER,
-            Role.RoleName.PARENT,
-            Role.RoleName.STUDENT,
+            'PRINCIPAL',
+            'VICE_PRINCIPAL',
+            'EXAMINER',
+            'CLASS_TEACHER',
+            'SUBJECT_TEACHER',
+            'PARENT',
+            'STUDENT',
         ]
         for role_name in priority:
             if self.has_role(role_name):
