@@ -24,7 +24,7 @@ def reverse_roles(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0002_alter_user_role'),  
+    ('accounts', '0002_role_remove_user_role_user_roles'),
     ]
 
     operations = [
