@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 
 
@@ -15,7 +16,10 @@ def login_view(request):
 
         if user is not None:
             login(request, user)
-            messages.success(request, f'Welcome back, {user.get_full_name() or user.username}!')
+            messages.success(
+                request,
+                f'Welcome back, {user.get_full_name() or user.username}!'
+            )
             return redirect('accounts:dashboard')
         else:
             messages.error(request, 'Invalid username or password.')
@@ -29,5 +33,14 @@ def logout_view(request):
     return redirect('accounts:login')
 
 
+@login_required
 def dashboard_view(request):
-    return render(request, 'accounts/dashboard.html')
+    user = request.user
+
+    # Route to role-specific dashboard
+    if user.is_student:
+        return render(request, 'accounts/dashboard_student.html')
+    elif user.is_parent:
+        return render(request, 'accounts/dashboard_parent.html')
+    else:
+        return render(request, 'accounts/dashboard.html')

@@ -2,21 +2,35 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
-class User(AbstractUser):
+class Role(models.Model):
+    """Roles that can be assigned to users"""
 
-    class Role(models.TextChoices):
+    class RoleName(models.TextChoices):
         PRINCIPAL = 'PRINCIPAL', 'Principal'
         VICE_PRINCIPAL = 'VICE_PRINCIPAL', 'Vice Principal'
         CLASS_TEACHER = 'CLASS_TEACHER', 'Class Teacher'
         SUBJECT_TEACHER = 'SUBJECT_TEACHER', 'Subject Teacher'
-        STUDENT = 'STUDENT', 'Student'
+        EXAMINER = 'EXAMINER', 'Examiner'
         PARENT = 'PARENT', 'Parent'
+        STUDENT = 'STUDENT', 'Student'
 
-    role = models.CharField(
+    name = models.CharField(
         max_length=20,
-        choices=Role.choices,
-        null=True,
-        blank=True
+        choices=RoleName.choices,
+        unique=True
+    )
+
+    def __str__(self):
+        return self.get_name_display()
+
+
+class User(AbstractUser):
+    """Custom user model supporting multiple roles"""
+
+    roles = models.ManyToManyField(
+        Role,
+        blank=True,
+        related_name='users'
     )
     phone_number = models.CharField(max_length=15, blank=True)
     profile_picture = models.ImageField(
@@ -27,33 +41,74 @@ class User(AbstractUser):
     is_first_login = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.get_full_name()} ({self.role})"
+        return f"{self.get_full_name() or self.username}"
 
-    # Role helper properties
+    def get_role_display(self):
+        """Return all roles as a readable string"""
+        return ', '.join([role.get_name_display() for role in self.roles.all()])
+
+    # ── Role check helpers ─────────────────────────────────
+    def has_role(self, role_name):
+        return self.roles.filter(name=role_name).exists()
+
     @property
     def is_principal(self):
-        return self.role == self.Role.PRINCIPAL
+        return self.has_role(Role.RoleName.PRINCIPAL)
 
     @property
     def is_vice_principal(self):
-        return self.role == self.Role.VICE_PRINCIPAL
+        return self.has_role(Role.RoleName.VICE_PRINCIPAL)
 
     @property
     def is_class_teacher(self):
-        return self.role == self.Role.CLASS_TEACHER
+        return self.has_role(Role.RoleName.CLASS_TEACHER)
 
     @property
     def is_subject_teacher(self):
-        return self.role == self.Role.SUBJECT_TEACHER
+        return self.has_role(Role.RoleName.SUBJECT_TEACHER)
 
     @property
-    def is_student(self):
-        return self.role == self.Role.STUDENT
+    def is_examiner(self):
+        return self.has_role(Role.RoleName.EXAMINER)
 
     @property
     def is_parent(self):
-        return self.role == self.Role.PARENT
+        return self.has_role(Role.RoleName.PARENT)
+
+    @property
+    def is_student(self):
+        return self.has_role(Role.RoleName.STUDENT)
 
     @property
     def is_admin_staff(self):
-        return self.role in [self.Role.PRINCIPAL, self.Role.VICE_PRINCIPAL]
+        return self.has_role(Role.RoleName.PRINCIPAL) or \
+               self.has_role(Role.RoleName.VICE_PRINCIPAL)
+
+    @property
+    def is_teaching_staff(self):
+        return self.has_role(Role.RoleName.SUBJECT_TEACHER) or \
+               self.has_role(Role.RoleName.CLASS_TEACHER)
+
+    @property
+    def is_exam_committee(self):
+        """VP, Principal or Examiner can vet questions"""
+        return self.has_role(Role.RoleName.EXAMINER) or \
+               self.has_role(Role.RoleName.PRINCIPAL) or \
+               self.has_role(Role.RoleName.VICE_PRINCIPAL)
+
+    @property
+    def primary_role(self):
+        """Returns highest authority role for display"""
+        priority = [
+            Role.RoleName.PRINCIPAL,
+            Role.RoleName.VICE_PRINCIPAL,
+            Role.RoleName.EXAMINER,
+            Role.RoleName.CLASS_TEACHER,
+            Role.RoleName.SUBJECT_TEACHER,
+            Role.RoleName.PARENT,
+            Role.RoleName.STUDENT,
+        ]
+        for role_name in priority:
+            if self.has_role(role_name):
+                return role_name
+        return None
