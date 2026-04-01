@@ -44,18 +44,104 @@
 </a>
 
 <!-- Academics -->
-<a href="{% url 'academics:session_list' %}"
-   class="flex items-center px-4 py-2.5 transition text-white
-          {% if current_app == 'academics' %}opacity-100{% else %}opacity-60 hover:opacity-100{% endif %}"
-   {% if current_app == 'academics' %}
-   style="background:rgba(133,26,16,0.6);border-left:3px solid #C2B0A1;"
-   {% endif %}>
-  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-  </svg>
-  <span x-show="sidebarOpen" class="ml-3 text-sm whitespace-nowrap">Academics</span>
-</a>
+<div x-data="{ academicsOpen: {% if current_app == 'academics' %}true{% else %}false{% endif %} }">
+
+  <!-- Toggle -->
+  <button @click="academicsOpen = !academicsOpen"
+          class="academics-toggle-btn flex items-center w-full px-4 py-2.5 text-sm text-white transition
+                 {% if current_app == 'academics' %}active{% else %}opacity-70 hover:opacity-100{% endif %}">
+    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13
+               C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477
+               14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247
+               18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+    </svg>
+    <span x-show="sidebarOpen" class="ml-3 flex-1 text-left whitespace-nowrap">
+      Academics
+    </span>
+    <svg x-show="sidebarOpen"
+         :class="academicsOpen ? 'rotate-180' : ''"
+         class="w-4 h-4 transition-transform duration-200 shrink-0"
+         fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+    </svg>
+  </button>
+
+  <!-- Submenu -->
+  <div x-show="academicsOpen" x-transition x-cloak class="mt-1 space-y-0.5">
+
+    <!-- Sessions -->
+    <a href="{% url 'academics:session_list' %}"
+       class="submenu-item flex items-center gap-2 py-2 text-xs text-white transition
+              {% if request.resolver_match.url_name == 'session_list' or request.resolver_match.url_name == 'session_create' or request.resolver_match.url_name == 'session_edit' %}
+              active{% else %}inactive{% endif %}">
+      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5
+                 a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+      <span x-show="sidebarOpen" class="whitespace-nowrap">Sessions</span>
+    </a>
+
+    <!-- Terms -->
+    <a href="{% url 'academics:term_list' %}"
+       class="submenu-item flex items-center gap-2 py-2 text-xs text-white transition
+              {% if request.resolver_match.url_name == 'term_list' or request.resolver_match.url_name == 'term_create' or request.resolver_match.url_name == 'term_edit' %}
+              active{% else %}inactive{% endif %}">
+      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
+                 M9 5a2 2 0 002 2h2a2 2 0 002-2"/>
+      </svg>
+      <span x-show="sidebarOpen" class="whitespace-nowrap">Terms</span>
+    </a>
+
+    <!-- Class Levels -->
+    <a href="{% url 'academics:class_level_list' %}"
+       class="submenu-item flex items-center gap-2 py-2 text-xs text-white transition
+              {% if request.resolver_match.url_name == 'class_level_list' or request.resolver_match.url_name == 'class_level_create' or request.resolver_match.url_name == 'class_level_edit' %}
+              active{% else %}inactive{% endif %}">
+      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9
+                 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2
+                 a1 1 0 011 1v5m-4 0h4"/>
+      </svg>
+      <span x-show="sidebarOpen" class="whitespace-nowrap">Class Levels</span>
+    </a>
+
+    <!-- Classes -->
+    <a href="{% url 'academics:class_arm_list' %}"
+       class="submenu-item flex items-center gap-2 py-2 text-xs text-white transition
+              {% if request.resolver_match.url_name == 'class_arm_list' or request.resolver_match.url_name == 'class_arm_create' or request.resolver_match.url_name == 'class_arm_edit' %}
+              active{% else %}inactive{% endif %}">
+      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283
+                 -.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283
+                 .356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+      <span x-show="sidebarOpen" class="whitespace-nowrap">Classes</span>
+    </a>
+
+    <!-- Subjects -->
+    <a href="{% url 'academics:subject_list' %}"
+       class="submenu-item flex items-center gap-2 py-2 text-xs text-white transition
+              {% if request.resolver_match.url_name == 'subject_list' or request.resolver_match.url_name == 'subject_create' or request.resolver_match.url_name == 'subject_edit' %}
+              active{% else %}inactive{% endif %}">
+      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13
+                 C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477
+                 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247
+                 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+      </svg>
+      <span x-show="sidebarOpen" class="whitespace-nowrap">Subjects</span>
+    </a>
+
+  </div>
+</div>
 
 <!-- Examinations -->
 <a href="#"
