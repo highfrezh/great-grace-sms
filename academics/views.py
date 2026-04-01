@@ -272,3 +272,59 @@ def subject_edit(request, pk):
         'page_title': f'Edit — {subject.name}',
         'back_url': 'academics:subject_list'
     })
+
+@login_required
+@admin_staff_required
+def term_delete(request, pk):
+    term = get_object_or_404(Term, pk=pk)
+    if term.is_current:
+        messages.error(request, 'Cannot delete the current active term.')
+        return redirect('academics:term_list')
+    if request.method == 'POST':
+        term.delete()
+        messages.success(request, 'Term deleted successfully.')
+    return redirect('academics:term_list')
+
+
+@login_required
+@admin_staff_required
+def class_level_delete(request, pk):
+    level = get_object_or_404(ClassLevel, pk=pk)
+    if request.method == 'POST':
+        name = level.name
+        level.delete()
+        messages.success(request, f'Class level {name} deleted successfully.')
+    return redirect('academics:class_level_list')
+
+
+@login_required
+@admin_staff_required
+def class_arm_delete(request, pk):
+    arm = get_object_or_404(ClassArm, pk=pk)
+    if request.method == 'POST':
+        name = arm.full_name
+        arm.delete()
+        messages.success(request, f'Class {name} deleted successfully.')
+    return redirect('academics:class_arm_list')
+
+
+@login_required
+@admin_staff_required
+def subject_delete(request, pk):
+    subject = get_object_or_404(Subject, pk=pk)
+    if request.method == 'POST':
+        name = subject.name
+        subject.delete()
+        messages.success(request, f'Subject {name} deleted successfully.')
+    return redirect('academics:subject_list')
+
+
+@login_required
+@admin_staff_required
+def subject_toggle(request, pk):
+    subject = get_object_or_404(Subject, pk=pk)
+    subject.is_active = not subject.is_active
+    subject.save()
+    status = 'activated' if subject.is_active else 'deactivated'
+    messages.success(request, f'{subject.name} {status} successfully.')
+    return redirect('academics:subject_list')

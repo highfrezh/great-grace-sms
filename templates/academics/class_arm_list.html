@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+
+{% block title %}Classes — Great Grace SMS{% endblock %}
+{% block page_title %}Classes{% endblock %}
+
+{% block content %}
+
+<div class="flex items-center justify-between mb-6">
+  <p class="text-sm text-gray-500">Manage class arms for the current session</p>
+  <a href="{% url 'academics:class_arm_create' %}"
+     class="flex items-center gap-2 px-4 py-2.5 text-white text-sm
+            font-semibold rounded-lg hover:opacity-90 transition"
+     style="background:#851A10;">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    New Class
+  </a>
+</div>
+
+{% if current_session %}
+  <div class="mb-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
+       style="background:#FFF5F3; color:#851A10; border:1px solid #FECACA;">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5
+               a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+    </svg>
+    Current Session: {{ current_session.name }}
+  </div>
+{% endif %}
+
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+  <table class="w-full text-sm">
+    <thead>
+      <tr style="background:#635E57;">
+        <th class="text-left px-6 py-4 text-white font-semibold">Class</th>
+        <th class="text-left px-6 py-4 text-white font-semibold">Level</th>
+        <th class="text-left px-6 py-4 text-white font-semibold">Class Teacher</th>
+        <th class="text-left px-6 py-4 text-white font-semibold">Students</th>
+        <th class="text-left px-6 py-4 text-white font-semibold">Capacity</th>
+        <th class="text-left px-6 py-4 text-white font-semibold">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-100">
+      {% for arm in class_arms %}
+        <tr class="hover:bg-gray-50 transition">
+          <td class="px-6 py-4 font-semibold" style="color:#635E57;">
+            {{ arm.full_name }}
+          </td>
+          <td class="px-6 py-4">
+            <span class="px-3 py-1 text-xs font-semibold rounded-full
+              {% if arm.level.section == 'PRIMARY' %}bg-blue-100 text-blue-700
+              {% elif arm.level.section == 'JSS' %}bg-purple-100 text-purple-700
+              {% else %}bg-orange-100 text-orange-700{% endif %}">
+              {{ arm.level.get_section_display }}
+            </span>
+          </td>
+          <td class="px-6 py-4 text-gray-600">
+            {{ arm.class_teacher.get_full_name|default:"— Not Assigned" }}
+          </td>
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-2">
+              <span class="font-semibold" style="color:#635E57;">
+                {{ arm.student_count }}
+              </span>
+              <span class="text-gray-400">/ {{ arm.capacity }}</span>
+            </div>
+          </td>
+          <td class="px-6 py-4">
+            {% if arm.student_count >= arm.capacity %}
+              <span class="px-3 py-1 text-xs font-semibold rounded-full
+                           bg-red-100 text-red-700">Full</span>
+            {% elif arm.student_count >= arm.capacity|add:"-5" %}
+              <span class="px-3 py-1 text-xs font-semibold rounded-full
+                           bg-yellow-100 text-yellow-700">Almost Full</span>
+            {% else %}
+              <span class="px-3 py-1 text-xs font-semibold rounded-full
+                           bg-green-100 text-green-700">Available</span>
+            {% endif %}
+          </td>
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-2">
+
+              <!-- Edit -->
+              <div class="tooltip">
+                <a href="{% url 'academics:class_arm_edit' arm.pk %}"
+                   class="flex items-center justify-center w-8 h-8 rounded-lg
+                          bg-orange-50 hover:bg-orange-100 transition"
+                   style="color:#851A10;">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5
+                             m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                </a>
+                <span class="tooltip-text">Edit</span>
+              </div>
+
+              <!-- Delete -->
+              <div class="tooltip">
+                <button type="button"
+                        @click="
+                          deleteModal.show = true;
+                          deleteModal.url = '{% url 'academics:class_arm_delete' arm.pk %}';
+                          deleteModal.name = '{{ arm.full_name|escapejs }}';
+                        "
+                        class="flex items-center justify-center w-8 h-8 rounded-lg
+                               bg-red-50 hover:bg-red-100 transition text-red-500">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858
+                             L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
+                <span class="tooltip-text">Delete</span>
+              </div>
+
+            </div>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="6" class="px-6 py-12 text-center text-gray-400">
+            {% if current_session %}
+              No classes for {{ current_session.name }} yet.
+            {% else %}
+              No active session found. Please set a current session first.
+            {% endif %}
+            <a href="{% url 'academics:class_arm_create' %}"
+               class="font-medium" style="color:#851A10;">Create one</a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
+
+{% block modals %}
+<div x-show="deleteModal.show"
+     x-cloak
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 z-[999] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,0.5);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+       @click.outside="deleteModal.show = false"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 scale-95"
+       x-transition:enter-end="opacity-100 scale-100">
+    <div class="flex items-center justify-center w-14 h-14 rounded-full bg-red-100 mx-auto mb-4">
+      <svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94
+                 a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      </svg>
+    </div>
+    <h3 class="text-lg font-bold text-gray-800 text-center mb-2">Delete Class</h3>
+    <p class="text-sm text-gray-500 text-center mb-1">Are you sure you want to delete</p>
+    <p class="text-sm font-semibold text-center mb-4" style="color:#851A10;"
+       x-text="deleteModal.name"></p>
+    <p class="text-xs text-red-500 text-center mb-6">
+      ⚠️ This will permanently delete all students and data linked to this class.
+      This action cannot be undone.
+    </p>
+    <div class="flex items-center gap-3">
+      <button @click="deleteModal.show = false"
+              class="flex-1 px-4 py-2.5 text-sm font-medium rounded-xl
+                     border-2 border-gray-200 text-gray-600 hover:bg-gray-50 transition">
+        Cancel
+      </button>
+      <form :action="deleteModal.url" method="POST" class="flex-1">
+        {% csrf_token %}
+        <button type="submit"
+                class="w-full px-4 py-2.5 text-white text-sm font-medium
+                       rounded-xl bg-red-600 hover:bg-red-700 transition">
+          Yes, Delete
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
