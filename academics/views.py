@@ -7,6 +7,8 @@ from .forms import (
     AcademicSessionForm, TermForm, ClassLevelForm,
     ClassArmForm, SubjectForm
 )
+from .models import SubjectTeacherAssignment
+from .forms import SubjectTeacherAssignmentForm
 
 
 # ── ACADEMIC SESSIONS ─────────────────────────────────────────
@@ -328,3 +330,67 @@ def subject_toggle(request, pk):
     status = 'activated' if subject.is_active else 'deactivated'
     messages.success(request, f'{subject.name} {status} successfully.')
     return redirect('academics:subject_list')
+
+
+from .models import SubjectTeacherAssignment
+from .forms import SubjectTeacherAssignmentForm
+
+@login_required
+@admin_staff_required
+def assignment_list(request):
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
+    assignments = SubjectTeacherAssignment.objects.filter(
+        session=current_session,
+        term=current_term
+    ).select_related(
+        'teacher', 'subject', 'class_arm', 'session', 'term'
+    ).order_by('class_arm__level__order', 'class_arm__name', 'subject__name')
+
+    return render(request, 'academics/assignment_list.html', {
+        'assignments': assignments,
+        'current_session': current_session,
+        'current_term': current_term,
+        'page_title': 'Subject-Teacher Assignments'
+    })
+
+# ---------------- Assignment Views ----------------
+@login_required
+@admin_staff_required
+def assignment_create(request):
+    form = SubjectTeacherAssignmentForm(request.POST or None)
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Assignment created successfully.')
+        return redirect('academics:assignment_list')
+    return render(request, 'academics/form.html', {
+        'form': form,
+        'page_title': 'Assign Subject Teacher',
+        'back_url': 'academics:assignment_list'
+    })
+
+
+@login_required
+@admin_staff_required
+def assignment_edit(request, pk):
+    assignment = get_object_or_404(SubjectTeacherAssignment, pk=pk)
+    form = SubjectTeacherAssignmentForm(request.POST or None, instance=assignment)
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Assignment updated successfully.')
+        return redirect('academics:assignment_list')
+    return render(request, 'academics/form.html', {
+        'form': form,
+        'page_title': 'Edit Subject Teacher Assignment',
+        'back_url': 'academics:assignment_list'
+    })
+
+
+@login_required
+@admin_staff_required
+def assignment_delete(request, pk):
+    assignment = get_object_or_404(SubjectTeacherAssignment, pk=pk)
+    if request.method == 'POST':
+        assignment.delete()
+        messages.success(request, 'Assignment removed successfully.')
+    return redirect('academics:assignment_list')

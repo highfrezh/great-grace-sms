@@ -146,7 +146,11 @@ class ClassArm(models.Model):
 
     @property
     def student_count(self):
-        return self.enrollments.filter(is_active=True).count()
+        # Return 0 until Student/Enrollment model is implemented
+        try:
+            return self.enrollments.filter(is_active=True).count()
+        except AttributeError:
+            return 0
 
 
 class Subject(models.Model):

@@ -38,4 +38,10 @@ urlpatterns = [
     path('subjects/<int:pk>/delete/', views.subject_delete, name='subject_delete'),
     path('subjects/<int:pk>/toggle/', views.subject_toggle, name='subject_toggle'),
 
+    # Subject Teacher Assignments
+    path('assignments/', views.assignment_list, name='assignment_list'),
+    path('assignments/create/', views.assignment_create, name='assignment_create'),
+    path('assignments/<int:pk>/edit/', views.assignment_edit, name='assignment_edit'),
+    path('assignments/<int:pk>/delete/', views.assignment_delete, name='assignment_delete'),
+
 ]

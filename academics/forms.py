@@ -1,5 +1,9 @@
 from django import forms
-from .models import AcademicSession, Term, ClassLevel, ClassArm, Subject, ClassSubject
+from .models import AcademicSession, Term, ClassLevel, ClassArm, Subject, ClassSubject, SubjectTeacherAssignment
+
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class AcademicSessionForm(forms.ModelForm):
@@ -100,3 +104,28 @@ class SubjectForm(forms.ModelForm):
             }),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
         }
+
+class SubjectTeacherAssignmentForm(forms.ModelForm):
+    class Meta:
+        model = SubjectTeacherAssignment
+        fields = ['teacher', 'subject', 'class_arm', 'session', 'term']
+        widgets = {
+            'teacher': forms.Select(attrs={'class': 'form-input'}),
+            'subject': forms.Select(attrs={'class': 'form-input'}),
+            'class_arm': forms.Select(attrs={'class': 'form-input'}),
+            'session': forms.Select(attrs={'class': 'form-input'}),
+            'term': forms.Select(attrs={'class': 'form-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only show teaching staff in teacher dropdown
+        self.fields['teacher'].queryset = User.objects.filter(
+            roles__name__in=[
+                'SUBJECT_TEACHER', 'CLASS_TEACHER',
+                'VICE_PRINCIPAL', 'PRINCIPAL'
+            ]
+        ).distinct()
+        # Default to current session and term
+        self.fields['session'].initial = AcademicSession.get_current()
+        self.fields['term'].initial = Term.get_current()
