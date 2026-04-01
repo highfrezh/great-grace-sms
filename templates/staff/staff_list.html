@@ -1,0 +1,635 @@
+{% extends 'base.html' %}
+
+{% block title %}Staff Management — Great Grace SMS{% endblock %}
+{% block page_title %}Staff Management{% endblock %}
+
+{% block content %}
+
+<!-- Stats Cards - Horizontal with Flexbox -->
+<div class="flex flex-wrap gap-4 mb-6">
+  <div class="flex-1 min-w-[200px] bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-sm text-gray-500 mb-2">Total Active Staff</p>
+        <p class="text-4xl font-bold" style="color:#635E57;">
+          <span id="totalActiveCount">{{ page_obj.paginator.count }}</span>
+        </p>
+      </div>
+      <div class="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100">
+        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  
+  <div class="flex-1 min-w-[200px] bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-sm text-gray-500 mb-2">Teaching Staff</p>
+        <p class="text-4xl font-bold" style="color:#851A10;">
+          <span id="teachingCount">{{ teaching_staff_count|default:"0" }}</span>
+        </p>
+      </div>
+      <div class="w-10 h-10 rounded-full flex items-center justify-center bg-red-50">
+        <svg class="w-5 h-5" style="color:#851A10;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  
+  <div class="flex-1 min-w-[200px] bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-sm text-gray-500 mb-2">Inactive Staff</p>
+        <p class="text-4xl font-bold text-gray-400">
+          <span id="inactiveCount">{{ inactive_staff|length }}</span>
+        </p>
+      </div>
+      <div class="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100">
+        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Header with Search -->
+<div class="flex items-center justify-between mb-6">
+  <p class="text-sm text-gray-500">Manage all staff accounts and roles</p>
+  <div class="flex items-center gap-3">
+    <!-- Search -->
+    <div style="position: relative;">
+      <input type="text" 
+             id="staffSearch"
+             placeholder="Search staff..."
+             style="width: 256px; padding: 0.625rem 1rem 0.625rem 2.5rem; font-size: 0.875rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; outline: none;"
+             class="focus:border-[#851A10] focus:ring-2 focus:ring-[#851A10]/10">
+      <svg style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 1rem; height: 1rem; color: #9ca3af;"
+           fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+    </div>
+    <a href="{% url 'staff:staff_create' %}"
+       class="flex items-center gap-2 px-4 py-2.5 text-white text-sm
+              font-semibold rounded-lg hover:opacity-90 transition whitespace-nowrap"
+       style="background:#851A10;">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Add New Staff
+    </a>
+  </div>
+</div>
+
+<!-- Active Staff Table -->
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+  <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+    <h2 class="font-semibold text-gray-800">Active Staff</h2>
+    <span class="text-xs text-gray-400">
+      <span id="activeVisibleCount">{{ page_obj|length }}</span> of {{ page_obj.paginator.count }} member(s)
+    </span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr style="background:#635E57;">
+          <th class="text-left px-6 py-4 text-white font-semibold">Staff ID</th>
+          <th class="text-left px-6 py-4 text-white font-semibold">Name</th>
+          <th class="text-left px-6 py-4 text-white font-semibold">Phone</th>
+          <th class="text-left px-6 py-4 text-white font-semibold">Roles</th>
+          <th class="text-left px-6 py-4 text-white font-semibold">Employment</th>
+          <th class="text-left px-6 py-4 text-white font-semibold">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="activeStaffTable" class="divide-y divide-gray-100">
+        {% for s in page_obj %}
+          <tr class="staff-row hover:bg-gray-50 transition"
+              data-name="{{ s.full_name|lower }}"
+              data-id="{{ s.staff_id|lower }}"
+              data-email="{{ s.user.email|lower }}"
+              data-phone="{{ s.user.phone_number|default:''|lower }}"
+              data-roles="{% for role in s.user.roles.all %}{{ role.get_name_display|lower }} {% endfor %}">
+            <td class="px-6 py-4">
+              <span class="px-2 py-1 text-xs font-bold rounded-lg bg-gray-100 text-gray-700">
+                {{ s.staff_id }}
+              </span>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                {% if s.profile_picture %}
+                  <img src="{{ s.profile_picture.url }}"
+                       class="w-8 h-8 rounded-full object-cover shrink-0">
+                {% else %}
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center
+                              text-white text-xs font-bold shrink-0"
+                       style="background:#851A10;">
+                    {{ s.user.first_name|first|upper }}{{ s.user.last_name|first|upper }}
+                  </div>
+                {% endif %}
+                <div>
+                  <p class="font-semibold text-gray-800">{{ s.full_name }}</p>
+                  <p class="text-xs text-gray-400">{{ s.user.email }}</p>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4 text-gray-600">
+              {{ s.user.phone_number|default:"—" }}
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex flex-wrap gap-1">
+                {% for role in s.user.roles.all %}
+                  <span class="role-tag px-2 py-0.5 text-xs font-medium rounded-full"
+                        style="background:#FFF5F3;color:#851A10;border:1px solid #FECACA;">
+                    {{ role.get_name_display }}
+                  </span>
+                {% empty %}
+                  <span class="text-xs text-gray-400">No roles</span>
+                {% endfor %}
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div>
+                <p class="text-xs font-medium text-gray-700">
+                  {{ s.get_employment_type_display|default:"—" }}
+                </p>
+                <p class="text-xs text-gray-400">
+                  Since {{ s.employment_date|date:"M Y"|default:"—" }}
+                </p>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-2">
+                <!-- View -->
+                <div class="tooltip">
+                  <a href="{% url 'staff:staff_detail' s.pk %}"
+                     class="flex items-center justify-center w-8 h-8 rounded-lg
+                            bg-blue-50 hover:bg-blue-100 transition text-blue-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943
+                               9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                  </a>
+                  <span class="tooltip-text">View Profile</span>
+                </div>
+
+                <!-- Edit -->
+                <div class="tooltip">
+                  <a href="{% url 'staff:staff_edit' s.pk %}"
+                     class="flex items-center justify-center w-8 h-8 rounded-lg
+                            bg-orange-50 hover:bg-orange-100 transition"
+                     style="color:#851A10;">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5
+                               m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                  </a>
+                  <span class="tooltip-text">Edit</span>
+                </div>
+
+                <!-- Deactivate -->
+                <div class="tooltip">
+                  <button type="button"
+                          @click="
+                            actionModal.show = true;
+                            actionModal.type = 'deactivate';
+                            actionModal.url = '{% url 'staff:staff_deactivate' s.pk %}';
+                            actionModal.name = '{{ s.full_name|escapejs }}';
+                          "
+                          class="flex items-center justify-center w-8 h-8 rounded-lg
+                                 bg-yellow-50 hover:bg-yellow-100 transition text-yellow-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0
+                               015.636 5.636m12.728 12.728L5.636 5.636"/>
+                    </svg>
+                  </button>
+                  <span class="tooltip-text">Deactivate</span>
+                </div>
+
+                <!-- Delete (Permanent) -->
+                <div class="tooltip">
+                  <button type="button"
+                          @click="
+                            actionModal.show = true;
+                            actionModal.type = 'delete';
+                            actionModal.url = '{% url 'staff:staff_delete' s.pk %}';
+                            actionModal.name = '{{ s.full_name|escapejs }}';
+                          "
+                          class="flex items-center justify-center w-8 h-8 rounded-lg
+                                 bg-red-50 hover:bg-red-100 transition text-red-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                  </button>
+                  <span class="tooltip-text">Delete Permanently</span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="px-6 py-12 text-center text-gray-400">
+              No active staff yet.
+              <a href="{% url 'staff:staff_create' %}"
+                 class="font-medium" style="color:#851A10;">Add one</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+  <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+    <div class="text-sm text-gray-500">
+      Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} staff
+    </div>
+    <div class="flex items-center gap-2">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+           class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+          Previous
+        </a>
+      {% endif %}
+      
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+          <span class="px-3 py-1.5 text-sm bg-[#851A10] text-white rounded-lg">
+            {{ num }}
+          </span>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+             class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+            {{ num }}
+          </a>
+        {% endif %}
+      {% endfor %}
+      
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+           class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+          Next
+        </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Inactive Staff -->
+{% if inactive_staff %}
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+  <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+    <h2 class="font-semibold text-gray-500">Inactive Staff</h2>
+    <span class="text-xs text-gray-400">
+      <span id="inactiveVisibleCount">{{ inactive_staff|length }}</span> member(s)
+    </span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-gray-50">
+          <th class="text-left px-6 py-3 text-gray-500 font-semibold">Staff ID</th>
+          <th class="text-left px-6 py-3 text-gray-500 font-semibold">Name</th>
+          <th class="text-left px-6 py-3 text-gray-500 font-semibold">Roles</th>
+          <th class="text-left px-6 py-3 text-gray-500 font-semibold">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="inactiveStaffTable" class="divide-y divide-gray-100">
+        {% for s in inactive_staff %}
+          <tr class="inactive-staff-row hover:bg-gray-50 transition opacity-60"
+              data-name="{{ s.full_name|lower }}"
+              data-id="{{ s.staff_id|lower }}"
+              data-email="{{ s.user.email|lower }}"
+              data-roles="{% for role in s.user.roles.all %}{{ role.get_name_display|lower }} {% endfor %}">
+            <td class="px-6 py-4">
+              <span class="px-2 py-1 text-xs font-bold rounded-lg bg-gray-100 text-gray-500">
+                {{ s.staff_id }}
+              </span>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center
+                            bg-gray-300 text-white text-xs font-bold shrink-0">
+                  {{ s.user.first_name|first|upper }}{{ s.user.last_name|first|upper }}
+                </div>
+                <div>
+                  <p class="font-semibold text-gray-500">{{ s.full_name }}</p>
+                  <p class="text-xs text-gray-400">{{ s.user.email }}</p>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex flex-wrap gap-1">
+                {% for role in s.user.roles.all %}
+                  <span class="role-tag px-2 py-0.5 text-xs font-medium rounded-full
+                               bg-gray-100 text-gray-500">
+                    {{ role.get_name_display }}
+                  </span>
+                {% endfor %}
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-2">
+                <!-- Reactivate -->
+                <div class="tooltip">
+                  <a href="{% url 'staff:staff_activate' s.pk %}"
+                     class="flex items-center justify-center w-8 h-8 rounded-lg
+                            bg-green-50 hover:bg-green-100 transition text-green-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                  </a>
+                  <span class="tooltip-text">Reactivate</span>
+                </div>
+                <!-- View -->
+                <div class="tooltip">
+                  <a href="{% url 'staff:staff_detail' s.pk %}"
+                     class="flex items-center justify-center w-8 h-8 rounded-lg
+                            bg-blue-50 hover:bg-blue-100 transition text-blue-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943
+                               9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                  </a>
+                  <span class="tooltip-text">View Profile</span>
+                </div>
+                <!-- Delete Permanently -->
+                <div class="tooltip">
+                  <button type="button"
+                          @click="
+                            actionModal.show = true;
+                            actionModal.type = 'delete';
+                            actionModal.url = '{% url 'staff:staff_delete' s.pk %}';
+                            actionModal.name = '{{ s.full_name|escapejs }}';
+                          "
+                          class="flex items-center justify-center w-8 h-8 rounded-lg
+                                 bg-red-50 hover:bg-red-100 transition text-red-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                  </button>
+                  <span class="tooltip-text">Delete Permanently</span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block modals %}
+<!-- Unified Action Modal (Deactivate/Delete) -->
+<div x-show="actionModal.show"
+     x-cloak
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 z-[999] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,0.5);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+       @click.outside="actionModal.show = false"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 scale-95"
+       x-transition:enter-end="opacity-100 scale-100">
+    
+    <!-- Icon based on action type -->
+    <div class="flex items-center justify-center w-14 h-14 rounded-full mx-auto mb-4"
+         :class="actionModal.type === 'delete' ? 'bg-red-100' : 'bg-yellow-100'">
+      <svg x-show="actionModal.type === 'deactivate'" 
+           class="w-7 h-7 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+      </svg>
+      <svg x-show="actionModal.type === 'delete'" 
+           class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+      </svg>
+    </div>
+    
+    <h3 class="text-lg font-bold text-gray-800 text-center mb-2"
+        x-text="actionModal.type === 'delete' ? 'Delete Staff Permanently' : 'Deactivate Staff'"></h3>
+    
+    <p class="text-sm text-gray-500 text-center mb-1">
+      <span x-text="actionModal.type === 'delete' ? 'Are you sure you want to permanently delete' : 'Are you sure you want to deactivate'"></span>
+    </p>
+    <p class="text-sm font-semibold text-center mb-4"
+       :style="actionModal.type === 'delete' ? 'color:#DC2626;' : 'color:#851A10;'" 
+       x-text="actionModal.name"></p>
+    
+    <p x-show="actionModal.type === 'deactivate'" 
+       class="text-xs text-yellow-600 text-center mb-6 bg-yellow-50 p-3 rounded-lg">
+      ⚠️ This will disable their login access. Their data will be preserved 
+      and they can be reactivated at any time.
+    </p>
+    
+    <p x-show="actionModal.type === 'delete'" 
+       class="text-xs text-red-600 text-center mb-6 bg-red-50 p-3 rounded-lg">
+      ⚠️ This action cannot be undone. The staff member will be permanently 
+      removed from the system along with all associated data.
+    </p>
+    
+    <div class="flex items-center gap-3">
+      <button @click="actionModal.show = false"
+              class="flex-1 px-4 py-2.5 text-sm font-medium rounded-xl
+                     border-2 border-gray-200 text-gray-600
+                     hover:bg-gray-50 transition">
+        Cancel
+      </button>
+      <form :action="actionModal.url" method="POST" class="flex-1">
+        {% csrf_token %}
+        <button type="submit"
+                class="w-full px-4 py-2.5 text-white text-sm font-medium rounded-xl transition inline-block modal-submit-btn"
+                :class="actionModal.type === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-yellow-500 hover:bg-yellow-600'">
+          <span x-text="actionModal.type === 'delete' ? 'Yes, Delete Permanently' : 'Yes, Deactivate'">Yes, Deactivate</span>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('staffSearch');
+  const activeRows = document.querySelectorAll('#activeStaffTable .staff-row');
+  const inactiveRows = document.querySelectorAll('#inactiveStaffTable .inactive-staff-row');
+  const activeVisibleCount = document.getElementById('activeVisibleCount');
+  const inactiveVisibleCount = document.getElementById('inactiveVisibleCount');
+  const totalActiveCount = document.getElementById('totalActiveCount');
+  const teachingCount = document.getElementById('teachingCount');
+
+  function updateCounts() {
+    let visibleActive = 0;
+    let teachingStaffVisible = 0;
+    
+    activeRows.forEach(row => {
+      if (row.style.display !== 'none') {
+        visibleActive++;
+        const roles = row.querySelectorAll('.role-tag');
+        let isTeaching = false;
+        roles.forEach(role => {
+          if (role.textContent.toLowerCase().includes('teacher')) {
+            isTeaching = true;
+          }
+        });
+        if (isTeaching) teachingStaffVisible++;
+      }
+    });
+    
+    if (activeVisibleCount) activeVisibleCount.textContent = visibleActive;
+    if (totalActiveCount) totalActiveCount.textContent = visibleActive;
+    if (teachingCount) teachingCount.textContent = teachingStaffVisible;
+    
+    if (inactiveVisibleCount) {
+      let visibleInactive = 0;
+      inactiveRows.forEach(row => {
+        if (row.style.display !== 'none') visibleInactive++;
+      });
+      inactiveVisibleCount.textContent = visibleInactive;
+    }
+  }
+
+  function searchStaff() {
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    
+    activeRows.forEach(row => {
+      const name = row.dataset.name || '';
+      const staffId = row.dataset.id || '';
+      const email = row.dataset.email || '';
+      const phone = row.dataset.phone || '';
+      const roles = row.dataset.roles || '';
+      
+      const matches = searchTerm === '' || 
+                     name.includes(searchTerm) ||
+                     staffId.includes(searchTerm) ||
+                     email.includes(searchTerm) ||
+                     phone.includes(searchTerm) ||
+                     roles.includes(searchTerm);
+      
+      row.style.display = matches ? '' : 'none';
+    });
+    
+    inactiveRows.forEach(row => {
+      const name = row.dataset.name || '';
+      const staffId = row.dataset.id || '';
+      const email = row.dataset.email || '';
+      const roles = row.dataset.roles || '';
+      
+      const matches = searchTerm === '' || 
+                     name.includes(searchTerm) ||
+                     staffId.includes(searchTerm) ||
+                     email.includes(searchTerm) ||
+                     roles.includes(searchTerm);
+      
+      row.style.display = matches ? '' : 'none';
+    });
+    
+    updateCounts();
+  }
+  
+  if (searchInput) {
+    searchInput.addEventListener('keyup', searchStaff);
+    searchInput.addEventListener('search', searchStaff);
+  }
+  
+  updateCounts();
+});
+</script>
+
+<style>
+/* Force modal buttons to be visible */
+[x-cloak] { display: none !important; }
+
+.modal-submit-btn {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  min-height: 40px;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.modal-submit-btn span {
+  display: inline !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Ensure form is visible */
+form.flex-1 {
+  display: block !important;
+  visibility: visible !important;
+  min-height: 40px;
+}
+
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip .tooltip-text {
+  visibility: hidden;
+  width: 120px;
+  background-color: #555;
+  color: #fff;
+  text-align: center;
+  padding: 5px 0;
+  border-radius: 6px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -60px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.tooltip .tooltip-text::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #555 transparent transparent transparent;
+}
+
+.tooltip:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+#activeStaffTable tr,
+#inactiveStaffTable tr {
+  transition: all 0.2s ease;
+}
+
+#totalActiveCount, #teachingCount, #inactiveCount {
+  transition: all 0.3s ease;
+}
+</style>
+{% endblock %}

@@ -30,7 +30,7 @@
 </a>
 
 <!-- Staff -->
-<a href="#"
+<a href="{% url 'staff:staff_list' %}"
    class="flex items-center px-4 py-2.5 transition text-white
           {% if current_app == 'staff' %}opacity-100{% else %}opacity-60 hover:opacity-100{% endif %}"
    {% if current_app == 'staff' %}

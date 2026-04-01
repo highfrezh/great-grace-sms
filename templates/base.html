@@ -75,12 +75,18 @@
   .submenu-item.inactive:hover {
     opacity: 0.9;
   }
+
+  /* Alpine.js x-cloak */
+  [x-cloak] {
+    display: none !important;
+  }
 </style>
 </head>
 <body class="bg-gray-100 font-sans text-gray-800" 
       x-data="{ 
         sidebarOpen: true,
-        deleteModal: { show: false, url: '', name: '' }
+        deleteModal: { show: false, url: '', name: '' },
+        actionModal: { show: false, type: '', url: '', name: '' }
       }">
 
 <div class="flex min-h-screen">

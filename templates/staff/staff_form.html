@@ -1,0 +1,484 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} — Great Grace SMS{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+  <form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <style>
+      input:not([type="checkbox"]):not([type="file"]),
+      select, textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1.5px solid #E5E7EB;
+        border-radius: 0.75rem;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+        background-color: white;
+        outline: none;
+        color: #374151;
+      }
+      input:not([type="checkbox"]):not([type="file"]):focus,
+      select:focus, textarea:focus {
+        border-color: #851A10;
+        box-shadow: 0 0 0 3px rgba(133,26,16,0.1);
+      }
+      select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        background-position: right 1rem center;
+        background-repeat: no-repeat;
+        background-size: 1.25rem;
+        padding-right: 2.5rem;
+      }
+      input[type="file"] {
+        width: 100%;
+        padding: 0.5rem;
+        background-color: #F9FAFB;
+        border: 1.5px solid #E5E7EB;
+        border-radius: 0.75rem;
+      }
+      input[type="file"]::file-selector-button {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        border: none;
+        background: #851A10;
+        color: white;
+        cursor: pointer;
+        margin-right: 1rem;
+      }
+      input[type="file"]::file-selector-button:hover {
+        background: #A52318;
+      }
+      .form-error {
+        color: #851A10;
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+      }
+      input.is-invalid, select.is-invalid, textarea.is-invalid {
+        border-color: #851A10;
+        background-color: #FFF5F3;
+      }
+    </style>
+
+    <!-- ── SECTION 1: Account & Roles ──────────────────── -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+      <div class="px-8 py-5 border-b border-gray-100"
+           style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
+        <div class="flex items-center gap-3">
+          <div class="w-1 h-8 rounded-full" style="background:#851A10;"></div>
+          <div>
+            <h2 class="text-lg font-bold text-gray-800">Account & Roles</h2>
+            <p class="text-xs text-gray-500 mt-0.5">Login credentials and system access</p>
+          </div>
+        </div>
+      </div>
+      <div class="px-8 py-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              First Name <span style="color:#851A10;">*</span>
+            </label>
+            {{ user_form.first_name }}
+            {% if user_form.first_name.errors %}
+              <p class="form-error">{{ user_form.first_name.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Last Name <span style="color:#851A10;">*</span>
+            </label>
+            {{ user_form.last_name }}
+            {% if user_form.last_name.errors %}
+              <p class="form-error">{{ user_form.last_name.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Email Address <span style="color:#851A10;">*</span>
+            </label>
+            {{ user_form.email }}
+            {% if user_form.email.errors %}
+              <p class="form-error">{{ user_form.email.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Username <span style="color:#851A10;">*</span>
+            </label>
+            {{ user_form.username }}
+            {% if user_form.username.errors %}
+              <p class="form-error">{{ user_form.username.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Phone Number <span style="color:#851A10;">*</span>
+            </label>
+            <input type="text" 
+                   name="phone_number" 
+                   value="{{ user_form.instance.phone_number|default:'' }}"
+                   placeholder="e.g. 08012345678"
+                   class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#851A10] focus:ring-2 focus:ring-[#851A10]/10">
+            <p class="text-xs text-gray-400 mt-1">
+              {% if not is_edit %}
+              This will be the default login password
+              {% else %}
+              Used for password reset
+              {% endif %}
+            </p>
+          </div>
+
+        </div>
+
+        <!-- Roles -->
+        <div class="mt-5">
+          <label class="block text-sm font-semibold text-gray-700 mb-2">
+            Assign Roles <span style="color:#851A10;">*</span>
+          </label>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {% for checkbox in user_form.roles %}
+              <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-200
+                            hover:border-red-200 hover:bg-red-50 cursor-pointer transition">
+                {{ checkbox.tag }}
+                <span class="text-sm text-gray-700 font-medium">
+                  {{ checkbox.choice_label }}
+                </span>
+              </label>
+            {% endfor %}
+          </div>
+          {% if user_form.roles.errors %}
+            <p class="form-error">{{ user_form.roles.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── SECTION 2: Personal Details ─────────────────── -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+      <div class="px-8 py-5 border-b border-gray-100"
+           style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
+        <div class="flex items-center gap-3">
+          <div class="w-1 h-8 rounded-full" style="background:#851A10;"></div>
+          <div>
+            <h2 class="text-lg font-bold text-gray-800">Personal Details</h2>
+            <p class="text-xs text-gray-500 mt-0.5">Staff personal information</p>
+          </div>
+        </div>
+      </div>
+      <div class="px-8 py-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Gender <span style="color:#851A10;">*</span>
+            </label>
+            {{ profile_form.gender }}
+            {% if profile_form.gender.errors %}
+              <p class="form-error">{{ profile_form.gender.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Date of Birth
+            </label>
+            {{ profile_form.date_of_birth }}
+            {% if profile_form.date_of_birth.errors %}
+              <p class="form-error">{{ profile_form.date_of_birth.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Marital Status
+            </label>
+            {{ profile_form.marital_status }}
+            {% if profile_form.marital_status.errors %}
+              <p class="form-error">{{ profile_form.marital_status.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              State of Origin
+            </label>
+            {{ profile_form.state_of_origin }}
+            {% if profile_form.state_of_origin.errors %}
+              <p class="form-error">{{ profile_form.state_of_origin.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Religion
+            </label>
+            {{ profile_form.religion }}
+            {% if profile_form.religion.errors %}
+              <p class="form-error">{{ profile_form.religion.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Home Address
+            </label>
+            {{ profile_form.address }}
+            {% if profile_form.address.errors %}
+              <p class="form-error">{{ profile_form.address.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Profile Picture
+            </label>
+            {{ profile_form.profile_picture }}
+            {% if profile_form.profile_picture.errors %}
+              <p class="form-error">{{ profile_form.profile_picture.errors.0 }}</p>
+            {% endif %}
+            {% if profile_form.instance.profile_picture %}
+              <p class="text-xs text-gray-500 mt-1">Current: {{ profile_form.instance.profile_picture.name }}</p>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SECTION 3: Employment Details ───────────────── -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+      <div class="px-8 py-5 border-b border-gray-100"
+           style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
+        <div class="flex items-center gap-3">
+          <div class="w-1 h-8 rounded-full" style="background:#851A10;"></div>
+          <div>
+            <h2 class="text-lg font-bold text-gray-800">Employment Details</h2>
+            <p class="text-xs text-gray-500 mt-0.5">Employment type and dates</p>
+          </div>
+        </div>
+      </div>
+      <div class="px-8 py-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Employment Date
+            </label>
+            {{ profile_form.employment_date }}
+            {% if profile_form.employment_date.errors %}
+              <p class="form-error">{{ profile_form.employment_date.errors.0 }}</p>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Employment Type
+            </label>
+            {{ profile_form.employment_type }}
+            {% if profile_form.employment_type.errors %}
+              <p class="form-error">{{ profile_form.employment_type.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SECTION 4: Qualifications ───────────────────── -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+      <div class="px-8 py-5 border-b border-gray-100"
+           style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
+        <div class="flex items-center gap-3">
+          <div class="w-1 h-8 rounded-full" style="background:#851A10;"></div>
+          <div>
+            <h2 class="text-lg font-bold text-gray-800">Qualifications</h2>
+            <p class="text-xs text-gray-500 mt-0.5">Academic and professional qualifications</p>
+          </div>
+        </div>
+      </div>
+      <div class="px-8 py-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Highest Qualification
+            </label>
+            {{ profile_form.highest_qualification }}
+            {% if profile_form.highest_qualification.errors %}
+              <p class="form-error">{{ profile_form.highest_qualification.errors.0 }}</p>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Qualification Subject
+            </label>
+            {{ profile_form.qualification_subject }}
+            {% if profile_form.qualification_subject.errors %}
+              <p class="form-error">{{ profile_form.qualification_subject.errors.0 }}</p>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Institution
+            </label>
+            {{ profile_form.institution }}
+            {% if profile_form.institution.errors %}
+              <p class="form-error">{{ profile_form.institution.errors.0 }}</p>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Year Obtained
+            </label>
+            {{ profile_form.year_obtained }}
+            {% if profile_form.year_obtained.errors %}
+              <p class="form-error">{{ profile_form.year_obtained.errors.0 }}</p>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Teaching Certificate
+            </label>
+            {{ profile_form.teaching_certificate }}
+            {% if profile_form.teaching_certificate.errors %}
+              <p class="form-error">{{ profile_form.teaching_certificate.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SECTION 5: Next of Kin ───────────────────────── -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+      <div class="px-8 py-5 border-b border-gray-100"
+           style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
+        <div class="flex items-center gap-3">
+          <div class="w-1 h-8 rounded-full" style="background:#851A10;"></div>
+          <div>
+            <h2 class="text-lg font-bold text-gray-800">Next of Kin</h2>
+            <p class="text-xs text-gray-500 mt-0.5">Emergency contact information</p>
+          </div>
+        </div>
+      </div>
+      <div class="px-8 py-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Full Name
+            </label>
+            {{ profile_form.next_of_kin_name }}
+            {% if profile_form.next_of_kin_name.errors %}
+              <p class="form-error">{{ profile_form.next_of_kin_name.errors.0 }}</p>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Relationship
+            </label>
+            {{ profile_form.next_of_kin_relationship }}
+            {% if profile_form.next_of_kin_relationship.errors %}
+              <p class="form-error">{{ profile_form.next_of_kin_relationship.errors.0 }}</p>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Phone Number
+            </label>
+            {{ profile_form.next_of_kin_phone }}
+            {% if profile_form.next_of_kin_phone.errors %}
+              <p class="form-error">{{ profile_form.next_of_kin_phone.errors.0 }}</p>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Address
+            </label>
+            {{ profile_form.next_of_kin_address }}
+            {% if profile_form.next_of_kin_address.errors %}
+              <p class="form-error">{{ profile_form.next_of_kin_address.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SECTION 6: Bank Details ──────────────────────── -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+      <div class="px-8 py-5 border-b border-gray-100"
+           style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
+        <div class="flex items-center gap-3">
+          <div class="w-1 h-8 rounded-full" style="background:#851A10;"></div>
+          <div>
+            <h2 class="text-lg font-bold text-gray-800">Bank Details</h2>
+            <p class="text-xs text-gray-500 mt-0.5">For payroll purposes</p>
+          </div>
+        </div>
+      </div>
+      <div class="px-8 py-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Bank Name
+            </label>
+            {{ profile_form.bank_name }}
+            {% if profile_form.bank_name.errors %}
+              <p class="form-error">{{ profile_form.bank_name.errors.0 }}</p>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Account Name
+            </label>
+            {{ profile_form.account_name }}
+            {% if profile_form.account_name.errors %}
+              <p class="form-error">{{ profile_form.account_name.errors.0 }}</p>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Account Number
+            </label>
+            {{ profile_form.account_number }}
+            {% if profile_form.account_number.errors %}
+              <p class="form-error">{{ profile_form.account_number.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Submit Buttons ───────────────────────────────── -->
+    <div class="flex items-center justify-end gap-3 pb-6">
+      <a href="{% url 'staff:staff_list' %}"
+         class="px-6 py-2.5 text-sm font-medium rounded-xl border-2
+                border-gray-200 text-gray-600 hover:bg-gray-50 transition
+                inline-flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Cancel
+      </a>
+      <button type="submit"
+              class="px-6 py-2.5 text-white text-sm font-medium rounded-xl
+                     shadow-md hover:shadow-lg hover:scale-105 transition-all
+                     duration-200 inline-flex items-center gap-2"
+              style="background:linear-gradient(135deg,#851A10 0%,#A52318 100%);">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M5 13l4 4L19 7"/>
+        </svg>
+        {% if is_edit %}Update Staff{% else %}Create Staff Account{% endif %}
+      </button>
+    </div>
+
+  </form>
+</div>
+{% endblock %}

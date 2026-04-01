@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ profile.full_name }} — Great Grace SMS{% endblock %}
+{% block page_title %}Staff Profile{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+  <!-- Header Card -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+    <div class="flex items-start justify-between flex-wrap gap-4">
+      <div class="flex items-center gap-4">
+        {% if profile.profile_picture %}
+          <img src="{{ profile.profile_picture.url }}"
+               class="w-16 h-16 rounded-2xl object-cover shadow">
+        {% else %}
+          <div class="w-16 h-16 rounded-2xl flex items-center justify-center
+                      text-white text-xl font-bold shadow"
+               style="background:#851A10;">
+            {{ profile.user.first_name|first|upper }}{{ profile.user.last_name|first|upper }}
+          </div>
+        {% endif %}
+        <div>
+          <h2 class="text-xl font-bold text-gray-800">{{ profile.full_name }}</h2>
+          <p class="text-sm text-gray-500">{{ profile.user.email }}</p>
+          <div class="flex items-center gap-2 mt-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-bold rounded-lg bg-gray-100 text-gray-600">
+              {{ profile.staff_id }}
+            </span>
+            {% for role in profile.user.roles.all %}
+              <span class="px-2 py-0.5 text-xs font-medium rounded-full"
+                    style="background:#FFF5F3;color:#851A10;border:1px solid #FECACA;">
+                {{ role.get_name_display }}
+              </span>
+            {% endfor %}
+            {% if profile.is_active %}
+              <span class="px-2 py-0.5 text-xs font-semibold rounded-full
+                           bg-green-100 text-green-700">Active</span>
+            {% else %}
+              <span class="px-2 py-0.5 text-xs font-semibold rounded-full
+                           bg-red-100 text-red-500">Inactive</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2">
+        <a href="{% url 'staff:staff_edit' profile.pk %}"
+           class="flex items-center gap-2 px-4 py-2 text-sm font-semibold
+                  text-white rounded-lg hover:opacity-90 transition"
+           style="background:#851A10;">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5
+                     m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          Edit Profile
+        </a>
+        <form action="{% url 'staff:staff_reset_password' profile.pk %}"
+              method="POST">
+          {% csrf_token %}
+          <button type="submit"
+                  class="flex items-center gap-2 px-4 py-2 text-sm font-semibold
+                         text-gray-600 rounded-lg border-2 border-gray-200
+                         hover:bg-gray-50 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1
+                       1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+            </svg>
+            Reset Password
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Details Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Personal Details -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100"
+           style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
+        <div class="flex items-center gap-2">
+          <div class="w-1 h-6 rounded-full" style="background:#851A10;"></div>
+          <h3 class="font-semibold text-gray-800">Personal Details</h3>
+        </div>
+      </div>
+      <div class="p-6 space-y-3">
+        {% include 'staff/partials/detail_row.html' with label="Phone" value=profile.user.phone_number %}
+        {% include 'staff/partials/detail_row.html' with label="Gender" value=profile.get_gender_display %}
+        {% include 'staff/partials/detail_row.html' with label="Date of Birth" value=profile.date_of_birth %}
+        {% include 'staff/partials/detail_row.html' with label="Marital Status" value=profile.get_marital_status_display %}
+        {% include 'staff/partials/detail_row.html' with label="State of Origin" value=profile.state_of_origin %}
+        {% include 'staff/partials/detail_row.html' with label="Religion" value=profile.religion %}
+        {% include 'staff/partials/detail_row.html' with label="Address" value=profile.address %}
+      </div>
+    </div>
+
+    <!-- Employment Details -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100"
+           style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
+        <div class="flex items-center gap-2">
+          <div class="w-1 h-6 rounded-full" style="background:#851A10;"></div>
+          <h3 class="font-semibold text-gray-800">Employment Details</h3>
+        </div>
+      </div>
+      <div class="p-6 space-y-3">
+        {% include 'staff/partials/detail_row.html' with label="Staff ID" value=profile.staff_id %}
+        {% include 'staff/partials/detail_row.html' with label="Employment Date" value=profile.employment_date %}
+        {% include 'staff/partials/detail_row.html' with label="Employment Type" value=profile.get_employment_type_display %}
+        {% include 'staff/partials/detail_row.html' with label="Username" value=profile.user.username %}
+      </div>
+    </div>
+
+    <!-- Qualifications -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100"
+           style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
+        <div class="flex items-center gap-2">
+          <div class="w-1 h-6 rounded-full" style="background:#851A10;"></div>
+          <h3 class="font-semibold text-gray-800">Qualifications</h3>
+        </div>
+      </div>
+      <div class="p-6 space-y-3">
+        {% include 'staff/partials/detail_row.html' with label="Highest Qualification" value=profile.get_highest_qualification_display %}
+        {% include 'staff/partials/detail_row.html' with label="Subject" value=profile.qualification_subject %}
+        {% include 'staff/partials/detail_row.html' with label="Institution" value=profile.institution %}
+        {% include 'staff/partials/detail_row.html' with label="Year Obtained" value=profile.year_obtained %}
+        {% include 'staff/partials/detail_row.html' with label="Teaching Certificate" value=profile.teaching_certificate %}
+      </div>
+    </div>
+
+    <!-- Next of Kin -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100"
+           style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
+        <div class="flex items-center gap-2">
+          <div class="w-1 h-6 rounded-full" style="background:#851A10;"></div>
+          <h3 class="font-semibold text-gray-800">Next of Kin</h3>
+        </div>
+      </div>
+      <div class="p-6 space-y-3">
+        {% include 'staff/partials/detail_row.html' with label="Name" value=profile.next_of_kin_name %}
+        {% include 'staff/partials/detail_row.html' with label="Relationship" value=profile.next_of_kin_relationship %}
+        {% include 'staff/partials/detail_row.html' with label="Phone" value=profile.next_of_kin_phone %}
+        {% include 'staff/partials/detail_row.html' with label="Address" value=profile.next_of_kin_address %}
+      </div>
+    </div>
+
+    <!-- Bank Details -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden lg:col-span-2">
+      <div class="px-6 py-4 border-b border-gray-100"
+           style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
+        <div class="flex items-center gap-2">
+          <div class="w-1 h-6 rounded-full" style="background:#851A10;"></div>
+          <h3 class="font-semibold text-gray-800">Bank Details</h3>
+        </div>
+      </div>
+      <div class="p-6">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {% include 'staff/partials/detail_row.html' with label="Bank Name" value=profile.bank_name %}
+          {% include 'staff/partials/detail_row.html' with label="Account Name" value=profile.account_name %}
+          {% include 'staff/partials/detail_row.html' with label="Account Number" value=profile.account_number %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Back Button -->
+  <div class="mt-6">
+    <a href="{% url 'staff:staff_list' %}"
+       class="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      </svg>
+      Back to Staff List
+    </a>
+  </div>
+
+</div>
+{% endblock %}
