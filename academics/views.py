@@ -62,6 +62,24 @@ def session_set_current(request, pk):
     messages.success(request, f'{session.name} is now the current session.')
     return redirect('academics:session_list')
 
+@login_required
+@admin_staff_required
+def session_delete(request, pk):
+    session = get_object_or_404(AcademicSession, pk=pk)
+
+    # Prevent deleting current session
+    if session.is_current:
+        messages.error(request, 'Cannot delete the current active session.')
+        return redirect('academics:session_list')
+
+    if request.method == 'POST':
+        name = session.name
+        session.delete()
+        messages.success(request, f'Session {name} deleted successfully.')
+        return redirect('academics:session_list')
+
+    return redirect('academics:session_list')
+
 
 # ── TERMS ─────────────────────────────────────────────────────
 

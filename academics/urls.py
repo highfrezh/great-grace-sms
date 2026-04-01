@@ -10,6 +10,7 @@ urlpatterns = [
     path('sessions/create/', views.session_create, name='session_create'),
     path('sessions/<int:pk>/edit/', views.session_edit, name='session_edit'),
     path('sessions/<int:pk>/set-current/', views.session_set_current, name='session_set_current'),
+    path('sessions/<int:pk>/delete/', views.session_delete, name='session_delete'),
 
     # Terms
     path('terms/', views.term_list, name='term_list'),

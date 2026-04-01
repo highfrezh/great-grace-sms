@@ -4,71 +4,206 @@
 {% block page_title %}{{ page_title }}{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
+<div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-3xl mx-auto">
+    <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
 
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-
-    <form method="POST" enctype="multipart/form-data">
-      {% csrf_token %}
-
-      <div class="space-y-5">
-        {% for field in form %}
+      <!-- Form Header -->
+      <div class="px-8 py-6 border-b border-gray-100"
+           style="background: linear-gradient(135deg, #FFF5F3 0%, #FFFFFF 100%);">
+        <div class="flex items-center gap-3">
+          <div class="w-1 h-8 rounded-full" style="background: #851A10;"></div>
           <div>
-            <label class="block text-sm font-medium mb-1.5"
-                   style="color:#635E57;">
-              {{ field.label }}
-              {% if field.field.required %}
-                <span style="color:#851A10;">*</span>
-              {% endif %}
-            </label>
-
-            {% if field.field.widget.input_type == 'checkbox' %}
-              <div class="flex items-center gap-2">
-                {{ field }}
-                <span class="text-sm text-gray-500">{{ field.help_text }}</span>
-              </div>
-            {% else %}
-              <div class="[&>*]:w-full [&>input]:px-4 [&>input]:py-2.5
-                          [&>input]:rounded-lg [&>input]:border [&>input]:border-gray-300
-                          [&>input]:text-sm [&>input]:outline-none
-                          [&>select]:px-4 [&>select]:py-2.5 [&>select]:rounded-lg
-                          [&>select]:border [&>select]:border-gray-300 [&>select]:text-sm
-                          [&>select]:outline-none [&>textarea]:px-4 [&>textarea]:py-2.5
-                          [&>textarea]:rounded-lg [&>textarea]:border [&>textarea]:border-gray-300
-                          [&>textarea]:text-sm [&>textarea]:outline-none">
-                {{ field }}
-              </div>
-            {% endif %}
-
-            {% if field.errors %}
-              {% for error in field.errors %}
-                <p class="text-xs mt-1" style="color:#851A10;">{{ error }}</p>
-              {% endfor %}
-            {% endif %}
-
-            {% if field.help_text and field.field.widget.input_type != 'checkbox' %}
-              <p class="text-xs text-gray-400 mt-1">{{ field.help_text }}</p>
-            {% endif %}
+            <h2 class="text-2xl font-bold text-gray-800">{{ page_title }}</h2>
+            <p class="text-sm text-gray-500 mt-1">Please fill in the information below</p>
           </div>
-        {% endfor %}
+        </div>
       </div>
 
-      <!-- Buttons -->
-      <div class="flex items-center gap-3 mt-8 pt-6 border-t border-gray-100">
-        <button type="submit"
-                class="px-6 py-2.5 text-white text-sm font-semibold rounded-lg
-                       hover:opacity-90 transition"
-                style="background:#851A10;">
-          Save
-        </button>
-        <a href="{% url back_url %}"
-           class="px-6 py-2.5 text-sm font-semibold rounded-lg border
-                  border-gray-300 text-gray-600 hover:bg-gray-50 transition">
-          Cancel
-        </a>
-      </div>
+      <!-- Form Body -->
+      <form method="POST" enctype="multipart/form-data" class="px-8 py-6">
+        {% csrf_token %}
 
-    </form>
+        <style>
+          input:not([type="checkbox"]):not([type="file"]),
+          select,
+          textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1.5px solid #E5E7EB;
+            border-radius: 0.75rem;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            background-color: white;
+            outline: none;
+            color: #374151;
+          }
+
+          input:not([type="checkbox"]):not([type="file"]):focus,
+          select:focus,
+          textarea:focus {
+            border-color: #851A10;
+            box-shadow: 0 0 0 3px rgba(133, 26, 16, 0.1);
+          }
+
+          input:not([type="checkbox"]):not([type="file"]):hover,
+          select:hover,
+          textarea:hover {
+            border-color: #9CA3AF;
+          }
+
+          select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+            background-position: right 1rem center;
+            background-repeat: no-repeat;
+            background-size: 1.25rem;
+            padding-right: 2.5rem;
+          }
+
+          input[type="file"] {
+            width: 100%;
+            padding: 0.5rem;
+            background-color: #F9FAFB;
+            border: 1.5px solid #E5E7EB;
+            border-radius: 0.75rem;
+            outline: none;
+          }
+
+          input[type="file"]::file-selector-button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            border: none;
+            background: #851A10;
+            color: white;
+            cursor: pointer;
+            margin-right: 1rem;
+            transition: opacity 0.2s;
+          }
+
+          input[type="file"]::file-selector-button:hover {
+            opacity: 0.9;
+          }
+        </style>
+
+        <div class="space-y-6">
+          {% for field in form %}
+            <div class="group">
+
+              <!-- Label — hidden for checkboxes to avoid duplication -->
+              {% if field.field.widget.input_type != 'checkbox' %}
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                  {{ field.label }}
+                  {% if field.field.required %}
+                    <span style="color: #851A10;">*</span>
+                  {% endif %}
+                </label>
+              {% endif %}
+
+              <!-- Checkbox Field -->
+              {% if field.field.widget.input_type == 'checkbox' %}
+                <div class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg
+                            border border-gray-200 w-full">
+                  <input type="checkbox"
+                         name="{{ field.html_name }}"
+                         id="{{ field.id_for_label }}"
+                         {% if field.value %}checked{% endif %}
+                         class="w-5 h-5 rounded shrink-0 cursor-pointer accent-[#851A10]">
+                  <label for="{{ field.id_for_label }}"
+                         class="text-sm text-gray-700 cursor-pointer font-medium">
+                    {{ field.label }}
+                    {% if field.help_text %}
+                      <span class="block text-xs text-gray-400 font-normal mt-0.5">
+                        {{ field.help_text }}
+                      </span>
+                    {% endif %}
+                  </label>
+                </div>
+
+              <!-- All Other Fields -->
+              {% else %}
+                <div class="relative">
+                  {{ field }}
+
+                  {% if field.help_text %}
+                    <p class="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
+                      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor"
+                           viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      {{ field.help_text }}
+                    </p>
+                  {% endif %}
+                </div>
+              {% endif %}
+
+              <!-- Field Errors -->
+              {% if field.errors %}
+                <div class="mt-2 space-y-1">
+                  {% for error in field.errors %}
+                    <p class="text-sm flex items-center gap-1" style="color: #851A10;">
+                      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor"
+                           viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      {{ error }}
+                    </p>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+            </div>
+          {% endfor %}
+        </div>
+
+        <!-- Form Actions -->
+        <div class="mt-8 pt-6 border-t border-gray-100 flex items-center justify-end gap-3">
+          <a href="{% url back_url %}"
+             class="px-6 py-2.5 text-sm font-medium rounded-xl border-2 border-gray-200
+                    text-gray-600 hover:bg-gray-50 hover:border-gray-300
+                    transition-all duration-200 inline-flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Cancel
+          </a>
+          <button type="submit"
+                  class="px-6 py-2.5 text-white text-sm font-medium rounded-xl shadow-md
+                         hover:shadow-lg hover:scale-105 transition-all duration-200
+                         inline-flex items-center gap-2"
+                  style="background: linear-gradient(135deg, #851A10 0%, #A52318 100%);">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M5 13l4 4L19 7"/>
+            </svg>
+            Save
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Help Box -->
+    <div class="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
+      <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 text-blue-600 mt-0.5 shrink-0" fill="none"
+             stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <div class="text-sm text-blue-800">
+          <p class="font-semibold mb-1">Need help?</p>
+          <p class="text-blue-700">
+            Fields marked with <span style="color: #851A10;">*</span> are required.
+            Double-check your information before saving.
+          </p>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 {% endblock %}
