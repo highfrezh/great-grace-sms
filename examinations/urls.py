@@ -11,6 +11,13 @@ urlpatterns = [
     path('config/<int:pk>/', views.exam_configuration_detail, name='exam_config_detail'),
     path('config/<int:pk>/edit/', views.exam_configuration_edit, name='exam_config_edit'),
 
+    # ── Teacher Exam Management (Simplified Workflow) ─
+    path('teacher/', views.teacher_exam_list, name='teacher_exam_list'),
+    path('teacher/create/', views.teacher_exam_create, name='teacher_exam_create'),
+    path('teacher/<int:pk>/', views.teacher_exam_detail, name='teacher_exam_detail'),
+    path('teacher/<int:pk>/edit/', views.teacher_exam_edit, name='teacher_exam_edit'),
+    path('teacher/<int:exam_pk>/add-questions/', views.teacher_add_questions, name='teacher_add_questions'),
+
     # ── Exam Management ───────────────────────────────
     path('', views.exam_list, name='exam_list'),
     path('create/', views.exam_create, name='exam_create'),

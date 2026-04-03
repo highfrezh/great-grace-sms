@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Add Questions - {{ exam.title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">➕ Add Objective Questions</h1>
+            <p class="text-gray-600 mt-1">{{ exam.title }} • {{ exam.subject.name }}</p>
+        </div>
+
+        <!-- Form -->
+        <form method="post" enctype="multipart/form-data" id="questionsForm">
+            {% csrf_token %}
+
+            <!-- Existing Questions Count -->
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
+                <p class="text-sm text-gray-700">
+                    <strong>Current Questions:</strong> {{ exam.objective_questions.count }} 
+                    <span class="text-gray-600">| Add more below</span>
+                </p>
+            </div>
+
+            <!-- Questions Container -->
+            <div id="questionsContainer" class="space-y-6">
+                <!-- Questions will be added here dynamically -->
+            </div>
+
+            <!-- Add More Button -->
+            <div class="flex gap-2 my-6">
+                <button type="button" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition" onclick="addQuestionForm()">
+                    + Add Question Form
+                </button>
+            </div>
+
+            <!-- Form Styling -->
+            <style>
+                .question-card {
+                    @apply bg-white border border-gray-300 rounded-lg p-6 shadow-sm;
+                }
+                .question-card input[type="text"], 
+                .question-card textarea,
+                .question-card select,
+                .question-card input[type="file"] {
+                    @apply w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500;
+                }
+                .question-card label {
+                    @apply block text-sm font-semibold text-gray-700 mb-1;
+                }
+                .question-card .section-title {
+                    @apply text-lg font-bold text-gray-900 mb-3 pb-2 border-b;
+                }
+                .option-group {
+                    @apply grid md:grid-cols-2 gap-3;
+                }
+            </style>
+
+            <!-- Submit Buttons -->
+            <div class="flex gap-3 pt-6 border-t">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition flex-1">
+                    ✓ Add Question(s)
+                </button>
+                <a href="{% url 'examinations:teacher_exam_detail' exam.pk %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition text-center">
+                    Cancel
+                </a>
+            </div>
+        </form>
+
+        <!-- Help Box -->
+        <div class="mt-8 bg-blue-50 rounded-lg p-6 border-l-4 border-blue-500">
+            <h4 class="font-bold text-gray-900 mb-3">📝 Tips for Adding Questions</h4>
+            <ul class="text-sm text-gray-700 space-y-2 list-disc list-inside">
+                <li>Question text should be clear and concise</li>
+                <li>All four options (A, B, C, D) are required</li>
+                <li>Select the correct answer from the dropdown</li>
+                <li>You can optionally attach an image to each question (diagram, formula, etc.)</li>
+                <li>Add as many questions as needed - click "Add Question Form" for more fields</li>
+                <li>Questions appear in the order you add them</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for dynamic form -->
+<script>
+let questionCount = {{ num_questions }};
+
+function addQuestionForm() {
+    const container = document.getElementById('questionsContainer');
+    const questionIndex = container.children.length;
+    
+    const questionCard = document.createElement('div');
+    questionCard.className = 'question-card';
+    questionCard.innerHTML = `
+        <div class="flex justify-between items-start mb-4">
+            <h3 class="text-lg font-bold text-gray-900">Question ${questionIndex + 1}</h3>
+            <button type="button" class="text-red-600 hover:text-red-800 px-2 py-1 text-sm" onclick="this.closest('.question-card').remove(); renumberQuestions();">
+                ✕ Remove
+            </button>
+        </div>
+
+        <!-- Question Text and Image -->
+        <div class="mb-4">
+            <label>Question Text *</label>
+            <textarea name="question_${questionIndex}_text" placeholder="Enter your question here..." rows="3" required></textarea>
+        </div>
+
+        <div class="mb-4">
+            <label>Question Image (Optional)</label>
+            <input type="file" name="question_${questionIndex}_image" accept="image/*">
+            <p class="text-xs text-gray-500 mt-1">Optional: Upload an image (diagram, formula, etc.)</p>
+        </div>
+
+        <!-- Answer Options -->
+        <div class="mb-4">
+            <p class="section-title">Answer Options</p>
+            <div class="option-group">
+                <div>
+                    <label>Option A *</label>
+                    <input type="text" name="question_${questionIndex}_option_a" placeholder="Option A" maxlength="500" required>
+                </div>
+                <div>
+                    <label>Option B *</label>
+                    <input type="text" name="question_${questionIndex}_option_b" placeholder="Option B" maxlength="500" required>
+                </div>
+                <div>
+                    <label>Option C *</label>
+                    <input type="text" name="question_${questionIndex}_option_c" placeholder="Option C" maxlength="500" required>
+                </div>
+                <div>
+                    <label>Option D *</label>
+                    <input type="text" name="question_${questionIndex}_option_d" placeholder="Option D" maxlength="500" required>
+                </div>
+            </div>
+        </div>
+
+        <!-- Correct Answer -->
+        <div class="mb-4">
+            <label>Correct Answer *</label>
+            <select name="question_${questionIndex}_correct_option" required>
+                <option value="">-- Select correct option --</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+            </select>
+        </div>
+    `;
+    
+    container.appendChild(questionCard);
+}
+
+function renumberQuestions() {
+    const container = document.getElementById('questionsContainer');
+    Array.from(container.querySelectorAll('.question-card')).forEach((card, idx) => {
+        card.querySelector('h3').textContent = `Question ${idx + 1}`;
+    });
+}
+
+// Add initial question forms on page load
+document.addEventListener('DOMContentLoaded', function() {
+    for (let i = 0; i < {{ num_questions }}; i++) {
+        addQuestionForm();
+    }
+});
+</script>
+{% endblock %}

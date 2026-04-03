@@ -9,8 +9,9 @@ from accounts.decorators import (
     admin_staff_required, teaching_staff_required, examiner_required,
     subject_teacher_required
 )
-from academics.models import AcademicSession, Term
+from academics.models import AcademicSession, Term, SubjectTeacherAssignment, Subject, ClassArm
 from students.models import Student, StudentEnrollment
+from staff.models import StaffProfile
 from .models import (
     Exam, ObjectiveQuestion, TheoryQuestion, ExamSubmission,
     StudentAnswer, TheoryScore, ExamResult, ExamDeadlinePenalty,
@@ -912,7 +913,193 @@ def theory_score_entry(request, pk):
     })
 
 
+# ── SUBJECT TEACHER EXAM CREATION WORKFLOW ────────────────────
+
 @login_required
+@subject_teacher_required
+def teacher_exam_list(request):
+    """List exams created by current teacher"""
+    try:
+        staff_profile = StaffProfile.objects.get(user=request.user)
+    except StaffProfile.DoesNotExist:
+        messages.error(request, 'Staff profile not found.')
+        return redirect('accounts:dashboard')
+    
+    exams = Exam.objects.filter(
+        teacher=staff_profile
+    ).select_related(
+        'subject', 'class_arm', 'session', 'term'
+    ).order_by('-created_at')
+    
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
+    
+    return render(request, 'examinations/teacher_exam_list.html', {
+        'exams': exams,
+        'page_title': 'My Exams',
+        'current_session': current_session,
+        'current_term': current_term,
+    })
+
+
+@login_required
+@subject_teacher_required
+def teacher_exam_create(request):
+    """Create exam for assigned subject/class"""
+    try:
+        staff_profile = StaffProfile.objects.get(user=request.user)
+    except StaffProfile.DoesNotExist:
+        messages.error(request, 'Staff profile not found.')
+        return redirect('accounts:dashboard')
+    
+    # Get teacher's assigned subjects/classes
+    assignments = SubjectTeacherAssignment.objects.filter(
+        teacher=staff_profile
+    ).select_related('subject', 'class_arm').distinct('subject', 'class_arm')
+    
+    form = ExamForm(request.POST or None)
+    
+    if form.is_valid():
+        exam = form.save(commit=False)
+        exam.teacher = staff_profile
+        exam.save()
+        messages.success(request, f'Exam "{exam.title}" created successfully.')
+        return redirect('examinations:teacher_exam_detail', pk=exam.pk)
+    
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
+    
+    return render(request, 'examinations/teacher_exam_create.html', {
+        'form': form,
+        'assignments': assignments,
+        'page_title': 'Create New Exam',
+        'current_session': current_session,
+        'current_term': current_term,
+    })
+
+
+@login_required
+@subject_teacher_required
+def teacher_exam_detail(request, pk):
+    """Display exam details with questions count and theory file status"""
+    try:
+        staff_profile = StaffProfile.objects.get(user=request.user)
+    except StaffProfile.DoesNotExist:
+        messages.error(request, 'Staff profile not found.')
+        return redirect('accounts:dashboard')
+    
+    exam = get_object_or_404(Exam, pk=pk, teacher=staff_profile)
+    objective_questions = exam.objective_questions.all()
+    
+    return render(request, 'examinations/teacher_exam_detail.html', {
+        'exam': exam,
+        'objective_questions': objective_questions,
+        'objective_count': objective_questions.count(),
+        'has_theory_file': bool(exam.theory_attachment),
+        'page_title': f'Exam: {exam.title}'
+    })
+
+
+@login_required
+@subject_teacher_required
+def teacher_exam_edit(request, pk):
+    """Edit exam details and upload theory file"""
+    try:
+        staff_profile = StaffProfile.objects.get(user=request.user)
+    except StaffProfile.DoesNotExist:
+        messages.error(request, 'Staff profile not found.')
+        return redirect('accounts:dashboard')
+    
+    exam = get_object_or_404(Exam, pk=pk, teacher=staff_profile)
+    form = ExamForm(request.POST or None, request.FILES or None, instance=exam)
+    
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Exam updated successfully.')
+        return redirect('examinations:teacher_exam_detail', pk=exam.pk)
+    
+    return render(request, 'examinations/teacher_exam_edit.html', {
+        'form': form,
+        'exam': exam,
+        'page_title': f'Edit Exam: {exam.title}'
+    })
+
+
+@login_required
+@subject_teacher_required
+def teacher_add_questions(request, exam_pk):
+    """Add multiple objective questions to exam"""
+    try:
+        staff_profile = StaffProfile.objects.get(user=request.user)
+    except StaffProfile.DoesNotExist:
+        messages.error(request, 'Staff profile not found.')
+        return redirect('accounts:dashboard')
+    
+    exam = get_object_or_404(Exam, pk=exam_pk, teacher=staff_profile)
+    
+    if request.method == 'POST':
+        questions_added = 0
+        errors = []
+        
+        # Dynamic form field parsing for question_{index}_field_name
+        question_indices = set()
+        for key in request.POST.keys():
+            if key.startswith('question_') and '_text' in key:
+                idx = key.split('_')[1]
+                question_indices.add(int(idx))
+        
+        for idx in sorted(question_indices):
+            question_text = request.POST.get(f'question_{idx}_text', '').strip()
+            option_a = request.POST.get(f'question_{idx}_option_a', '').strip()
+            option_b = request.POST.get(f'question_{idx}_option_b', '').strip()
+            option_c = request.POST.get(f'question_{idx}_option_c', '').strip()
+            option_d = request.POST.get(f'question_{idx}_option_d', '').strip()
+            correct_option = request.POST.get(f'question_{idx}_correct_option', '').strip()
+            
+            # Validate required fields
+            if not all([question_text, option_a, option_b, option_c, option_d, correct_option]):
+                errors.append(f'Question {idx + 1}: All fields are required.')
+                continue
+            
+            if correct_option not in ['A', 'B', 'C', 'D']:
+                errors.append(f'Question {idx + 1}: Invalid correct option.')
+                continue
+            
+            try:
+                # Handle question image
+                question_image = None
+                image_key = f'question_{idx}_image'
+                if image_key in request.FILES:
+                    question_image = request.FILES[image_key]
+                
+                question = ObjectiveQuestion.objects.create(
+                    exam=exam,
+                    question_text=question_text,
+                    question_image=question_image,
+                    option_a=option_a,
+                    option_b=option_b,
+                    option_c=option_c,
+                    option_d=option_d,
+                    correct_option=correct_option
+                )
+                questions_added += 1
+            except Exception as e:
+                errors.append(f'Question {idx + 1}: Error creating question - {str(e)}')
+        
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+        
+        if questions_added > 0:
+            messages.success(request, f'{questions_added} question(s) added successfully.')
+            return redirect('examinations:teacher_exam_detail', pk=exam.pk)
+    
+    # GET request - show form
+    return render(request, 'examinations/teacher_add_questions.html', {
+        'exam': exam,
+        'page_title': f'Add Questions to {exam.title}',
+        'num_questions': 5  # Default number of question forms to display
+    })
 @teaching_staff_required
 @require_POST
 @transaction.atomic
