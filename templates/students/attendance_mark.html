@@ -2,140 +2,406 @@
 {% load student_extras %}
 
 {% block title %}{{ page_title }}{% endblock %}
+{% block page_title %}Attendance — {{ class_arm.full_name }}{% endblock %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto" x-data="{ selectedDate: '{{ today|date:'Y-m-d' }}' }">
+<div x-data="{ activeTab: 'mark' }">
+
   <!-- Header -->
-  <div class="mb-6">
-    <div class="flex items-center gap-2 text-sm text-gray-500 mb-2">
-      <a href="{% url 'students:student_list' %}" class="hover:text-[#851A10]">Students</a>
-      <span>/</span>
-      <span>Attendance</span>
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <p class="text-sm text-gray-500">
+        {{ class_arm.full_name }} —
+        {{ current_session.name }}
+        {{ current_term.get_name_display }}
+      </p>
     </div>
-    
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-800">Mark Attendance</h1>
-        <p class="text-gray-500">{{ class_arm.full_name }} — {{ current_session.name }} {{ current_term.get_name_display }}</p>
-      </div>
-      <div class="text-right">
-        <p class="text-sm text-gray-500">Today</p>
-        <p class="text-lg font-semibold text-[#851A10]">{{ today|date:"F d, Y" }}</p>
-      </div>
+    <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium"
+         style="background:#FFF5F3;color:#851A10;border:1px solid #FECACA;">
+      <div class="w-2 h-2 rounded-full bg-green-500"></div>
+      Today: {{ today|date:"l, d F Y" }}
     </div>
   </div>
 
-  <!-- Attendance Form -->
-  <form method="post" class="space-y-6">
-    {% csrf_token %}
-    
-    <!-- Date Selection -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-4">
-      <label class="font-medium text-gray-700">Date:</label>
-      <input type="date" 
-             name="attendance_date" 
-             x-model="selectedDate"
-             class="form-input"
-             value="{{ today|date:'Y-m-d' }}">
+  <!-- Stats Row -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+      <p class="text-xs text-gray-500 mb-1">Total Students</p>
+      <p class="text-2xl font-bold" style="color:#635E57;">
+        {{ students|length }}
+      </p>
     </div>
-    
-    <!-- Students Table -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-        <h2 class="font-semibold text-gray-800">Students</h2>
-        <span class="text-sm text-gray-500">{{ students|length }} students</span>
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+      <p class="text-xs text-gray-500 mb-1">Present Today</p>
+      <p class="text-2xl font-bold text-green-600">
+        {{ present_today|default:"—" }}
+      </p>
+    </div>
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+      <p class="text-xs text-gray-500 mb-1">Absent Today</p>
+      <p class="text-2xl font-bold text-red-500">
+        {{ absent_today|default:"—" }}
+      </p>
+    </div>
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+      <p class="text-xs text-gray-500 mb-1">Days Marked</p>
+      <p class="text-2xl font-bold" style="color:#851A10;">
+        {{ days_marked|default:"0" }}
+      </p>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
+    <button @click="activeTab = 'mark'"
+            :class="activeTab === 'mark'
+                    ? 'bg-white shadow-sm text-gray-800'
+                    : 'text-gray-500 hover:text-gray-700'"
+            class="px-5 py-2 rounded-lg text-sm font-medium transition">
+      Mark Attendance
+    </button>
+    <button @click="activeTab = 'report'"
+            :class="activeTab === 'report'
+                    ? 'bg-white shadow-sm text-gray-800'
+                    : 'text-gray-500 hover:text-gray-700'"
+            class="px-5 py-2 rounded-lg text-sm font-medium transition">
+      Term Report
+    </button>
+    <button @click="activeTab = 'history'"
+            :class="activeTab === 'history'
+                    ? 'bg-white shadow-sm text-gray-800'
+                    : 'text-gray-500 hover:text-gray-700'"
+            class="px-5 py-2 rounded-lg text-sm font-medium transition">
+      History
+    </button>
+  </div>
+
+  <!-- ── TAB 1: MARK ATTENDANCE ───────────────────── -->
+  <div x-show="activeTab === 'mark'">
+    <form method="POST" action="{% url 'students:attendance_mark' class_arm.pk %}">
+      {% csrf_token %}
+
+      <!-- Date Picker -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4
+                  flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <label class="text-sm font-semibold text-gray-700">Date:</label>
+          <input type="date"
+                 name="attendance_date"
+                 id="attendanceDate"
+                 value="{{ selected_date|date:'Y-m-d' }}"
+                 max="{{ today|date:'Y-m-d' }}"
+                 onchange="this.form.submit()"
+                 class="px-3 py-2 text-sm border border-gray-200 rounded-lg
+                        outline-none focus:border-[#851A10]">
+        </div>
+        {% if attendance_marked %}
+          <span class="flex items-center gap-1.5 text-xs font-medium
+                       text-green-700 bg-green-50 px-3 py-1.5 rounded-full">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
+                 viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            Already marked — editing
+          </span>
+        {% else %}
+          <span class="flex items-center gap-1.5 text-xs font-medium
+                       text-orange-600 bg-orange-50 px-3 py-1.5 rounded-full">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
+                 viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Not yet marked
+          </span>
+        {% endif %}
       </div>
-      
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">#</th>
-              <th class="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Student</th>
-              <th class="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Admission No.</th>
-              <th class="text-center px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Status</th>
+
+      <!-- Quick Mark All -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100
+                  px-6 py-3 mb-4 flex items-center justify-between">
+        <p class="text-sm font-medium text-gray-600">Quick mark all as:</p>
+        <div class="flex items-center gap-2">
+          <button type="button"
+                  onclick="markAll('PRESENT')"
+                  class="px-3 py-1.5 text-xs font-medium rounded-lg
+                         bg-green-100 text-green-700 hover:bg-green-200 transition">
+            All Present
+          </button>
+          <button type="button"
+                  onclick="markAll('ABSENT')"
+                  class="px-3 py-1.5 text-xs font-medium rounded-lg
+                         bg-red-100 text-red-700 hover:bg-red-200 transition">
+            All Absent
+          </button>
+        </div>
+      </div>
+
+      <!-- Students Table -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100
+                  overflow-hidden mb-4">
+        <table class="w-full text-sm">
+          <thead>
+            <tr style="background:#635E57;">
+              <th class="text-left px-6 py-3 text-white font-semibold w-8">
+                #
+              </th>
+              <th class="text-left px-6 py-3 text-white font-semibold">
+                Student
+              </th>
+              <th class="text-left px-6 py-3 text-white font-semibold">
+                Admission No.
+              </th>
+              <th class="text-center px-6 py-3 text-white font-semibold">
+                Status
+              </th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
             {% for student in students %}
-            {% with attendance=existing_attendance|get_item:student.id %}
-            <tr class="hover:bg-gray-50">
-              <td class="px-6 py-3 text-gray-500">{{ forloop.counter }}</td>
-              <td class="px-6 py-3">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-full bg-[#851A10]/10 flex items-center justify-center text-[#851A10] font-medium text-xs">
-                    {{ student.first_name|first }}{{ student.last_name|first }}
+              {% with att=existing_attendance|get_item:student.id %}
+              <tr class="hover:bg-gray-50 transition">
+                <td class="px-6 py-3 text-gray-400 text-xs">
+                  {{ forloop.counter }}
+                </td>
+                <td class="px-6 py-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full flex items-center
+                                justify-center text-white text-xs font-bold
+                                shrink-0"
+                         style="background:#851A10;">
+                      {{ student.first_name|first|upper }}{{ student.last_name|first|upper }}
+                    </div>
+                    <p class="font-medium text-gray-800">
+                      {{ student.full_name }}
+                    </p>
                   </div>
-                  <div>
-                    <p class="font-medium text-gray-800">{{ student.full_name }}</p>
+                </td>
+                <td class="px-6 py-3 text-gray-500 text-xs">
+                  {{ student.admission_number }}
+                </td>
+                <td class="px-6 py-3">
+                  <div class="flex items-center justify-center gap-2
+                              flex-wrap" id="status-group-{{ student.id }}">
+                    {% for value, label, color in attendance_statuses %}
+                      <label class="inline-flex items-center gap-1 px-3 py-1.5
+                                    rounded-lg cursor-pointer transition
+                                    {{ color }}">
+                        <input type="radio"
+                               name="status_{{ student.id }}"
+                               value="{{ value }}"
+                               {% if att.status == value %}checked
+                               {% elif not att and value == 'PRESENT' %}checked
+                               {% endif %}
+                               class="w-3.5 h-3.5">
+                        <span class="text-xs font-medium">{{ label }}</span>
+                      </label>
+                    {% endfor %}
                   </div>
-                </div>
-              </td>
-              <td class="px-6 py-3 text-gray-500">{{ student.admission_number }}</td>
-              <td class="px-6 py-3">
-                <div class="flex items-center justify-center gap-2">
-                  <label class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-100 text-green-700 cursor-pointer hover:bg-green-200 transition">
-                    <input type="radio" 
-                           name="status_{{ student.id }}" 
-                           value="PRESENT"
-                           {% if attendance.status == 'PRESENT' or not attendance %}checked{% endif %}
-                           class="w-4 h-4 accent-green-600">
-                    <span class="text-xs font-medium">Present</span>
-                  </label>
-                  <label class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-100 text-red-700 cursor-pointer hover:bg-red-200 transition">
-                    <input type="radio" 
-                           name="status_{{ student.id }}" 
-                           value="ABSENT"
-                           {% if attendance.status == 'ABSENT' %}checked{% endif %}
-                           class="w-4 h-4 accent-red-600">
-                    <span class="text-xs font-medium">Absent</span>
-                  </label>
-                  <label class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-yellow-100 text-yellow-700 cursor-pointer hover:bg-yellow-200 transition">
-                    <input type="radio" 
-                           name="status_{{ student.id }}" 
-                           value="LATE"
-                           {% if attendance.status == 'LATE' %}checked{% endif %}
-                           class="w-4 h-4 accent-yellow-600">
-                    <span class="text-xs font-medium">Late</span>
-                  </label>
-                  <label class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 cursor-pointer hover:bg-blue-200 transition">
-                    <input type="radio" 
-                           name="status_{{ student.id }}" 
-                           value="EXCUSED"
-                           {% if attendance.status == 'EXCUSED' %}checked{% endif %}
-                           class="w-4 h-4 accent-blue-600">
-                    <span class="text-xs font-medium">Excused</span>
-                  </label>
-                </div>
-              </td>
-            </tr>
-            {% endwith %}
+                </td>
+              </tr>
+              {% endwith %}
             {% empty %}
-            <tr>
-              <td colspan="4" class="px-6 py-8 text-center text-gray-500">
-                <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                </svg>
-                <p>No students found in this class.</p>
-              </td>
+              <tr>
+                <td colspan="4"
+                    class="px-6 py-10 text-center text-gray-400 text-sm">
+                  No students enrolled in this class.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Submit -->
+      <div class="flex items-center justify-end gap-3">
+        <button type="submit"
+                class="flex items-center gap-2 px-6 py-2.5 text-white
+                       text-sm font-semibold rounded-lg hover:opacity-90
+                       transition"
+                style="background:#851A10;">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor"
+               viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          {% if attendance_marked %}Update Attendance{% else %}Save Attendance{% endif %}
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+  <!-- ── TAB 2: TERM REPORT ───────────────────────── -->
+  <div x-show="activeTab === 'report'">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100
+                overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 flex items-center
+                  justify-between"
+           style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
+        <div class="flex items-center gap-2">
+          <div class="w-1 h-6 rounded-full" style="background:#851A10;"></div>
+          <h3 class="font-semibold text-gray-800">Term Attendance Report</h3>
+        </div>
+        <span class="text-xs text-gray-400">
+          {{ days_marked }} school days recorded
+        </span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-gray-50">
+              <th class="text-left px-6 py-3 text-gray-600 font-semibold">
+                Student
+              </th>
+              <th class="text-center px-4 py-3 text-gray-600 font-semibold">
+                Present
+              </th>
+              <th class="text-center px-4 py-3 text-gray-600 font-semibold">
+                Absent
+              </th>
+              <th class="text-center px-4 py-3 text-gray-600 font-semibold">
+                Late
+              </th>
+              <th class="text-center px-4 py-3 text-gray-600 font-semibold">
+                Excused
+              </th>
+              <th class="text-center px-4 py-3 text-gray-600 font-semibold">
+                Attendance %
+              </th>
             </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for stat in student_stats %}
+              <tr class="hover:bg-gray-50 transition">
+                <td class="px-6 py-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-7 h-7 rounded-full flex items-center
+                                justify-center text-white text-xs font-bold
+                                shrink-0"
+                         style="background:#635E57;">
+                      {{ stat.student.first_name|first|upper }}{{ stat.student.last_name|first|upper }}
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-800 text-sm">
+                        {{ stat.student.full_name }}
+                      </p>
+                      <p class="text-xs text-gray-400">
+                        {{ stat.student.admission_number }}
+                      </p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="font-semibold text-green-600">
+                    {{ stat.present }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="font-semibold text-red-500">
+                    {{ stat.absent }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="font-semibold text-yellow-600">
+                    {{ stat.late }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="font-semibold text-blue-500">
+                    {{ stat.excused }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="px-3 py-1 text-xs font-bold rounded-full
+                    {% if stat.percentage >= 75 %}
+                    bg-green-100 text-green-700
+                    {% elif stat.percentage >= 50 %}
+                    bg-yellow-100 text-yellow-700
+                    {% else %}
+                    bg-red-100 text-red-700
+                    {% endif %}">
+                    {{ stat.percentage }}%
+                  </span>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="6"
+                    class="px-6 py-10 text-center text-gray-400 text-sm">
+                  No attendance records yet for this term.
+                </td>
+              </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     </div>
-    
-    <!-- Submit Button -->
-    <div class="flex items-center justify-end gap-3">
-      <button type="submit" 
-              class="flex items-center gap-2 px-6 py-2.5 text-white text-sm font-semibold rounded-lg hover:opacity-90 transition"
-              style="background:#851A10;">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-        </svg>
-        Save Attendance
-      </button>
+  </div>
+
+  <!-- ── TAB 3: HISTORY ───────────────────────────── -->
+  <div x-show="activeTab === 'history'">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100
+                overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100"
+           style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
+        <div class="flex items-center gap-2">
+          <div class="w-1 h-6 rounded-full" style="background:#851A10;"></div>
+          <h3 class="font-semibold text-gray-800">Attendance History</h3>
+        </div>
+      </div>
+      <div class="divide-y divide-gray-100">
+        {% for day in attendance_history %}
+          <div class="px-6 py-4 flex items-center justify-between
+                      hover:bg-gray-50 transition">
+            <div>
+              <p class="font-medium text-gray-800 text-sm">
+                {{ day.date|date:"l, d F Y" }}
+              </p>
+              <p class="text-xs text-gray-400 mt-0.5">
+                Marked by {{ day.marked_by }}
+              </p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-green-600 font-medium">
+                {{ day.present }} present
+              </span>
+              <span class="text-xs text-red-500 font-medium">
+                {{ day.absent }} absent
+              </span>
+              {% if day.late %}
+                <span class="text-xs text-yellow-600 font-medium">
+                  {{ day.late }} late
+                </span>
+              {% endif %}
+              <a href="?date={{ day.date|date:'Y-m-d' }}"
+                 @click="activeTab = 'mark'"
+                 class="text-xs font-medium px-3 py-1.5 rounded-lg
+                        border border-gray-200 hover:bg-gray-50 transition">
+                Edit
+              </a>
+            </div>
+          </div>
+        {% empty %}
+          <div class="px-6 py-10 text-center text-gray-400 text-sm">
+            No attendance history yet.
+          </div>
+        {% endfor %}
+      </div>
     </div>
-  </form>
+  </div>
+
 </div>
+
+<script>
+function markAll(status) {
+  const radios = document.querySelectorAll(
+    `input[type="radio"][value="${status}"]`
+  );
+  radios.forEach(r => r.checked = true);
+}
+</script>
+
 {% endblock %}

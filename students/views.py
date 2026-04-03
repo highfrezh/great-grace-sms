@@ -10,6 +10,7 @@ from academics.models import AcademicSession, Term, ClassArm
 from accounts.models import User
 from staff.models import StaffProfile
 from .models import Student, Guardian, StudentEnrollment, Attendance
+from .models import Student, Guardian, StudentEnrollment, Attendance, generate_admission_number
 from .forms import StudentForm, GuardianForm, StudentEnrollmentForm, StudentSearchForm, BulkStudentImportForm
 
 User = get_user_model()
@@ -320,10 +321,8 @@ def student_bulk_import(request):
                 
                 for idx, row in df.iterrows():
                     try:
-                        # Generate admission number
-                        current_year = session.start_date.year % 100 if session else datetime.now().year % 100
-                        count = Student.objects.filter(admission_number__startswith=f"{current_year}/").count() + 1 + created_count
-                        admission_number = f"{current_year}/{count:04d}"
+                        # Generate admission number using the same function as manual creation
+                        admission_number = generate_admission_number()
                         
                         # Create student
                         student = Student.objects.create(
@@ -400,19 +399,16 @@ def student_bulk_import(request):
 @login_required
 @class_teacher_required
 def attendance_mark(request, pk=None):
-    from datetime import date as date_obj
-    from django.utils import timezone
+    from datetime import date as date_obj, datetime
 
     current_session = AcademicSession.get_current()
     current_term = Term.get_current()
     today = date_obj.today()
 
-    # Get class arm from URL pk or find by teacher
+    # Get class arm
     if pk:
         class_arm = get_object_or_404(
-            ClassArm,
-            pk=pk,
-            class_teacher=request.user
+            ClassArm, pk=pk, class_teacher=request.user
         )
     else:
         class_arm = ClassArm.objects.filter(
@@ -424,6 +420,14 @@ def attendance_mark(request, pk=None):
         messages.error(request, 'You are not assigned to any class.')
         return redirect('accounts:dashboard')
 
+    # Get selected date from GET param or default to today
+    date_str = request.GET.get('date', today.strftime('%Y-%m-%d'))
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        selected_date = today
+
+    # Get students
     students = Student.objects.filter(
         is_active=True,
         enrollments__class_arm=class_arm,
@@ -432,22 +436,20 @@ def attendance_mark(request, pk=None):
         enrollments__is_active=True
     ).order_by('last_name', 'first_name').distinct()
 
+    # Handle POST — save attendance
     if request.method == 'POST':
-        attendance_date_str = request.POST.get(
+        date_str_post = request.POST.get(
             'attendance_date', today.strftime('%Y-%m-%d')
         )
         try:
-            from datetime import datetime
             attendance_date = datetime.strptime(
-                attendance_date_str, '%Y-%m-%d'
+                date_str_post, '%Y-%m-%d'
             ).date()
         except ValueError:
             attendance_date = today
 
         for student in students:
             status = request.POST.get(f'status_{student.id}', 'PRESENT')
-            remarks = request.POST.get(f'remarks_{student.id}', '')
-
             Attendance.objects.update_or_create(
                 student=student,
                 date=attendance_date,
@@ -456,33 +458,123 @@ def attendance_mark(request, pk=None):
                     'session': current_session,
                     'term': current_term,
                     'status': status,
-                    'remarks': remarks,
                     'marked_by': request.user,
                 }
             )
-
         messages.success(
             request,
-            f'Attendance marked for {attendance_date.strftime("%d %B %Y")}'
+            f'Attendance saved for '
+            f'{attendance_date.strftime("%d %B %Y")}.'
         )
         return redirect('students:attendance_mark', pk=class_arm.pk)
 
+    # Existing attendance for selected date
     existing_attendance = {
         a.student_id: a
         for a in Attendance.objects.filter(
             class_arm=class_arm,
             session=current_session,
             term=current_term,
-            date=today
+            date=selected_date
         )
     }
+
+    attendance_marked = bool(existing_attendance)
+
+    # Today's stats
+    today_records = Attendance.objects.filter(
+        class_arm=class_arm,
+        session=current_session,
+        term=current_term,
+        date=today
+    )
+    present_today = today_records.filter(status='PRESENT').count()
+    absent_today = today_records.filter(status='ABSENT').count()
+
+    # Days marked this term
+    from django.db.models import Count
+    days_marked = Attendance.objects.filter(
+        class_arm=class_arm,
+        session=current_session,
+        term=current_term
+    ).values('date').distinct().count()
+
+    # Term report per student
+    from django.db.models import Q as DQ
+    student_stats = []
+    for student in students:
+        records = Attendance.objects.filter(
+            student=student,
+            class_arm=class_arm,
+            session=current_session,
+            term=current_term
+        )
+        present = records.filter(status='PRESENT').count()
+        absent = records.filter(status='ABSENT').count()
+        late = records.filter(status='LATE').count()
+        excused = records.filter(status='EXCUSED').count()
+        total = present + absent + late + excused
+        percentage = round((present + late) / total * 100) if total > 0 else 0
+        student_stats.append({
+            'student': student,
+            'present': present,
+            'absent': absent,
+            'late': late,
+            'excused': excused,
+            'percentage': percentage,
+        })
+
+    # Attendance history — unique dates
+    history_dates = Attendance.objects.filter(
+        class_arm=class_arm,
+        session=current_session,
+        term=current_term
+    ).values('date', 'marked_by__first_name',
+             'marked_by__last_name').distinct().order_by('-date')
+
+    attendance_history = []
+    for entry in history_dates:
+        day_records = Attendance.objects.filter(
+            class_arm=class_arm,
+            session=current_session,
+            term=current_term,
+            date=entry['date']
+        )
+        attendance_history.append({
+            'date': entry['date'],
+            'marked_by': f"{entry['marked_by__first_name']} "
+                         f"{entry['marked_by__last_name']}",
+            'present': day_records.filter(status='PRESENT').count(),
+            'absent': day_records.filter(status='ABSENT').count(),
+            'late': day_records.filter(status='LATE').count(),
+        })
+
+    # Status choices for template
+    attendance_statuses = [
+        ('PRESENT', 'Present',
+         'bg-green-100 text-green-700 hover:bg-green-200'),
+        ('ABSENT', 'Absent',
+         'bg-red-100 text-red-700 hover:bg-red-200'),
+        ('LATE', 'Late',
+         'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'),
+        ('EXCUSED', 'Excused',
+         'bg-blue-100 text-blue-700 hover:bg-blue-200'),
+    ]
 
     return render(request, 'students/attendance_mark.html', {
         'class_arm': class_arm,
         'students': students,
         'today': today,
+        'selected_date': selected_date,
         'existing_attendance': existing_attendance,
+        'attendance_marked': attendance_marked,
         'current_session': current_session,
         'current_term': current_term,
-        'page_title': f'Mark Attendance — {class_arm.full_name}',
+        'present_today': present_today,
+        'absent_today': absent_today,
+        'days_marked': days_marked,
+        'student_stats': student_stats,
+        'attendance_history': attendance_history,
+        'attendance_statuses': attendance_statuses,
+        'page_title': f'Attendance — {class_arm.full_name}',
     })
