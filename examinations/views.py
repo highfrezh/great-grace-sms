@@ -954,7 +954,7 @@ def teacher_exam_create(request):
     
     # Get teacher's assigned subjects/classes
     assignments = SubjectTeacherAssignment.objects.filter(
-        teacher=staff_profile
+        teacher=request.user
     ).select_related('subject', 'class_arm').distinct('subject', 'class_arm')
     
     form = TeacherExamForm(request.POST or None)
