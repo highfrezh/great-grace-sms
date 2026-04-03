@@ -16,6 +16,8 @@ urlpatterns = [
     path('teacher/create/', views.teacher_exam_create, name='teacher_exam_create'),
     path('teacher/<int:pk>/', views.teacher_exam_detail, name='teacher_exam_detail'),
     path('teacher/<int:pk>/edit/', views.teacher_exam_edit, name='teacher_exam_edit'),
+    path('teacher/<int:pk>/publish/', views.teacher_exam_publish, name='teacher_exam_publish'),
+    path('teacher/<int:pk>/delete/', views.teacher_exam_delete, name='teacher_exam_delete'),
     path('teacher/<int:exam_pk>/add-questions/', views.teacher_add_questions, name='teacher_add_questions'),
 
     # ── Exam Management ───────────────────────────────
@@ -32,7 +34,6 @@ urlpatterns = [
     path('<int:pk>/preview/', views.exam_preview, name='exam_preview'),
 
     # ── CBT Questions ─────────────────────────────────
-    path('questions/bulk-create/', views.question_bulk_create, name='question_bulk_create'),
     path('<int:exam_pk>/questions/', views.question_list, name='question_list'),
     path('<int:exam_pk>/questions/create/', views.question_create, name='question_create'),
     path('<int:exam_pk>/questions/<int:pk>/edit/', views.question_edit, name='question_edit'),

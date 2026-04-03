@@ -1,115 +1,574 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Create New Exam{% endblock %}
+{% block title %}Create New Exam — Great Grace SMS{% endblock %}
+{% block page_title %}Create New Exam{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-2xl mx-auto">
-        <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900">➕ Create New Exam</h1>
-            <p class="text-gray-600 mt-2">Step 1: Define exam details for your subject</p>
-        </div>
+<style>
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-label .required {
+    color: #851A10;
+    margin-left: 0.25rem;
+  }
+  
+  .form-label .optional {
+    color: #9CA3AF;
+    font-weight: 400;
+    font-size: 0.7rem;
+    margin-left: 0.5rem;
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background-color: white;
+    outline: none;
+    color: #374151;
+  }
+  
+  .form-control:focus {
+    border-color: #851A10;
+    box-shadow: 0 0 0 3px rgba(133, 26, 16, 0.1);
+  }
+  
+  .form-control.is-invalid {
+    border-color: #DC2626;
+    background-color: #FEF2F2;
+  }
+  
+  .form-error {
+    color: #DC2626;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+  }
+  
+  .form-hint {
+    color: #6B7280;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+  }
+  
+  select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+    background-position: right 1rem center;
+    background-repeat: no-repeat;
+    background-size: 1.25rem;
+    padding-right: 2.5rem;
+  }
+  
+  .section-card {
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid #F3F4F6;
+    overflow: hidden;
+    transition: all 0.2s ease;
+  }
+  
+  .section-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  .section-header {
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, #FFF5F3 0%, #FFFFFF 100%);
+    border-bottom: 1px solid #F3F4F6;
+  }
+  
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #374151;
+  }
+  
+  .section-title::before {
+    content: '';
+    width: 4px;
+    height: 1.5rem;
+    background: #851A10;
+    border-radius: 4px;
+  }
+  
+  .section-content {
+    padding: 1.5rem;
+  }
+  
+  .btn-primary {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #851A10 0%, #A52318 100%);
+    color: white;
+    font-weight: 600;
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .btn-primary:hover {
+    transform: scale(1.02);
+    box-shadow: 0 10px 15px -3px rgba(133, 26, 16, 0.3);
+  }
+  
+  .btn-secondary {
+    padding: 0.75rem 1.5rem;
+    background: #F3F4F6;
+    color: #374151;
+    font-weight: 600;
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+    text-align: center;
+  }
+  
+  .btn-secondary:hover {
+    background: #E5E7EB;
+  }
+  
+  .info-box {
+    background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+    border-left: 4px solid #059669;
+    border-radius: 0.75rem;
+    padding: 1rem;
+  }
+  
+  .step-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #9CA3AF;
+  }
+  
+  .step.active {
+    color: #851A10;
+  }
+  
+  .step.completed {
+    color: #059669;
+  }
+  
+  .step-number {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    background: #F3F4F6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  
+  .step.active .step-number {
+    background: #851A10;
+    color: white;
+  }
+  
+  .step.completed .step-number {
+    background: #059669;
+    color: white;
+  }
+  
+  .step-line {
+    flex: 1;
+    height: 2px;
+    background: #E5E7EB;
+  }
+  
+  .step-line.completed {
+    background: #059669;
+  }
+</style>
 
-        <!-- Form -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <form method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-
-                <!-- Subject & Class Selection -->
-                <div class="mb-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4 border-b pb-3">Subject & Class</h3>
-                    
-                    <div class="grid md:grid-cols-2 gap-6">
-                        {{ form.subject }}
-                        {{ form.class_arm }}
-                    </div>
-
-                    {% if form.subject.errors %}
-                    <div class="mt-2 text-red-600 text-sm">{{ form.subject.errors }}</div>
-                    {% endif %}
-                    {% if form.class_arm.errors %}
-                    <div class="mt-2 text-red-600 text-sm">{{ form.class_arm.errors }}</div>
-                    {% endif %}
-                </div>
-
-                <!-- Session & Term -->
-                <div class="mb-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4 border-b pb-3">Academic Period</h3>
-                    
-                    <div class="grid md:grid-cols-2 gap-6">
-                        {{ form.session }}
-                        {{ form.term }}
-                    </div>
-
-                    {% if form.session.errors %}
-                    <div class="mt-2 text-red-600 text-sm">{{ form.session.errors }}</div>
-                    {% endif %}
-                    {% if form.term.errors %}
-                    <div class="mt-2 text-red-600 text-sm">{{ form.term.errors }}</div>
-                    {% endif %}
-                </div>
-
-                <!-- Exam Details -->
-                <div class="mb-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4 border-b pb-3">Exam Details</h3>
-                    
-                    {{ form.title }}
-                    {% if form.title.errors %}
-                    <div class="mt-1 text-red-600 text-sm">{{ form.title.errors }}</div>
-                    {% endif %}
-
-                    <div class="mt-4">
-                        {{ form.duration_minutes }}
-                        {% if form.duration_minutes.errors %}
-                        <div class="mt-1 text-red-600 text-sm">{{ form.duration_minutes.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Form Styling -->
-                <style>
-                    form select, form input[type="text"], form input[type="number"], form textarea {
-                        @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500;
-                    }
-                    form label {
-                        @apply block text-sm font-semibold text-gray-700 mb-2;
-                    }
-                    form .helptext {
-                        @apply text-xs text-gray-500 mt-1;
-                    }
-                </style>
-
-                <!-- Submit Buttons -->
-                <div class="flex gap-3 pt-6 border-t">
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition flex-1">
-                        ✓ Create Exam
-                    </button>
-                    <a href="{% url 'examinations:teacher_exam_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition text-center">
-                        Cancel
-                    </a>
-                </div>
-
-                <!-- Form Errors -->
-                {% if form.non_field_errors %}
-                <div class="mt-4 bg-red-50 border-l-4 border-red-500 p-4 text-red-700">
-                    <p class="font-semibold">Error creating exam:</p>
-                    {{ form.non_field_errors }}
-                </div>
-                {% endif %}
-            </form>
-        </div>
-
-        <!-- Help Box -->
-        <div class="mt-8 bg-blue-50 rounded-lg p-6 border-l-4 border-blue-500">
-            <h4 class="font-bold text-gray-900 mb-3">📋 What comes next?</h4>
-            <ol class="text-sm text-gray-700 space-y-2 list-decimal list-inside">
-                <li>After creating the exam, you can add objective questions</li>
-                <li>Upload the theory file (PDF or DOCX) with written questions</li>
-                <li>Publish the exam when ready for students</li>
-            </ol>
-        </div>
-    </div>
+<!-- Header -->
+<div class="mb-8">
+  <div class="flex items-center gap-3 mb-2">
+    <div class="w-1 h-10 rounded-full" style="background:#851A10;"></div>
+    <h1 class="text-2xl font-bold" style="color:#635E57;">Create New Exam</h1>
+  </div>
+  <p class="text-sm text-gray-500 ml-4">Step 1: Define exam details for your subject and class</p>
 </div>
+
+<!-- Step Indicator -->
+<div class="step-indicator max-w-2xl mb-8">
+  <div class="step active">
+    <div class="step-number">1</div>
+    <span class="text-sm font-medium hidden sm:inline">Exam Details</span>
+  </div>
+  <div class="step-line"></div>
+  <div class="step">
+    <div class="step-number">2</div>
+    <span class="text-sm font-medium hidden sm:inline">Add Questions</span>
+  </div>
+  <div class="step-line"></div>
+  <div class="step">
+    <div class="step-number">3</div>
+    <span class="text-sm font-medium hidden sm:inline">Publish</span>
+  </div>
+</div>
+
+<!-- Messages -->
+{% if messages %}
+  {% for message in messages %}
+    {% if message.tags == 'error' %}
+    <div class="max-w-3xl mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+      <div class="flex items-start gap-3">
+        <svg class="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <div>
+          <p class="font-bold text-red-800">⚠️ Error</p>
+          <p class="text-red-700 text-sm mt-1">{{ message }}</p>
+        </div>
+      </div>
+    </div>
+    {% elif message.tags == 'success' %}
+    <div class="max-w-3xl mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-lg">
+      <div class="flex items-start gap-3">
+        <svg class="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <p class="text-green-800 text-sm font-semibold">✓ {{ message }}</p>
+      </div>
+    </div>
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+<!-- Duplicate Exam Warning -->
+<div class="max-w-3xl mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+  <div class="flex items-start gap-3">
+    <svg class="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <div>
+      <p class="font-semibold text-blue-800">ℹ️ Important</p>
+      <p class="text-blue-700 text-sm mt-1">You can only create ONE exam per subject-class-session-term combination. If an exam already exists for these parameters, it will show an error.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Form -->
+<div class="max-w-3xl">
+  <div class="section-card">
+    <form method="post" enctype="multipart/form-data" id="examForm">
+      {% csrf_token %}
+
+      <!-- Subject & Class Selection -->
+      <div class="section-header">
+        <div class="section-title">Subject & Class</div>
+      </div>
+      <div class="section-content">
+        <div class="grid md:grid-cols-2 gap-5">
+          <div class="form-group">
+            <label class="form-label">
+              Subject <span class="required">*</span>
+            </label>
+            {{ form.subject }}
+            {% if form.subject.errors %}
+              <p class="form-error">{{ form.subject.errors.0 }}</p>
+            {% endif %}
+            <p class="form-hint">Select the subject for this exam</p>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">
+              Class <span class="required">*</span>
+            </label>
+            {{ form.class_arm }}
+            {% if form.class_arm.errors %}
+              <p class="form-error">{{ form.class_arm.errors.0 }}</p>
+            {% endif %}
+            <p class="form-hint">Select the target class</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session & Term -->
+      <div class="section-header">
+        <div class="section-title">Academic Period</div>
+      </div>
+      <div class="section-content">
+        <div class="grid md:grid-cols-2 gap-5">
+          <div class="form-group">
+            <label class="form-label">
+              Session <span class="required">*</span>
+            </label>
+            {{ form.session }}
+            {% if form.session.errors %}
+              <p class="form-error">{{ form.session.errors.0 }}</p>
+            {% endif %}
+            <p class="form-hint">Current academic session</p>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">
+              Term <span class="required">*</span>
+            </label>
+            {{ form.term }}
+            {% if form.term.errors %}
+              <p class="form-error">{{ form.term.errors.0 }}</p>
+            {% endif %}
+            <p class="form-hint">Term/Semester</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exam Details -->
+      <div class="section-header">
+        <div class="section-title">Exam Details</div>
+      </div>
+      <div class="section-content">
+        <div class="form-group">
+          <label class="form-label">
+            Exam Title <span class="required">*</span>
+          </label>
+          {{ form.title }}
+          {% if form.title.errors %}
+            <p class="form-error">{{ form.title.errors.0 }}</p>
+          {% endif %}
+          <p class="form-hint">e.g., "First Term Examination 2024", "Mid-Term Test", etc.</p>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">
+            Duration (Minutes) <span class="required">*</span>
+          </label>
+          {{ form.duration_minutes }}
+          {% if form.duration_minutes.errors %}
+            <p class="form-error">{{ form.duration_minutes.errors.0 }}</p>
+          {% endif %}
+          <p class="form-hint">Recommended: 60-120 minutes</p>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">
+            Total Marks <span class="optional">(Auto-calculated)</span>
+          </label>
+          <input type="text" class="form-control" value="Will be calculated from questions" disabled readonly style="background:#F9FAFB;">
+          <p class="form-hint">Marks will be automatically calculated after adding questions</p>
+        </div>
+      </div>
+
+      <!-- Advanced Options (Collapsible) -->
+      <div class="section-header" id="advancedToggle" style="cursor: pointer;">
+        <div class="section-title flex justify-between items-center w-full">
+          <span>Advanced Options</span>
+          <svg id="advancedIcon" class="w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="transform: rotate(180deg);">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </div>
+      </div>
+      <div class="section-content" id="advancedContent" style="display: block;">
+        <div class="grid md:grid-cols-2 gap-5">
+          <div class="form-group">
+            <label class="form-label">
+              Pass Mark (%)
+            </label>
+            <input type="number" name="pass_mark" id="id_pass_mark" class="form-control" placeholder="50" value="50" min="0" max="100">
+            <p class="form-hint">Default: 50%</p>
+          </div>
+          
+        </div>
+        
+        <div class="flex items-center gap-3 mt-2">
+          <input type="checkbox" name="shuffle_questions" id="id_shuffle_questions" class="w-4 h-4 rounded border-gray-300">
+          <label for="id_shuffle_questions" class="text-sm font-medium text-gray-700">Shuffle questions for each student</label>
+        </div>
+        
+        <div class="flex items-center gap-3 mt-3">
+          <input type="checkbox" name="show_results_immediately" id="id_show_results_immediately" class="w-4 h-4 rounded border-gray-300">
+          <label for="id_show_results_immediately" class="text-sm font-medium text-gray-700">Show results immediately after submission</label>
+        </div>
+      </div>
+
+      <!-- Form Errors -->
+      {% if form.non_field_errors %}
+      <div class="mx-6 mb-6 bg-red-50 border border-red-200 p-4 rounded-lg">
+        <div class="flex items-center gap-2 mb-2">
+          <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <p class="font-semibold text-red-700">Please fix the following errors:</p>
+        </div>
+        {{ form.non_field_errors }}
+      </div>
+      {% endif %}
+
+      <!-- Submit Buttons -->
+      <div class="flex gap-3 p-6 pt-0">
+        <button type="submit" class="btn-primary">
+          <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Create & Continue to Questions
+        </button>
+        <a href="{% url 'examinations:teacher_exam_list' %}" class="btn-secondary inline-flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Help Box -->
+  <div class="mt-6 grid md:grid-cols-2 gap-6">
+    <div class="info-box">
+      <div class="flex items-center gap-3 mb-3">
+        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <h4 class="font-bold text-gray-800">Next Steps</h4>
+      </div>
+      <ol class="text-sm text-gray-700 space-y-2 ml-4">
+        <li class="flex gap-2 items-start">
+          <span class="text-green-600 font-bold">1.</span>
+          <span>After creating, you'll be redirected to add objective questions</span>
+        </li>
+        <li class="flex gap-2 items-start">
+          <span class="text-green-600 font-bold">2.</span>
+          <span>Upload theory file (PDF or DOCX) if needed</span>
+        </li>
+        <li class="flex gap-2 items-start">
+          <span class="text-green-600 font-bold">3.</span>
+          <span>Review and publish when ready</span>
+        </li>
+      </ol>
+    </div>
+
+    <div class="bg-white rounded-xl p-5 border border-gray-100">
+      <div class="flex items-center gap-3 mb-3">
+        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <h4 class="font-bold text-gray-800">Pro Tips</h4>
+      </div>
+      <ul class="text-sm text-gray-700 space-y-2">
+        <li class="flex gap-2">
+          <span class="text-blue-600">💡</span>
+          <span>Use descriptive exam titles for easy identification</span>
+        </li>
+        <li class="flex gap-2">
+          <span class="text-blue-600">⏱️</span>
+          <span>Set realistic duration based on number of questions</span>
+        </li>
+        <li class="flex gap-2">
+          <span class="text-blue-600">📝</span>
+          <span>Add clear instructions to avoid student confusion</span>
+        </li>
+        <li class="flex gap-2">
+          <span class="text-blue-600">🔒</span>
+          <span>Keep exam unpublished until fully prepared</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+// Add CSS classes to form inputs
+document.addEventListener('DOMContentLoaded', function() {
+  // Add form-control class to all select and input elements
+  const selects = document.querySelectorAll('select');
+  const inputs = document.querySelectorAll('input[type="text"], input[type="number"]');
+  const textarea = document.querySelector('textarea');
+  
+  selects.forEach(select => {
+    select.classList.add('form-control');
+  });
+  
+  inputs.forEach(input => {
+    input.classList.add('form-control');
+  });
+  
+  if (textarea) {
+    textarea.classList.add('form-control');
+  }
+  
+  // Duration validation
+  const durationInput = document.querySelector('#id_duration_minutes');
+  if (durationInput) {
+    durationInput.addEventListener('change', function() {
+      const value = parseInt(this.value);
+      if (value < 1) {
+        this.value = 1;
+      } else if (value > 180) {
+        this.value = 180;
+        alert('Duration should not exceed 180 minutes (3 hours)');
+      }
+    });
+  }
+  
+  // Pass mark validation
+  const passMarkInput = document.querySelector('#id_pass_mark');
+  if (passMarkInput) {
+    passMarkInput.addEventListener('change', function() {
+      const value = parseInt(this.value);
+      if (value < 0) {
+        this.value = 0;
+      } else if (value > 100) {
+        this.value = 100;
+        alert('Pass mark cannot exceed 100%');
+      }
+    });
+  }
+  
+  // Advanced Options Toggle
+  const advancedToggle = document.getElementById('advancedToggle');
+  const advancedContent = document.getElementById('advancedContent');
+  const advancedIcon = document.getElementById('advancedIcon');
+  
+  if (advancedToggle) {
+    advancedToggle.addEventListener('click', function() {
+      if (advancedContent.style.display === 'none') {
+        advancedContent.style.display = 'block';
+        advancedIcon.style.transform = 'rotate(180deg)';
+      } else {
+        advancedContent.style.display = 'none';
+        advancedIcon.style.transform = 'rotate(0deg)';
+      }
+    });
+  }
+});
+
+// Form submission with validation
+document.getElementById('examForm')?.addEventListener('submit', function(e) {
+  const title = document.querySelector('#id_title')?.value;
+  const subject = document.querySelector('#id_subject')?.value;
+  const classArm = document.querySelector('#id_class_arm')?.value;
+  const duration = document.querySelector('#id_duration_minutes')?.value;
+  
+  if (!title || !subject || !classArm || !duration) {
+    e.preventDefault();
+    alert('Please fill in all required fields');
+  }
+});
+</script>
 {% endblock %}

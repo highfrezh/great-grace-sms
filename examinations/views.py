@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from accounts.decorators import (
     admin_staff_required, teaching_staff_required, examiner_required,
     subject_teacher_required
@@ -481,138 +481,6 @@ def question_delete(request, exam_pk, pk):
 
 @login_required
 @subject_teacher_required
-def question_bulk_create(request):
-    """
-    Bulk creation interface for objective questions with theory file upload.
-    Teachers can create multiple questions at once for an exam with dynamic form.
-    """
-    user = request.user
-    current_session = AcademicSession.get_current()
-    current_term = Term.get_current()
-    
-    # Get exams created by this teacher
-    exams = Exam.objects.filter(
-        created_by=user,
-        session=current_session,
-        term=current_term
-    ).select_related('subject', 'class_arm').order_by('-created_at')
-    
-    selected_exam = None
-    theory_file_form = None
-    
-    if request.method == 'POST':
-        exam_id = request.POST.get('exam_id')
-        if not exam_id:
-            messages.error(request, 'Please select an exam first.')
-            return redirect('examinations:question_bulk_create')
-        
-        selected_exam = get_object_or_404(Exam, pk=exam_id, created_by=user)
-        
-        # Process bulk questions
-        questions_data = []
-        question_index = 0
-        
-        while True:
-            q_text = request.POST.get(f'question_{question_index}_text')
-            if not q_text:
-                break
-            
-            q_data = {
-                'text': q_text,
-                'text_yoruba': request.POST.get(f'question_{question_index}_text_yoruba', ''),
-                'option_a': request.POST.get(f'question_{question_index}_option_a'),
-                'option_b': request.POST.get(f'question_{question_index}_option_b'),
-                'option_c': request.POST.get(f'question_{question_index}_option_c'),
-                'option_d': request.POST.get(f'question_{question_index}_option_d'),
-                'option_a_yoruba': request.POST.get(f'question_{question_index}_option_a_yoruba', ''),
-                'option_b_yoruba': request.POST.get(f'question_{question_index}_option_b_yoruba', ''),
-                'option_c_yoruba': request.POST.get(f'question_{question_index}_option_c_yoruba', ''),
-                'option_d_yoruba': request.POST.get(f'question_{question_index}_option_d_yoruba', ''),
-                'correct_answer': request.POST.get(f'question_{question_index}_correct_answer'),
-                'difficulty': request.POST.get(f'question_{question_index}_difficulty', 'MEDIUM'),
-                'marks': int(request.POST.get(f'question_{question_index}_marks', 1)),
-                'image': request.FILES.get(f'question_{question_index}_image'),
-            }
-            questions_data.append((question_index, q_data))
-            question_index += 1
-        
-        if not questions_data:
-            messages.error(request, 'Please add at least one question.')
-            return redirect('examinations:question_bulk_create')
-        
-        # Validate all questions
-        errors = []
-        for idx, q_data in questions_data:
-            if not q_data.get('text'):
-                errors.append(f'Question {idx + 1}: Text is required')
-            if not q_data.get('correct_answer'):
-                errors.append(f'Question {idx + 1}: Correct answer is required')
-            if not all([q_data.get('option_a'), q_data.get('option_b'), 
-                       q_data.get('option_c'), q_data.get('option_d')]):
-                errors.append(f'Question {idx + 1}: All four options are required')
-        
-        if errors:
-            for error in errors:
-                messages.error(request, error)
-            return redirect('examinations:question_bulk_create')
-        
-        # Create questions
-        created_count = 0
-        with transaction.atomic():
-            for order, q_data in questions_data:
-                question = Question(
-                    exam=selected_exam,
-                    order=order + 1
-                )
-                for field in ['text', 'text_yoruba', 'option_a', 'option_b', 'option_c', 
-                             'option_d', 'option_a_yoruba', 'option_b_yoruba',
-                             'option_c_yoruba', 'option_d_yoruba', 'correct_answer',
-                             'difficulty', 'marks', 'image']:
-                    if field in q_data:
-                        setattr(question, field, q_data[field])
-                question.save()
-                created_count += 1
-            
-            # Handle theory file if provided
-            if 'theory_file' in request.FILES:
-                theory_file = request.FILES['theory_file']
-                # Create or update TheoryQuestion
-                theory_q, _ = TheoryQuestion.objects.update_or_create(
-                    exam=selected_exam,
-                    defaults={
-                        'title': f'{selected_exam.title} - Theory Questions',
-                        'instruction': request.POST.get('theory_instruction', ''),
-                        'file': theory_file
-                    }
-                )
-        
-        messages.success(
-            request,
-            f'✅ Successfully created {created_count} objective question(s)!'
-        )
-        if 'theory_file' in request.FILES:
-            messages.success(request, '✅ Theory file uploaded successfully!')
-        
-        return redirect('examinations:question_list', exam_pk=selected_exam.pk)
-    
-    # GET request - show form
-    elif request.GET.get('exam_id'):
-        try:
-            selected_exam = Exam.objects.get(
-                pk=request.GET.get('exam_id'),
-                created_by=user
-            )
-        except Exam.DoesNotExist:
-            pass
-    
-    return render(request, 'examinations/question_bulk_create.html', {
-        'exams': exams,
-        'selected_exam': selected_exam,
-        'page_title': 'Create Bulk Exam Questions',
-        'current_session': current_session,
-        'current_term': current_term,
-    })
-
 
 # ── THEORY QUESTIONS ──────────────────────────────────────────
 
@@ -934,11 +802,38 @@ def teacher_exam_list(request):
     current_session = AcademicSession.get_current()
     current_term = Term.get_current()
     
+    # Count published and unpublished exams
+    published_count = exams.filter(is_published=True).count()
+    draft_count = exams.filter(is_published=False).count()
+    
+    # Count total questions across all exams
+    total_questions = ObjectiveQuestion.objects.filter(exam__in=exams).count()
+    
+    # Add completion percentage to each exam
+    exams_with_completion = []
+    for exam in exams:
+        has_objectives = exam.objectives.exists()
+        has_theory = bool(exam.theory_attachment)
+        
+        if has_objectives and has_theory:
+            completion = 100
+        elif has_objectives or has_theory:
+            completion = 50
+        else:
+            completion = 0
+        
+        # Store completion as an attribute on the exam object
+        exam.completion_percentage = completion
+        exams_with_completion.append(exam)
+    
     return render(request, 'examinations/teacher_exam_list.html', {
-        'exams': exams,
+        'exams': exams_with_completion,
         'page_title': 'My Exams',
         'current_session': current_session,
         'current_term': current_term,
+        'published_count': published_count,
+        'draft_count': draft_count,
+        'total_questions': total_questions,
     })
 
 
@@ -957,14 +852,22 @@ def teacher_exam_create(request):
         teacher=request.user
     ).select_related('subject', 'class_arm').distinct('subject', 'class_arm')
     
-    form = TeacherExamForm(request.POST or None)
+    form = TeacherExamForm(request.POST or None, teacher=request.user)
     
     if form.is_valid():
-        exam = form.save(commit=False)
-        exam.teacher = staff_profile
-        exam.save()
-        messages.success(request, f'Exam "{exam.title}" created successfully.')
-        return redirect('examinations:teacher_exam_detail', pk=exam.pk)
+        try:
+            exam = form.save(commit=False)
+            exam.teacher = staff_profile
+            exam.save()
+            messages.success(request, f'Exam "{exam.title}" created successfully.')
+            return redirect('examinations:teacher_exam_detail', pk=exam.pk)
+        except IntegrityError:
+            messages.error(
+                request, 
+                'An exam already exists for this subject, class, session, and term. '
+                'You can only create one exam per subject-class-session-term combination.'
+            )
+            form = TeacherExamForm(request.POST)
     
     current_session = AcademicSession.get_current()
     current_term = Term.get_current()
@@ -988,8 +891,11 @@ def teacher_exam_detail(request, pk):
         messages.error(request, 'Staff profile not found.')
         return redirect('accounts:dashboard')
     
-    exam = get_object_or_404(Exam, pk=pk, teacher=staff_profile)
-    objective_questions = exam.objective_questions.all()
+    exam = get_object_or_404(
+        Exam.objects.select_related('class_arm', 'class_arm__level', 'subject', 'session', 'term'),
+        pk=pk, teacher=staff_profile
+    )
+    objective_questions = exam.objectives.all()
     
     return render(request, 'examinations/teacher_exam_detail.html', {
         'exam': exam,
@@ -1023,6 +929,64 @@ def teacher_exam_edit(request, pk):
         'exam': exam,
         'page_title': f'Edit Exam: {exam.title}'
     })
+
+
+@login_required
+@subject_teacher_required
+@require_POST
+def teacher_exam_publish(request, pk):
+    """Publish exam created by current teacher"""
+    try:
+        staff_profile = StaffProfile.objects.get(user=request.user)
+    except StaffProfile.DoesNotExist:
+        messages.error(request, 'Staff profile not found.')
+        return redirect('accounts:dashboard')
+    
+    exam = get_object_or_404(Exam, pk=pk, teacher=staff_profile)
+    
+    # Check if exam can be published
+    if exam.is_published:
+        messages.warning(request, 'Exam is already published.')
+        return redirect('examinations:teacher_exam_detail', pk=exam.pk)
+    
+    # Check prerequisites
+    if exam.objectives.count() == 0:
+        messages.error(request, 'Cannot publish exam without objective questions.')
+        return redirect('examinations:teacher_exam_detail', pk=exam.pk)
+    
+    if not exam.theory_attachment:
+        messages.error(request, 'Cannot publish exam without theory file.')
+        return redirect('examinations:teacher_exam_detail', pk=exam.pk)
+    
+    # Publish the exam
+    exam.is_published = True
+    exam.save()
+    messages.success(request, f'Exam "{exam.title}" has been published successfully!')
+    return redirect('examinations:teacher_exam_detail', pk=exam.pk)
+
+
+@login_required
+@subject_teacher_required
+@require_POST
+def teacher_exam_delete(request, pk):
+    """Delete exam created by current teacher"""
+    try:
+        staff_profile = StaffProfile.objects.get(user=request.user)
+    except StaffProfile.DoesNotExist:
+        messages.error(request, 'Staff profile not found.')
+        return redirect('accounts:dashboard')
+    
+    exam = get_object_or_404(Exam, pk=pk, teacher=staff_profile)
+    
+    # Only allow deletion if exam is not published
+    if exam.is_published:
+        messages.error(request, 'Cannot delete a published exam. Unpublish it first.')
+        return redirect('examinations:teacher_exam_detail', pk=exam.pk)
+    
+    exam_title = exam.title
+    exam.delete()
+    messages.success(request, f'Exam "{exam_title}" has been deleted successfully.')
+    return redirect('examinations:teacher_exam_list')
 
 
 @login_required

@@ -342,24 +342,6 @@
     </a>
     {% endif %}
 
-    <!-- Create Exam Questions (Subject Teachers) -->
-    {% if request.user.is_subject_teacher %}
-    <a href="{% url 'examinations:question_bulk_create' %}"
-       class="flex items-center gap-2 py-2 text-xs text-white transition
-              {% if request.resolver_match.url_name == 'question_bulk_create' %}
-              opacity-100{% else %}opacity-50 hover:opacity-90{% endif %}"
-       style="padding-left:3.25rem;
-              {% if request.resolver_match.url_name == 'question_bulk_create' %}
-              background:rgba(133,26,16,0.4);border-left:2px solid #C2B0A1;
-              {% else %}border-left:2px solid rgba(255,255,255,0.1);{% endif %}">
-      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M8.5 13m0 0l4 4m-4-4l-4 4m4-4v6m0-6L8.5 9m0 0l4-4m-4 4l-4-4"/>
-      </svg>
-      <span x-show="sidebarOpen" class="whitespace-nowrap">📝 Create Questions</span>
-    </a>
-    {% endif %}
-
   </div>
 </div>
 

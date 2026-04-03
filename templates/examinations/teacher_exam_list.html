@@ -1,98 +1,553 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}My Exams{% endblock %}
+{% block title %}My Exams — Great Grace SMS{% endblock %}
+{% block page_title %}My Exams{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-8">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900">📚 My Exams</h1>
-            <p class="text-gray-600 mt-1">Manage exams for your assigned subjects</p>
-        </div>
-        <a href="{% url 'examinations:teacher_exam_create' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2">
-            ➕ Create New Exam
-        </a>
-    </div>
+<style>
+  .exam-card {
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid #F3F4F6;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .exam-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+  
+  .exam-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #851A10 0%, #A52318 100%);
+  }
+  
+  .stat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .stat-badge.published {
+    background: #DCFCE7;
+    color: #166534;
+  }
+  
+  .stat-badge.draft {
+    background: #FEF3C7;
+    color: #92400E;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #635E57;
+    line-height: 1.2;
+  }
+  
+  .stat-label {
+    font-size: 0.7rem;
+    color: #6B7280;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .progress-bar {
+    height: 4px;
+    background: #E5E7EB;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #851A10 0%, #A52318 100%);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+  
+  .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: white;
+    color: #374151;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+    border: 1px solid #E5E7EB;
+  }
+  
+  .btn-outline:hover {
+    background: #F9FAFB;
+    border-color: #851A10;
+  }
+  
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #851A10 0%, #A52318 100%);
+    color: white;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+  }
+  
+  .btn-primary:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 6px -1px rgba(133, 26, 16, 0.3);
+  }
+  
+  .btn-success {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    color: white;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+  }
+  
+  .btn-success:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.3);
+  }
+  
+  .info-card {
+    background: linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%);
+    border-radius: 1rem;
+    padding: 1rem;
+    border: 1px solid #DBEAFE;
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid #F3F4F6;
+  }
+</style>
 
-    <!-- Info Box -->
-    {% if current_session and current_term %}
-    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
-        <p class="text-sm text-gray-700">
-            <strong>Current Session:</strong> {{ current_session.title }} | 
-            <strong>Current Term:</strong> {{ current_term.term_name }}
-        </p>
+<div x-data="deleteModalData()">
+<!-- Header -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+  <div>
+    <div class="flex items-center gap-3 mb-2">
+      <div class="w-1 h-8 rounded-full" style="background:#851A10;"></div>
+      <p class="text-sm text-gray-500">Manage and create exams for your assigned subjects and classes</p>
     </div>
-    {% endif %}
-
-    <!-- Exams List -->
-    {% if exams %}
-    <div class="grid gap-4">
-        {% for exam in exams %}
-        <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition border-l-4 border-blue-600 p-5">
-            <div class="flex justify-between items-start">
-                <div class="flex-1">
-                    <h3 class="text-lg font-bold text-gray-900">{{ exam.title }}</h3>
-                    <div class="mt-2 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                        <div>
-                            <span class="text-gray-600">Subject:</span>
-                            <p class="font-semibold text-gray-900">{{ exam.subject.name }}</p>
-                        </div>
-                        <div>
-                            <span class="text-gray-600">Class:</span>
-                            <p class="font-semibold text-gray-900">{{ exam.class_arm.class_level.level_name }} - {{ exam.class_arm.class_name }}</p>
-                        </div>
-                        <div>
-                            <span class="text-gray-600">Duration:</span>
-                            <p class="font-semibold text-gray-900">{{ exam.duration_minutes }} mins</p>
-                        </div>
-                        <div>
-                            <span class="text-gray-600">Status:</span>
-                            <p class="font-semibold">
-                                {% if exam.is_published %}
-                                    <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">✓ Published</span>
-                                {% else %}
-                                    <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">● Draft</span>
-                                {% endif %}
-                            </p>
-                        </div>
-                    </div>
-                    
-                    <!-- Questions Summary -->
-                    <div class="mt-3 flex gap-4 text-sm text-gray-600">
-                        <span>📝 {{ exam.objective_questions.count }} Objective Questions</span>
-                        {% if exam.theory_attachment %}
-                            <span class="text-green-600">✓ Theory File Uploaded</span>
-                        {% else %}
-                            <span class="text-orange-600">⚠ No Theory File</span>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="flex flex-col gap-2 ml-4">
-                    <a href="{% url 'examinations:teacher_exam_detail' exam.pk %}" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm font-medium transition">
-                        View Details
-                    </a>
-                    <a href="{% url 'examinations:teacher_exam_edit' exam.pk %}" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium transition">
-                        Edit & Upload
-                    </a>
-                    <a href="{% url 'examinations:teacher_add_questions' exam.pk %}" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition">
-                        Add Questions
-                    </a>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-        <p class="text-gray-600 text-lg mb-4">No exams created yet</p>
-        <a href="{% url 'examinations:teacher_exam_create' %}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg">
-            Create Your First Exam
-        </a>
-    </div>
-    {% endif %}
+  </div>
+  <a href="{% url 'examinations:teacher_exam_create' %}" 
+     class="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    Create New Exam
+  </a>
 </div>
+
+<!-- Academic Period Info -->
+{% if current_session and current_term %}
+<div class="info-card mb-6">
+  <div class="flex items-center gap-3">
+    <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+      <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+    </div>
+    <div>
+      <p class="text-xs text-gray-500">Current Academic Period</p>
+      <p class="text-sm font-semibold" style="color:#635E57;">{{ current_session.name }} • {{ current_term.get_name_display }}</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Quick Stats -->
+{% if exams %}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+  <div class="bg-white rounded-xl p-4 border border-gray-100">
+    <p class="text-xs text-gray-500 mb-1">Total Exams</p>
+    <p class="text-2xl font-bold" style="color:#635E57;">{{ exams|length }}</p>
+  </div>
+  <div class="bg-white rounded-xl p-4 border border-gray-100">
+    <p class="text-xs text-gray-500 mb-1">Published</p>
+    <p class="text-2xl font-bold text-green-600">{{ published_count }}</p>
+  </div>
+  <div class="bg-white rounded-xl p-4 border border-gray-100">
+    <p class="text-xs text-gray-500 mb-1">Drafts</p>
+    <p class="text-2xl font-bold text-amber-600">{{ draft_count }}</p>
+  </div>
+  <div class="bg-white rounded-xl p-4 border border-gray-100">
+    <p class="text-xs text-gray-500 mb-1">Total Questions</p>
+    <p class="text-2xl font-bold" style="color:#635E57;">{{ total_questions|default:"0" }}</p>
+  </div>
+</div>
+{% endif %}
+
+<!-- Exams List -->
+{% if exams %}
+<div class="space-y-4">
+  {% for exam in exams %}
+  <div class="exam-card">
+    <!-- Header -->
+    <div class="flex flex-wrap justify-between items-start gap-4 mb-4">
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2">
+          <h3 class="text-lg font-bold" style="color:#635E57;">{{ exam.title }}</h3>
+          {% if exam.is_published %}
+            <span class="stat-badge published">
+              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              Published
+            </span>
+          {% else %}
+            <span class="stat-badge draft">
+              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"/>
+              </svg>
+              Draft
+            </span>
+          {% endif %}
+        </div>
+        <div class="flex items-center gap-2 text-sm text-gray-500">
+          <span class="font-medium">{{ exam.subject.name }}</span>
+          <span class="text-gray-300">•</span>
+          <span>{{ exam.class_arm.level.name }} - {{ exam.class_arm.name }}</span>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <a href="{% url 'examinations:teacher_exam_detail' exam.pk %}" class="btn-outline text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+          View
+        </a>
+        <a href="{% url 'examinations:teacher_exam_edit' exam.pk %}" class="btn-outline text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          Edit
+        </a>
+        {% if not exam.is_published %}
+        <button type="button" 
+                @click="console.log('Delete button clicked for exam', {{ exam.pk }}); deleteModal.show = true; deleteModal.exam_id = {{ exam.pk }}; deleteModal.exam_title = '{{ exam.title|escapejs }}';"
+                class="px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition flex items-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          Delete
+        </button>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 py-4 border-y border-gray-100 mb-4">
+      <div>
+        <p class="stat-label">Duration</p>
+        <p class="stat-value mt-1">{{ exam.duration_minutes }} <span class="text-xs font-normal text-gray-500">mins</span></p>
+      </div>
+      <div>
+        <p class="stat-label">Questions</p>
+        <p class="stat-value mt-1">{{ exam.objectives.count }} <span class="text-xs font-normal text-gray-500">obj</span></p>
+      </div>
+      <div>
+        <p class="stat-label">Theory File</p>
+        <div class="mt-1">
+          {% if exam.theory_attachment %}
+            <span class="inline-flex items-center gap-1 text-sm font-semibold text-green-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Uploaded
+            </span>
+          {% else %}
+            <span class="inline-flex items-center gap-1 text-sm font-semibold text-amber-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Missing
+            </span>
+          {% endif %}
+        </div>
+      </div>
+      <div>
+        <p class="stat-label">Completion</p>
+        <p class="stat-value mt-1">{{ exam.completion_percentage }}%</p>
+        <div class="progress-bar mt-2">
+          <div class="progress-fill" style="width: {{ exam.completion_percentage }}%"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="flex flex-wrap gap-2">
+      <a href="{% url 'examinations:teacher_add_questions' exam.pk %}" class="btn-success flex-1 sm:flex-none text-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Add Questions
+      </a>
+      {% if not exam.is_published and exam.objectives.count > 0 and exam.theory_attachment %}
+      <form method="post" action="{% url 'examinations:teacher_exam_publish' exam.pk %}" class="flex-1 sm:flex-none">
+        {% csrf_token %}
+        <button type="submit" class="btn-primary w-full text-sm inline-flex items-center justify-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Publish Now
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Pagination (if needed) -->
+{% if is_paginated %}
+<div class="flex justify-center gap-2 mt-8">
+  {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition">Previous</a>
+  {% endif %}
+  
+  {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+      <span class="px-4 py-2 bg-[#851A10] text-white rounded-lg">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+      <a href="?page={{ num }}" class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition">{{ num }}</a>
+    {% endif %}
+  {% endfor %}
+  
+  {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition">Next</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<!-- Empty State -->
+<div class="empty-state">
+  <div class="inline-flex items-center justify-center w-20 h-20 rounded-full mb-6" style="background:#FFF5F3;">
+    <svg class="w-10 h-10" style="color:#851A10;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+    </svg>
+  </div>
+  <h3 class="text-xl font-bold mb-2" style="color:#635E57;">No Exams Created Yet</h3>
+  <p class="text-gray-500 mb-6">Get started by creating your first exam for your subject and class</p>
+  <a href="{% url 'examinations:teacher_exam_create' %}" class="btn-primary inline-flex items-center gap-2 px-6 py-2.5">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    Create Your First Exam
+  </a>
+</div>
+
+<!-- Quick Tips for New Teachers -->
+<div class="mt-8 grid md:grid-cols-3 gap-4">
+  <div class="bg-white rounded-xl p-4 border border-gray-100">
+    <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3">
+      <span class="text-xl">📝</span>
+    </div>
+    <h4 class="font-semibold text-gray-800 mb-1">Step 1: Create Exam</h4>
+    <p class="text-xs text-gray-500">Set title, duration, and select subject/class</p>
+  </div>
+  <div class="bg-white rounded-xl p-4 border border-gray-100">
+    <div class="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center mb-3">
+      <span class="text-xl">✓</span>
+    </div>
+    <h4 class="font-semibold text-gray-800 mb-1">Step 2: Add Questions</h4>
+    <p class="text-xs text-gray-500">Add objective questions and upload theory file</p>
+  </div>
+  <div class="bg-white rounded-xl p-4 border border-gray-100">
+    <div class="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center mb-3">
+      <span class="text-xl">🚀</span>
+    </div>
+    <h4 class="font-semibold text-gray-800 mb-1">Step 3: Publish</h4>
+    <p class="text-xs text-gray-500">Review and publish when ready for students</p>
+  </div>
+</div>
+{% endif %}
+
+<!-- Quick Stats Script (for Django template) -->
+<script>
+// Alpine.js data for delete modal
+document.addEventListener('alpineinit', function() {
+  // Modal initialization will happen automatically with Alpine.js directives
+});
+</script>
+
+{% block modals %}
+<!-- Hidden CSRF Token for Modal -->
+<input type="hidden" id="csrf-token" name="csrfmiddlewaretoken" value="{{ csrf_token }}" style="display:none;">
+
+<!-- Delete Exam Confirmation Modal -->
+<div x-show="deleteModal.show"
+     x-cloak
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 z-[999] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,0.5);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+       @click.outside="deleteModal.show = false"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 scale-95"
+       x-transition:enter-end="opacity-100 scale-100">
+    
+    <!-- Delete Icon -->
+    <div class="flex items-center justify-center w-14 h-14 rounded-full mx-auto mb-4 bg-red-100">
+      <svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+      </svg>
+    </div>
+    
+    <h3 class="text-lg font-bold text-gray-800 text-center mb-2">Delete Exam Permanently</h3>
+    
+    <p class="text-sm text-gray-500 text-center mb-1">Are you sure you want to delete</p>
+    <p class="text-sm font-semibold text-center mb-4 text-red-600" x-text="deleteModal.exam_title"></p>
+    
+    <div class="bg-red-50 border border-red-200 p-3 rounded-lg mb-6">
+      <p class="text-xs text-red-700">
+        ⚠️ <span class="font-semibold">This action cannot be undone.</span> The exam and all associated questions will be permanently deleted from the system.
+      </p>
+      <p class="text-xs text-red-700 mt-2">
+        💡 <span class="font-semibold">Note:</span> Only unpublished exams can be deleted. Published exams must be unpublished first.
+      </p>
+    </div>
+    
+    <div class="flex items-center gap-3">
+      <button @click="deleteModal.show = false"
+              class="flex-1 px-4 py-2.5 text-sm font-medium rounded-xl
+                     border-2 border-gray-200 text-gray-600
+                     hover:bg-gray-50 transition">
+        Cancel
+      </button>
+      <button type="button"
+              @click="submitDelete()"
+              class="flex-1 px-4 py-2.5 text-white text-sm font-medium rounded-xl transition
+                     bg-red-600 hover:bg-red-700">
+        Yes, Delete Permanently
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function deleteModalData() {
+  return {
+    deleteModal: {
+      show: false,
+      exam_id: null,
+      exam_title: ''
+    },
+    submitDelete() {
+      console.log('submitDelete() called');
+      console.log('Exam ID:', this.deleteModal.exam_id);
+      
+      if (!this.deleteModal.exam_id) {
+        console.error('❌ No exam ID set');
+        alert('Error: No exam selected. Please try again.');
+        return;
+      }
+      
+      // Get the CSRF token - try multiple methods for reliability
+      let csrfToken = null;
+      
+      // Method 1: Try to get from hidden input by ID
+      csrfToken = document.querySelector('#csrf-token')?.value;
+      
+      // Method 2: Try to get from any form input with name csrfmiddlewaretoken
+      if (!csrfToken) {
+        csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+      }
+      
+      // Method 3: Try to get from cookies
+      if (!csrfToken) {
+        const name = 'csrftoken';
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          const cookies = document.cookie.split(';');
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              break;
+            }
+          }
+        }
+        csrfToken = cookieValue;
+      }
+      
+      console.log('CSRF Token found:', !!csrfToken);
+      
+      if (!csrfToken) {
+        console.error('❌ CSRF token not found in any location');
+        alert('Error: Security token missing. Please refresh the page.');
+        return;
+      }
+      
+      try {
+        // Create and submit form
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/examinations/teacher/${this.deleteModal.exam_id}/delete/`;
+        
+        console.log('Form action set to:', form.action);
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken;
+        
+        form.appendChild(csrfInput);
+        document.body.appendChild(form);
+        
+        // Close modal before submitting
+        this.deleteModal.show = false;
+        
+        console.log('✅ Submitting delete form...');
+        // Submit
+        form.submit();
+      } catch (error) {
+        console.error('❌ Error in submitDelete:', error);
+        alert('Error: ' + error.message);
+      }
+    }
+  };
+}
+
+// Make deleteModalData available globally
+window.deleteModalData = deleteModalData;
+</script>
+</div>
+{% endblock %}
 {% endblock %}

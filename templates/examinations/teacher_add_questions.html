@@ -2,86 +2,429 @@
 {% load static %}
 
 {% block title %}Add Questions - {{ exam.title }}{% endblock %}
+{% block page_title %}Add Questions{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-4xl mx-auto">
-        <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900">➕ Add Objective Questions</h1>
-            <p class="text-gray-600 mt-1">{{ exam.title }} • {{ exam.subject.name }}</p>
-        </div>
+<style>
+  .form-control {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 0.75rem;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    background-color: white;
+    outline: none;
+    color: #374151;
+  }
+  
+  .form-control:focus {
+    border-color: #851A10;
+    box-shadow: 0 0 0 3px rgba(133, 26, 16, 0.1);
+  }
+  
+  textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+  }
+  
+  .form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-label .required {
+    color: #851A10;
+    margin-left: 0.25rem;
+  }
+  
+  .question-card {
+    background: white;
+    border: 1px solid #E5E7EB;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    position: relative;
+  }
+  
+  .question-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border-color: #FECACA;
+  }
+  
+  .question-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(135deg, #851A10 0%, #A52318 100%);
+    border-radius: 1rem 0 0 1rem;
+  }
+  
+  .question-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: linear-gradient(135deg, #851A10 0%, #A52318 100%);
+    color: white;
+    font-weight: bold;
+    font-size: 1.125rem;
+    border-radius: 9999px;
+  }
+  
+  .question-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #F3F4F6;
+  }
+  
+  .question-section-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 1rem;
+    margin-top: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .question-section-title::before {
+    content: '';
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background-color: #851A10;
+  }
+  
+  .options-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    background: linear-gradient(135deg, #F9FAFB 0%, #FFFFFF 100%);
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+    border: 1px solid #F3F4F6;
+  }
+  
+  @media (max-width: 768px) {
+    .options-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  .option-input {
+    background-color: white;
+  }
+  
+  .correct-answer-select {
+    background-color: white;
+    border: 2px solid #E5E7EB;
+  }
+  
+  .correct-answer-select:focus {
+    border-color: #851A10;
+  }
+  
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    color: white;
+    font-weight: 600;
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .btn-primary:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .btn-danger {
+    color: #DC2626;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .btn-danger:hover {
+    background-color: #FEF2F2;
+    color: #B91C1C;
+  }
+  
+  .btn-submit {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #851A10 0%, #A52318 100%);
+    color: white;
+    font-weight: 600;
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .btn-submit:hover {
+    transform: scale(1.02);
+    box-shadow: 0 10px 15px -3px rgba(133, 26, 16, 0.3);
+  }
+  
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+  
+  .file-input-label {
+    display: block;
+    padding: 0.75rem 1rem;
+    border: 2px dashed #D1D5DB;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    background-color: white;
+    transition: all 0.2s ease;
+  }
+  
+  .file-input-label:hover {
+    border-color: #851A10;
+    background-color: #FFF5F3;
+  }
+  
+  .char-count {
+    font-size: 0.75rem;
+    color: #6B7280;
+    margin-top: 0.25rem;
+  }
+  
+  .char-count.warning {
+    color: #F59E0B;
+  }
+  
+  .char-count.danger {
+    color: #EF4444;
+  }
+  
+  .info-card {
+    background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+    border-left: 4px solid #059669;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .tip-card {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    border: 1px solid #E5E7EB;
+    transition: all 0.2s ease;
+  }
+  
+  .tip-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+  
+  .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    display: none;
+  }
+  
+  .loading-spinner {
+    background: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    text-align: center;
+  }
+  
+  .spinner {
+    border: 4px solid #F3F4F6;
+    border-top: 4px solid #851A10;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
 
-        <!-- Form -->
-        <form method="post" enctype="multipart/form-data" id="questionsForm">
-            {% csrf_token %}
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-spinner">
+    <div class="spinner"></div>
+    <p class="text-gray-700">Saving questions...</p>
+  </div>
+</div>
 
-            <!-- Existing Questions Count -->
-            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
-                <p class="text-sm text-gray-700">
-                    <strong>Current Questions:</strong> {{ exam.objective_questions.count }} 
-                    <span class="text-gray-600">| Add more below</span>
-                </p>
-            </div>
-
-            <!-- Questions Container -->
-            <div id="questionsContainer" class="space-y-6">
-                <!-- Questions will be added here dynamically -->
-            </div>
-
-            <!-- Add More Button -->
-            <div class="flex gap-2 my-6">
-                <button type="button" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition" onclick="addQuestionForm()">
-                    + Add Question Form
-                </button>
-            </div>
-
-            <!-- Form Styling -->
-            <style>
-                .question-card {
-                    @apply bg-white border border-gray-300 rounded-lg p-6 shadow-sm;
-                }
-                .question-card input[type="text"], 
-                .question-card textarea,
-                .question-card select,
-                .question-card input[type="file"] {
-                    @apply w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500;
-                }
-                .question-card label {
-                    @apply block text-sm font-semibold text-gray-700 mb-1;
-                }
-                .question-card .section-title {
-                    @apply text-lg font-bold text-gray-900 mb-3 pb-2 border-b;
-                }
-                .option-group {
-                    @apply grid md:grid-cols-2 gap-3;
-                }
-            </style>
-
-            <!-- Submit Buttons -->
-            <div class="flex gap-3 pt-6 border-t">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition flex-1">
-                    ✓ Add Question(s)
-                </button>
-                <a href="{% url 'examinations:teacher_exam_detail' exam.pk %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition text-center">
-                    Cancel
-                </a>
-            </div>
-        </form>
-
-        <!-- Help Box -->
-        <div class="mt-8 bg-blue-50 rounded-lg p-6 border-l-4 border-blue-500">
-            <h4 class="font-bold text-gray-900 mb-3">📝 Tips for Adding Questions</h4>
-            <ul class="text-sm text-gray-700 space-y-2 list-disc list-inside">
-                <li>Question text should be clear and concise</li>
-                <li>All four options (A, B, C, D) are required</li>
-                <li>Select the correct answer from the dropdown</li>
-                <li>You can optionally attach an image to each question (diagram, formula, etc.)</li>
-                <li>Add as many questions as needed - click "Add Question Form" for more fields</li>
-                <li>Questions appear in the order you add them</li>
-            </ul>
-        </div>
+<!-- Header Section -->
+<div class="mb-8">
+  <div class="flex justify-between items-start mb-4">
+    <div>
+      <div class="flex items-center gap-3 mb-2">
+        <div class="w-1 h-10 rounded-full" style="background:#851A10;"></div>
+        <h1 class="text-2xl font-bold" style="color:#635E57;">Add Objective Questions</h1>
+      </div>
+      <p class="text-sm text-gray-500 ml-4">{{ exam.title }} • {{ exam.subject.name }} • {{ exam.class_assigned.full_name }}</p>
     </div>
+    <div class="text-right">
+      <span class="text-xs text-gray-400">Exam Code:</span>
+      <p class="text-sm font-mono font-bold" style="color:#851A10;">{{ exam.exam_code }}</p>
+    </div>
+  </div>
+</div>
+
+<!-- Info Card -->
+<div class="info-card">
+  <div class="flex items-center gap-3">
+    <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background:#059669;">
+      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+      </svg>
+    </div>
+    <div>
+      <p class="text-sm font-semibold text-gray-900">{{ exam.objectives.count }} question{{ exam.objectives.count|pluralize }} already added</p>
+      <p class="text-xs text-gray-600">Add more questions to this exam below</p>
+    </div>
+  </div>
+</div>
+
+<!-- Form -->
+<form method="post" enctype="multipart/form-data" id="questionsForm" onsubmit="showLoading()">
+  {% csrf_token %}
+
+  <!-- Questions Container -->
+  <div id="questionsContainer" class="space-y-6 mb-8"></div>
+
+  <!-- Add Button -->
+  <div class="mb-8 text-center">
+    <button type="button" class="btn-primary" onclick="addQuestionForm()">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      <span>Add Another Question</span>
+    </button>
+  </div>
+
+  <!-- Submit Buttons -->
+  <div class="flex gap-3 pt-6 border-t-2 border-gray-200">
+    <button type="submit" class="btn-submit">
+      <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+      </svg>
+      Save All Questions
+    </button>
+    <a href="{% url 'examinations:teacher_exam_detail' exam.pk %}" 
+       class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg text-center text-sm transition-colors inline-flex items-center gap-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+      Cancel
+    </a>
+  </div>
+</form>
+
+<!-- Help & Tips Section -->
+<div class="mt-12 grid md:grid-cols-2 gap-6">
+  <div class="tip-card">
+    <h4 class="font-bold mb-4 flex items-center gap-2" style="color:#635E57;">
+      <span class="text-2xl">📝</span>
+      Tips for Adding Questions
+    </h4>
+    <ul class="text-sm text-gray-700 space-y-2">
+      <li class="flex gap-2 items-start">
+        <svg class="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        </svg>
+        <span>Keep questions clear, concise, and unambiguous</span>
+      </li>
+      <li class="flex gap-2 items-start">
+        <svg class="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        </svg>
+        <span>All four options (A, B, C, D) are mandatory</span>
+      </li>
+      <li class="flex gap-2 items-start">
+        <svg class="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        </svg>
+        <span>Select the correct answer from the dropdown</span>
+      </li>
+      <li class="flex gap-2 items-start">
+        <svg class="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        </svg>
+        <span>Upload images for diagrams, formulas, or illustrations</span>
+      </li>
+      <li class="flex gap-2 items-start">
+        <svg class="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        </svg>
+        <span>Questions appear in the order you add them</span>
+      </li>
+    </ul>
+  </div>
+
+  <div class="tip-card">
+    <h4 class="font-bold mb-4 flex items-center gap-2" style="color:#635E57;">
+      <span class="text-2xl">⚡</span>
+      Quick Guide
+    </h4>
+    <div class="space-y-3">
+      <div class="flex gap-3 items-start">
+        <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">1</div>
+        <p class="text-sm text-gray-700">Enter your question text in the text area</p>
+      </div>
+      <div class="flex gap-3 items-start">
+        <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">2</div>
+        <p class="text-sm text-gray-700">Fill in all four answer options (A, B, C, D)</p>
+      </div>
+      <div class="flex gap-3 items-start">
+        <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">3</div>
+        <p class="text-sm text-gray-700">Select the correct answer from the dropdown</p>
+      </div>
+      <div class="flex gap-3 items-start">
+        <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">4</div>
+        <p class="text-sm text-gray-700">(Optional) Attach an image for visual questions</p>
+      </div>
+      <div class="flex gap-3 items-start">
+        <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">5</div>
+        <p class="text-sm text-gray-700">Click "Add Another Question" to continue adding more</p>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- JavaScript for dynamic form -->
@@ -94,77 +437,181 @@ function addQuestionForm() {
     
     const questionCard = document.createElement('div');
     questionCard.className = 'question-card';
+    questionCard.setAttribute('data-question-id', questionIndex);
     questionCard.innerHTML = `
-        <div class="flex justify-between items-start mb-4">
-            <h3 class="text-lg font-bold text-gray-900">Question ${questionIndex + 1}</h3>
-            <button type="button" class="text-red-600 hover:text-red-800 px-2 py-1 text-sm" onclick="this.closest('.question-card').remove(); renumberQuestions();">
-                ✕ Remove
-            </button>
+      <div class="question-header">
+        <div class="flex items-center gap-4">
+          <div class="question-number">${questionIndex + 1}</div>
+          <div>
+            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Question ${questionIndex + 1}</p>
+          </div>
         </div>
+        <button type="button" class="btn-danger" onclick="if(confirm('⚠️ Are you sure you want to remove this question? This action cannot be undone.')) { this.closest('.question-card').remove(); renumberQuestions(); }">
+          <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          Remove
+        </button>
+      </div>
 
-        <!-- Question Text and Image -->
-        <div class="mb-4">
-            <label>Question Text *</label>
-            <textarea name="question_${questionIndex}_text" placeholder="Enter your question here..." rows="3" required></textarea>
-        </div>
+      <!-- Question Text -->
+      <div class="form-group">
+        <label class="form-label">Question Text <span class="required">*</span></label>
+        <textarea name="question_${questionIndex}_text" class="form-control" placeholder="Type your question here... (Be clear and specific)" rows="4" required></textarea>
+        <div class="char-count">0 / 500 characters</div>
+      </div>
 
-        <div class="mb-4">
-            <label>Question Image (Optional)</label>
-            <input type="file" name="question_${questionIndex}_image" accept="image/*">
-            <p class="text-xs text-gray-500 mt-1">Optional: Upload an image (diagram, formula, etc.)</p>
-        </div>
+      <!-- Question Image -->
+      <div class="form-group">
+        <label class="form-label">Question Image <span class="text-gray-400 font-normal">(Optional)</span></label>
+        <label class="file-input-label">
+          <input type="file" name="question_${questionIndex}_image" accept="image/*" class="hidden" onchange="updateFileName(this)">
+          <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span class="text-sm text-gray-600">Click to upload image <span class="text-xs text-gray-400">(JPG, PNG, GIF - Max 2MB)</span></span>
+          </div>
+        </label>
+      </div>
 
-        <!-- Answer Options -->
-        <div class="mb-4">
-            <p class="section-title">Answer Options</p>
-            <div class="option-group">
-                <div>
-                    <label>Option A *</label>
-                    <input type="text" name="question_${questionIndex}_option_a" placeholder="Option A" maxlength="500" required>
-                </div>
-                <div>
-                    <label>Option B *</label>
-                    <input type="text" name="question_${questionIndex}_option_b" placeholder="Option B" maxlength="500" required>
-                </div>
-                <div>
-                    <label>Option C *</label>
-                    <input type="text" name="question_${questionIndex}_option_c" placeholder="Option C" maxlength="500" required>
-                </div>
-                <div>
-                    <label>Option D *</label>
-                    <input type="text" name="question_${questionIndex}_option_d" placeholder="Option D" maxlength="500" required>
-                </div>
-            </div>
+      <!-- Answer Options -->
+      <div class="form-group">
+        <div class="question-section-title">Answer Options</div>
+        <div class="options-grid">
+          <div>
+            <label class="form-label">Option A <span class="required">*</span></label>
+            <input type="text" name="question_${questionIndex}_option_a" class="form-control option-input" placeholder="Enter option A" maxlength="500" required>
+          </div>
+          <div>
+            <label class="form-label">Option B <span class="required">*</span></label>
+            <input type="text" name="question_${questionIndex}_option_b" class="form-control option-input" placeholder="Enter option B" maxlength="500" required>
+          </div>
+          <div>
+            <label class="form-label">Option C <span class="required">*</span></label>
+            <input type="text" name="question_${questionIndex}_option_c" class="form-control option-input" placeholder="Enter option C" maxlength="500" required>
+          </div>
+          <div>
+            <label class="form-label">Option D <span class="required">*</span></label>
+            <input type="text" name="question_${questionIndex}_option_d" class="form-control option-input" placeholder="Enter option D" maxlength="500" required>
+          </div>
         </div>
+      </div>
 
-        <!-- Correct Answer -->
-        <div class="mb-4">
-            <label>Correct Answer *</label>
-            <select name="question_${questionIndex}_correct_option" required>
-                <option value="">-- Select correct option --</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="C">C</option>
-                <option value="D">D</option>
-            </select>
+      <!-- Correct Answer -->
+      <div class="form-group">
+        <label class="form-label">Correct Answer <span class="required">*</span></label>
+        <select name="question_${questionIndex}_correct_option" class="form-control correct-answer-select" required>
+          <option value="">-- Select the correct option --</option>
+          <option value="A">Option A</option>
+          <option value="B">Option B</option>
+          <option value="C">Option C</option>
+          <option value="D">Option D</option>
+        </select>
+        <div class="text-xs text-blue-600 mt-2 bg-blue-50 p-2 rounded-lg flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span>The option you select here will be marked as the correct answer</span>
         </div>
+      </div>
     `;
     
     container.appendChild(questionCard);
+    
+    // Add character counter with warning
+    const textarea = questionCard.querySelector('textarea');
+    const charCount = questionCard.querySelector('.char-count');
+    
+    textarea.addEventListener('input', function() {
+      const length = this.value.length;
+      charCount.textContent = `${length} / 500 characters`;
+      
+      if (length > 450) {
+        charCount.classList.add('danger');
+        charCount.classList.remove('warning');
+      } else if (length > 400) {
+        charCount.classList.add('warning');
+        charCount.classList.remove('danger');
+      } else {
+        charCount.classList.remove('warning', 'danger');
+      }
+    });
+    
+    // Add animation
+    questionCard.style.opacity = '0';
+    questionCard.style.transform = 'translateY(20px)';
+    setTimeout(() => {
+      questionCard.style.transition = 'all 0.3s ease';
+      questionCard.style.opacity = '1';
+      questionCard.style.transform = 'translateY(0)';
+    }, 10);
 }
 
 function renumberQuestions() {
     const container = document.getElementById('questionsContainer');
     Array.from(container.querySelectorAll('.question-card')).forEach((card, idx) => {
-        card.querySelector('h3').textContent = `Question ${idx + 1}`;
+        card.querySelector('.question-number').textContent = idx + 1;
+        const headerText = card.querySelector('.question-header p');
+        if (headerText) {
+            headerText.textContent = `Question ${idx + 1}`;
+        }
+        card.setAttribute('data-question-id', idx);
+        
+        // Update input names
+        const inputs = card.querySelectorAll('textarea, input, select');
+        inputs.forEach(input => {
+            if (input.name) {
+                input.name = input.name.replace(/question_\d+_/, `question_${idx}_`);
+            }
+        });
     });
 }
 
-// Add initial question forms on page load
+function updateFileName(input) {
+    if(input.files && input.files[0]) {
+        const file = input.files[0];
+        const fileSize = file.size / 1024 / 1024; // MB
+        
+        if (fileSize > 2) {
+            alert('File size must be less than 2MB');
+            input.value = '';
+            return;
+        }
+        
+        const fileName = file.name;
+        const label = input.closest('.file-input-label');
+        label.innerHTML = `
+          <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span class="text-sm text-green-700 font-semibold">${fileName}</span>
+            <span class="text-xs text-gray-500 ml-auto">${fileSize.toFixed(2)} MB</span>
+          </div>
+        `;
+    }
+}
+
+function showLoading() {
+    document.getElementById('loadingOverlay').style.display = 'flex';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Load existing questions
     for (let i = 0; i < {{ num_questions }}; i++) {
         addQuestionForm();
     }
+    
+    // Add keyboard shortcut (Ctrl+Enter to submit)
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            if (confirm('Submit all questions?')) {
+                document.getElementById('questionsForm').submit();
+            }
+        }
+    });
 });
 </script>
 {% endblock %}
