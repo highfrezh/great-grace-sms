@@ -18,7 +18,7 @@ from .models import (
     ExamConfiguration
 )
 from .forms import (
-    ExamForm, QuestionForm, TheoryQuestionForm,
+    ExamForm, TeacherExamForm, QuestionForm, TheoryQuestionForm,
     VettingForm, CAScoreForm, ExamConfigurationForm
 )
 import random
@@ -957,7 +957,7 @@ def teacher_exam_create(request):
         teacher=staff_profile
     ).select_related('subject', 'class_arm').distinct('subject', 'class_arm')
     
-    form = ExamForm(request.POST or None)
+    form = TeacherExamForm(request.POST or None)
     
     if form.is_valid():
         exam = form.save(commit=False)
@@ -1011,7 +1011,7 @@ def teacher_exam_edit(request, pk):
         return redirect('accounts:dashboard')
     
     exam = get_object_or_404(Exam, pk=pk, teacher=staff_profile)
-    form = ExamForm(request.POST or None, request.FILES or None, instance=exam)
+    form = TeacherExamForm(request.POST or None, request.FILES or None, instance=exam)
     
     if form.is_valid():
         form.save()

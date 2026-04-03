@@ -51,6 +51,46 @@ class ExamForm(forms.ModelForm):
             user__roles__name__in=['SUBJECT_TEACHER', 'CLASS_TEACHER', 'VICE_PRINCIPAL', 'PRINCIPAL']
         ).distinct()
 
+
+class TeacherExamForm(forms.ModelForm):
+    """Form for subject teachers creating exams (without teacher selection)"""
+    class Meta:
+        model = Exam
+        fields = [
+            'title', 'subject', 'class_arm', 'session', 'term',
+            'duration_minutes', 'theory_attachment', 'is_published'
+        ]
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'placeholder': 'e.g. First Term Examination',
+                'class': 'form-input'
+            }),
+            'subject': forms.Select(attrs={'class': 'form-input'}),
+            'class_arm': forms.Select(attrs={'class': 'form-input'}),
+            'session': forms.Select(attrs={'class': 'form-input'}),
+            'term': forms.Select(attrs={'class': 'form-input'}),
+            'duration_minutes': forms.NumberInput(attrs={
+                'class': 'form-input', 'min': 5, 'value': 60
+            }),
+            'theory_attachment': forms.FileInput(attrs={
+                'class': 'form-input',
+                'accept': '.pdf,.docx,.doc'
+            }),
+            'is_published': forms.CheckboxInput(attrs={
+                'class': 'form-checkbox'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        current_session = AcademicSession.get_current()
+        current_term = Term.get_current()
+        
+        # Set current session and term as defaults
+        self.fields['session'].initial = current_session
+        self.fields['term'].initial = current_term
+
+
 class QuestionForm(forms.ModelForm):
     """Form for creating objective questions"""
     class Meta:
