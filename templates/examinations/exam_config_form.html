@@ -1,0 +1,429 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} — Great Grace SMS{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+
+      <!-- Form Header -->
+      <div class="px-8 py-6 border-b border-gray-100"
+           style="background: linear-gradient(135deg, #FFF5F3 0%, #FFFFFF 100%);">
+        <div class="flex items-center gap-3">
+          <div class="w-1 h-8 rounded-full" style="background: #851A10;"></div>
+          <div>
+            <h2 class="text-2xl font-bold text-gray-800">{{ page_title }}</h2>
+            <p class="text-sm text-gray-500 mt-1">Configure exam settings school-wide</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Body -->
+      <form method="POST" class="px-8 py-6">
+        {% csrf_token %}
+
+        <style>
+          input, select, textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1.5px solid #E5E7EB;
+            border-radius: 0.75rem;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            background-color: white;
+            outline: none;
+            color: #374151;
+          }
+
+          input:focus, select:focus, textarea:focus {
+            border-color: #851A10;
+            box-shadow: 0 0 0 3px rgba(133, 26, 16, 0.1);
+          }
+
+          select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+            background-position: right 1rem center;
+            background-repeat: no-repeat;
+            background-size: 1.25rem;
+            padding-right: 2.5rem;
+          }
+
+          .form-section {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #E5E7EB;
+          }
+
+          .form-section:last-of-type {
+            border-bottom: none;
+          }
+
+          .section-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-gray-600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          }
+
+          .section-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            border-radius: 3px;
+            background: #851A10;
+          }
+
+          .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+          }
+
+          .form-group {
+            display: flex;
+            flex-direction: column;
+          }
+
+          label {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+          }
+
+          .help-text {
+            font-size: 0.8rem;
+            color: #9CA3AF;
+            margin-top: 0.25rem;
+          }
+
+          .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 1rem;
+          }
+
+          input[type="checkbox"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            cursor: pointer;
+            accent-color: #851A10;
+          }
+
+          .error-message {
+            color: #EF4444;
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+          }
+
+          .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            justify-content: flex-end;
+          }
+
+          button, a.btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+          }
+
+          button[type="submit"] {
+            background: #851A10;
+            color: white;
+          }
+
+          button[type="submit"]:hover {
+            background: #6D150D;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(133, 26, 16, 0.3);
+          }
+
+          a.btn-secondary {
+            background: #F3F4F6;
+            color: #6B7280;
+            border: 1.5px solid #E5E7EB;
+          }
+
+          a.btn-secondary:hover {
+            background: #E5E7EB;
+          }
+
+          .marks-preview {
+            background: #F9FAFB;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin-top: 1rem;
+          }
+
+          .marks-preview-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+          }
+
+          .marks-preview-item:last-child {
+            margin-bottom: 0;
+            padding-top: 0.75rem;
+            border-top: 1px solid #E5E7EB;
+            font-weight: 600;
+            color: #851A10;
+          }
+
+          .marks-preview-label {
+            color: #6B7280;
+          }
+
+          .marks-preview-value {
+            font-weight: 500;
+            color: #374151;
+          }
+        </style>
+
+        <!-- Session & Term -->
+        <div class="form-section">
+          <h3 class="section-title">Configuration Period</h3>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="id_session">Session *</label>
+              {{ form.session }}
+              {% if form.session.errors %}
+                <span class="error-message">{{ form.session.errors.0 }}</span>
+              {% endif %}
+            </div>
+            <div class="form-group">
+              <label for="id_term">Term *</label>
+              {{ form.term }}
+              {% if form.term.errors %}
+                <span class="error-message">{{ form.term.errors.0 }}</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Total Marks -->
+        <div class="form-section">
+          <h3 class="section-title">Exam Total Marks</h3>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="id_total_marks">Total Marks for Exam *</label>
+              {{ form.total_marks }}
+              <p class="help-text">Base marks value (percentages calculate actual marks from this)</p>
+              {% if form.total_marks.errors %}
+                <span class="error-message">{{ form.total_marks.errors.0 }}</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Mark Percentages -->
+        <div class="form-section">
+          <h3 class="section-title">Mark Distribution Percentages</h3>
+          <p style="color: #6B7280; margin-bottom: 1.5rem;">Percentages must sum to exactly <strong>100%</strong></p>
+          
+          <div class="form-row" x-data="{ ca1: {{ form.ca1_marks_percentage.value|default:"20" }}, ca2: {{ form.ca2_marks_percentage.value|default:"20" }}, obj: {{ form.obj_marks_percentage.value|default:"30" }}, theory: {{ form.theory_marks_percentage.value|default:"30" }}, total: {{ form.total_marks.value|default:"100" }} }" @change="$watch('ca1 + ca2 + obj + theory', val => {})">
+            <div class="form-group">
+              <label for="id_ca1_marks_percentage">CA1 Percentage *</label>
+              {{ form.ca1_marks_percentage }}
+              <p class="help-text">First Continuous Assessment</p>
+              <p style="color: #851A10; font-weight: 600; margin-top: 0.5rem;">Marks: <span x-text="Math.round((ca1 / 100) * total)">20</span></p>
+              {% if form.ca1_marks_percentage.errors %}
+                <span class="error-message">{{ form.ca1_marks_percentage.errors.0 }}</span>
+              {% endif %}
+            </div>
+            <div class="form-group">
+              <label for="id_ca2_marks_percentage">CA2 Percentage *</label>
+              {{ form.ca2_marks_percentage }}
+              <p class="help-text">Second Continuous Assessment</p>
+              <p style="color: #EC4899; font-weight: 600; margin-top: 0.5rem;">Marks: <span x-text="Math.round((ca2 / 100) * total)">20</span></p>
+              {% if form.ca2_marks_percentage.errors %}
+                <span class="error-message">{{ form.ca2_marks_percentage.errors.0 }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="form-row" x-data="{ ca1: {{ form.ca1_marks_percentage.value|default:"20" }}, ca2: {{ form.ca2_marks_percentage.value|default:"20" }}, obj: {{ form.obj_marks_percentage.value|default:"30" }}, theory: {{ form.theory_marks_percentage.value|default:"30" }}, total: {{ form.total_marks.value|default:"100" }} }">
+            <div class="form-group">
+              <label for="id_obj_marks_percentage">OBJ (CBT) Percentage *</label>
+              {{ form.obj_marks_percentage }}
+              <p class="help-text">Multiple Choice Questions</p>
+              <p style="color: #3B82F6; font-weight: 600; margin-top: 0.5rem;">Marks: <span x-text="Math.round((obj / 100) * total)">30</span></p>
+              {% if form.obj_marks_percentage.errors %}
+                <span class="error-message">{{ form.obj_marks_percentage.errors.0 }}</span>
+              {% endif %}
+            </div>
+            <div class="form-group">
+              <label for="id_theory_marks_percentage">Theory Percentage *</label>
+              {{ form.theory_marks_percentage }}
+              <p class="help-text">Written/Essay Questions</p>
+              <p style="color: #A855F7; font-weight: 600; margin-top: 0.5rem;">Marks: <span x-text="Math.round((theory / 100) * total)">30</span></p>
+              {% if form.theory_marks_percentage.errors %}
+                <span class="error-message">{{ form.theory_marks_percentage.errors.0 }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="marks-preview" x-data="{ ca1: {{ form.ca1_marks_percentage.value|default:"20" }}, ca2: {{ form.ca2_marks_percentage.value|default:"20" }}, obj: {{ form.obj_marks_percentage.value|default:"30" }}, theory: {{ form.theory_marks_percentage.value|default:"30" }}, total: {{ form.total_marks.value|default:"100" }} }">
+            <div class="marks-preview-item">
+              <span class="marks-preview-label">CA1:</span>
+              <span class="marks-preview-value"><span x-text="ca1">20</span>% = <span x-text="Math.round((ca1 / 100) * total)">20</span> marks</span>
+            </div>
+            <div class="marks-preview-item">
+              <span class="marks-preview-label">CA2:</span>
+              <span class="marks-preview-value"><span x-text="ca2">20</span>% = <span x-text="Math.round((ca2 / 100) * total)">20</span> marks</span>
+            </div>
+            <div class="marks-preview-item">
+              <span class="marks-preview-label">Objective:</span>
+              <span class="marks-preview-value"><span x-text="obj">30</span>% = <span x-text="Math.round((obj / 100) * total)">30</span> marks</span>
+            </div>
+            <div class="marks-preview-item">
+              <span class="marks-preview-label">Theory:</span>
+              <span class="marks-preview-value"><span x-text="theory">30</span>% = <span x-text="Math.round((theory / 100) * total)">30</span> marks</span>
+            </div>
+            <div class="marks-preview-item">
+              <span class="marks-preview-label">TOTAL:</span>
+              <span class="marks-preview-value"><span x-text="ca1 + ca2 + obj + theory">100</span>% = <span x-text="total">100</span> marks <span :class="(ca1 + ca2 + obj + theory) === 100 ? 'text-green-600' : 'text-red-600'" style="font-weight: 600;">(<span x-text="(ca1 + ca2 + obj + theory) === 100 ? '✅ Valid' : '❌ Invalid'"></span>)</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Deadlines -->
+        <div class="form-section">
+          <h3 class="section-title">Submission & Approval Deadlines</h3>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="id_question_submission_deadline">Question Submission Deadline *</label>
+              {{ form.question_submission_deadline }}
+              <p class="help-text">Teachers must submit exam questions by this date</p>
+              {% if form.question_submission_deadline.errors %}
+                <span class="error-message">{{ form.question_submission_deadline.errors.0 }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="id_exam_vetting_deadline">Exam Vetting Deadline *</label>
+              {{ form.exam_vetting_deadline }}
+              <p class="help-text">Examiner must vet questions by this date</p>
+              {% if form.exam_vetting_deadline.errors %}
+                <span class="error-message">{{ form.exam_vetting_deadline.errors.0 }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="id_exam_approval_deadline">Admin Approval Deadline *</label>
+              {{ form.exam_approval_deadline }}
+              <p class="help-text">Admin must approve exam by this date</p>
+              {% if form.exam_approval_deadline.errors %}
+                <span class="error-message">{{ form.exam_approval_deadline.errors.0 }}</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- CBT Settings -->
+        <div class="form-section">
+          <h3 class="section-title">CBT Default Settings</h3>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="id_default_exam_duration_minutes">Default Exam Duration (minutes) *</label>
+              {{ form.default_exam_duration_minutes }}
+              <p class="help-text">Default time students have to complete exam</p>
+              {% if form.default_exam_duration_minutes.errors %}
+                <span class="error-message">{{ form.default_exam_duration_minutes.errors.0 }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="checkbox-group">
+            <input type="checkbox" id="id_randomize_questions_by_default" 
+                   name="randomize_questions_by_default" value="on"
+                   {% if form.randomize_questions_by_default.value %}checked{% endif %}>
+            <label for="id_randomize_questions_by_default" style="margin: 0; font-weight: 500; color: #374151;">
+              Randomize question order by default for all exams
+            </label>
+          </div>
+
+          <div class="checkbox-group">
+            <input type="checkbox" id="id_show_results_immediately" 
+                   name="show_results_immediately" value="on"
+                   {% if form.show_results_immediately.value %}checked{% endif %}>
+            <label for="id_show_results_immediately" style="margin: 0; font-weight: 500; color: #374151;">
+              Show exam results immediately after submission
+            </label>
+          </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="button-group">
+          <a href="{% url 'examinations:exam_config_list' %}" class="btn btn-secondary">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Cancel
+          </a>
+          <button type="submit" style="background: #851A10; color: white;">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            {% if config %}Save Changes{% else %}Create Configuration{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Update total marks preview dynamically
+  const ca1Input = document.getElementById('id_ca1_marks');
+  const ca2Input = document.getElementById('id_ca2_marks');
+  const objInput = document.getElementById('id_obj_marks');
+  const theoryInput = document.getElementById('id_theory_marks');
+
+  function updateTotal() {
+    const ca1 = parseInt(ca1Input.value) || 0;
+    const ca2 = parseInt(ca2Input.value) || 0;
+    const obj = parseInt(objInput.value) || 0;
+    const theory = parseInt(theoryInput.value) || 0;
+    const total = ca1 + ca2 + obj + theory;
+    
+    document.querySelector('.marks-preview-item:last-child .marks-preview-value').textContent = total + ' marks';
+  }
+
+  [ca1Input, ca2Input, objInput, theoryInput].forEach(input => {
+    input.addEventListener('change', updateTotal);
+    input.addEventListener('input', updateTotal);
+  });
+
+  updateTotal();
+</script>
+{% endblock %}

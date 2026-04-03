@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+
+{% block title %}Exam Configuration — Great Grace SMS{% endblock %}
+{% block page_title %}Exam Configuration{% endblock %}
+
+{% block content %}
+<div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-6xl mx-auto">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Exam Configuration</h1>
+        <p class="text-gray-600 mt-1">Set school-wide exam settings, marks, and deadlines</p>
+      </div>
+      <a href="{% url 'examinations:exam_config_create' %}"
+         class="flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-lg 
+                hover:shadow-lg transition duration-200"
+         style="background: #851A10;">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        New Configuration
+      </a>
+    </div>
+
+    <!-- Current Config Highlight -->
+    {% if current_config %}
+    <div class="mb-6 p-6 rounded-lg" style="background: linear-gradient(135deg, #FFF5F3 0%, #FFFFFF 100%); border-left: 4px solid #851A10;">
+      <div class="flex items-start justify-between">
+        <div>
+          <p class="text-sm font-semibold text-gray-600 uppercase">Current Configuration</p>
+          <h2 class="text-2xl font-bold text-gray-900 mt-1">
+            {{ current_config.session }} • {{ current_config.term }}
+          </h2>
+          <p class="text-sm text-gray-600 mt-2">
+            Configured by <strong>{{ current_config.configured_by.get_full_name }}</strong> on 
+            {{ current_config.configured_at|date:"M d, Y H:i" }}
+          </p>
+        </div>
+        <div class="text-right">
+          <a href="{% url 'examinations:exam_config_edit' current_config.pk %}"
+             class="inline-flex items-center gap-2 px-4 py-2 text-white font-semibold rounded-lg"
+             style="background: #FF9800;">
+            ✏️ Edit
+          </a>
+        </div>
+      </div>
+
+      <!-- Marks Overview -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6 pt-6 border-t border-gray-200">
+        <div>
+          <p class="text-xs text-gray-600 uppercase font-semibold">CA1</p>
+          <p class="text-3xl font-bold" style="color: #851A10;">{{ current_config.ca1_marks }}</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-600 uppercase font-semibold">CA2</p>
+          <p class="text-3xl font-bold" style="color: #851A10;">{{ current_config.ca2_marks }}</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-600 uppercase font-semibold">OBJ</p>
+          <p class="text-3xl font-bold text-blue-600">{{ current_config.obj_marks }}</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-600 uppercase font-semibold">Theory</p>
+          <p class="text-3xl font-bold text-purple-600">{{ current_config.theory_marks }}</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-600 uppercase font-semibold">Total</p>
+          <p class="text-3xl font-bold text-green-600">{{ current_config.total_marks }}</p>
+        </div>
+      </div>
+
+      <!-- Deadlines -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
+        <div>
+          <p class="text-xs text-gray-600 uppercase font-semibold">Question Submission</p>
+          <p class="text-sm font-semibold text-gray-900 mt-1">
+            {{ current_config.question_submission_deadline|date:"M d, Y H:i" }}
+          </p>
+          {% if current_config.is_question_deadline_passed %}
+            <span class="inline-block mt-1 px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">
+              PASSED
+            </span>
+          {% endif %}
+        </div>
+        <div>
+          <p class="text-xs text-gray-600 uppercase font-semibold">Exam Vetting</p>
+          <p class="text-sm font-semibold text-gray-900 mt-1">
+            {{ current_config.exam_vetting_deadline|date:"M d, Y H:i" }}
+          </p>
+          {% if current_config.is_vetting_deadline_passed %}
+            <span class="inline-block mt-1 px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">
+              PASSED
+            </span>
+          {% endif %}
+        </div>
+        <div>
+          <p class="text-xs text-gray-600 uppercase font-semibold">Admin Approval</p>
+          <p class="text-sm font-semibold text-gray-900 mt-1">
+            {{ current_config.exam_approval_deadline|date:"M d, Y H:i" }}
+          </p>
+          {% if current_config.is_approval_deadline_passed %}
+            <span class="inline-block mt-1 px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">
+              PASSED
+            </span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="mb-6 p-4 rounded-lg bg-yellow-50 border-l-4 border-yellow-500">
+      <p class="text-sm text-yellow-900">
+        <strong>⚠️ No current configuration:</strong> Please create exam configuration for {{ current_session|default:"this session" }} and {{ current_term|default:"this term" }}.
+      </p>
+    </div>
+    {% endif %}
+
+    <!-- All Configurations Table -->
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+      {% if configs %}
+        <table class="w-full text-sm">
+          <thead>
+            <tr style="background: #635E57;">
+              <th class="text-left px-6 py-4 text-white font-semibold">Session • Term</th>
+              <th class="text-left px-6 py-4 text-white font-semibold">Mark Distribution</th>
+              <th class="text-left px-6 py-4 text-white font-semibold">Deadlines</th>
+              <th class="text-left px-6 py-4 text-white font-semibold">Configured By</th>
+              <th class="text-left px-6 py-4 text-white font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for config in configs %}
+              <tr class="hover:bg-gray-50 transition">
+                <!-- Session & Term -->
+                <td class="px-6 py-4">
+                  <div class="font-semibold text-gray-900">{{ config.session }}</div>
+                  <div class="text-xs text-gray-500">{{ config.term }}</div>
+                </td>
+
+                <!-- Marks -->
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-2">
+                    <span class="px-2.5 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">
+                      CA1: {{ config.ca1_marks }}
+                    </span>
+                    <span class="px-2.5 py-1 text-xs font-bold rounded-full bg-pink-100 text-pink-800">
+                      CA2: {{ config.ca2_marks }}
+                    </span>
+                    <span class="px-2.5 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-800">
+                      OBJ: {{ config.obj_marks }}
+                    </span>
+                    <span class="px-2.5 py-1 text-xs font-bold rounded-full bg-purple-100 text-purple-800">
+                      THY: {{ config.theory_marks }}
+                    </span>
+                  </div>
+                  <p class="text-xs text-gray-600 mt-1">
+                    <strong>Total:</strong> {{ config.total_marks }} marks
+                  </p>
+                </td>
+
+                <!-- Deadlines -->
+                <td class="px-6 py-4 text-xs text-gray-600">
+                  <div class="space-y-1">
+                    <p>📝 Q-Submit: {{ config.question_submission_deadline|date:"M d, Y" }}</p>
+                    <p>✓ Vetting: {{ config.exam_vetting_deadline|date:"M d, Y" }}</p>
+                    <p>✅ Approve: {{ config.exam_approval_deadline|date:"M d, Y" }}</p>
+                  </div>
+                </td>
+
+                <!-- Configured By -->
+                <td class="px-6 py-4">
+                  <p class="text-sm font-medium text-gray-900">{{ config.configured_by.get_full_name }}</p>
+                  <p class="text-xs text-gray-500">{{ config.configured_at|date:"M d, Y H:i" }}</p>
+                </td>
+
+                <!-- Actions -->
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-2">
+                    <!-- View -->
+                    <a href="{% url 'examinations:exam_config_detail' config.pk %}"
+                       class="flex items-center justify-center w-8 h-8 rounded-lg
+                              bg-blue-50 hover:bg-blue-100 transition text-blue-600"
+                       title="View">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                    </a>
+
+                    <!-- Edit -->
+                    <a href="{% url 'examinations:exam_config_edit' config.pk %}"
+                       class="flex items-center justify-center w-8 h-8 rounded-lg
+                              bg-orange-50 hover:bg-orange-100 transition text-orange-600"
+                       title="Edit">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                      </svg>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="px-6 py-12 text-center">
+          <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <h3 class="text-lg font-semibold text-gray-600 mb-1">No Configurations Yet</h3>
+          <p class="text-gray-500 mb-4">Create your first exam configuration</p>
+          <a href="{% url 'examinations:exam_config_create' %}"
+             class="inline-flex items-center gap-2 px-4 py-2 text-white rounded-lg"
+             style="background: #851A10;">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Create Configuration
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

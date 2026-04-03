@@ -6,19 +6,125 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.db import transaction
 from accounts.decorators import (
-    admin_staff_required, teaching_staff_required, examiner_required
+    admin_staff_required, teaching_staff_required, examiner_required,
+    subject_teacher_required
 )
 from academics.models import AcademicSession, Term
 from students.models import Student, StudentEnrollment
 from .models import (
     Exam, Question, TheoryQuestion, ExamSubmission,
-    StudentAnswer, TheoryScore, ExamResult, ExamDeadlinePenalty
+    StudentAnswer, TheoryScore, ExamResult, ExamDeadlinePenalty,
+    ExamConfiguration
 )
 from .forms import (
     ExamForm, QuestionForm, TheoryQuestionForm,
-    VettingForm, CAScoreForm
+    VettingForm, CAScoreForm, ExamConfigurationForm
 )
 import random
+
+
+# ── DECORATORS ─────────────────────────────────────────────
+
+def principal_or_vice_principal_required(view_func):
+    """Check if user is Principal or Vice Principal"""
+    def wrapper(request, *args, **kwargs):
+        if not (request.user.is_principal or request.user.is_vice_principal):
+            messages.error(request, 'Only principals can access this page.')
+            return redirect('accounts:dashboard')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+# ── EXAM CONFIGURATION (Principal/Vice Principal) ────────────
+
+@login_required
+@principal_or_vice_principal_required
+def exam_configuration_list(request):
+    """List all exam configurations"""
+    configs = ExamConfiguration.objects.select_related(
+        'session', 'term', 'configured_by'
+    ).order_by('-configured_at')
+    
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
+    current_config = None
+    
+    if current_session and current_term:
+        current_config = ExamConfiguration.objects.filter(
+            session=current_session,
+            term=current_term
+        ).first()
+    
+    return render(request, 'examinations/exam_config_list.html', {
+        'configs': configs,
+        'current_config': current_config,
+        'current_session': current_session,
+        'current_term': current_term,
+        'page_title': 'Exam Configuration'
+    })
+
+
+@login_required
+@principal_or_vice_principal_required
+def exam_configuration_create(request):
+    """Create new exam configuration"""
+    if request.method == 'POST':
+        form = ExamConfigurationForm(request.POST)
+        if form.is_valid():
+            config = form.save(commit=False)
+            config.configured_by = request.user
+            config.save()
+            messages.success(
+                request,
+                f'Exam configuration for {config.session} - {config.term} created successfully.'
+            )
+            return redirect('examinations:exam_config_list')
+    else:
+        form = ExamConfigurationForm()
+    
+    return render(request, 'examinations/exam_config_form.html', {
+        'form': form,
+        'page_title': 'Create Exam Configuration',
+    })
+
+
+@login_required
+@principal_or_vice_principal_required
+def exam_configuration_edit(request, pk):
+    """Edit exam configuration"""
+    config = get_object_or_404(ExamConfiguration, pk=pk)
+    
+    if request.method == 'POST':
+        form = ExamConfigurationForm(request.POST, instance=config)
+        if form.is_valid():
+            updated_config = form.save(commit=False)
+            updated_config.configured_by = request.user
+            updated_config.save()
+            messages.success(
+                request,
+                f'Exam configuration updated successfully.'
+            )
+            return redirect('examinations:exam_config_list')
+    else:
+        form = ExamConfigurationForm(instance=config)
+    
+    return render(request, 'examinations/exam_config_form.html', {
+        'form': form,
+        'config': config,
+        'page_title': f'Edit Configuration — {config.session}',
+    })
+
+
+@login_required
+@principal_or_vice_principal_required
+def exam_configuration_detail(request, pk):
+    """View exam configuration details"""
+    config = get_object_or_404(ExamConfiguration, pk=pk)
+    
+    return render(request, 'examinations/exam_config_detail.html', {
+        'config': config,
+        'page_title': f'Configuration Details — {config.session}'
+    })
 
 
 # ── EXAM MANAGEMENT ───────────────────────────────────────────
@@ -368,6 +474,143 @@ def question_delete(request, exam_pk, pk):
         question.delete()
         messages.success(request, 'Question deleted.')
     return redirect('examinations:question_list', exam_pk=exam_pk)
+
+
+# ── BULK QUESTION CREATION (Subject Teachers) ──────────────────
+
+@login_required
+@subject_teacher_required
+def question_bulk_create(request):
+    """
+    Bulk creation interface for objective questions with theory file upload.
+    Teachers can create multiple questions at once for an exam with dynamic form.
+    """
+    user = request.user
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
+    
+    # Get exams created by this teacher
+    exams = Exam.objects.filter(
+        created_by=user,
+        session=current_session,
+        term=current_term
+    ).select_related('subject', 'class_arm').order_by('-created_at')
+    
+    selected_exam = None
+    theory_file_form = None
+    
+    if request.method == 'POST':
+        exam_id = request.POST.get('exam_id')
+        if not exam_id:
+            messages.error(request, 'Please select an exam first.')
+            return redirect('examinations:question_bulk_create')
+        
+        selected_exam = get_object_or_404(Exam, pk=exam_id, created_by=user)
+        
+        # Process bulk questions
+        questions_data = []
+        question_index = 0
+        
+        while True:
+            q_text = request.POST.get(f'question_{question_index}_text')
+            if not q_text:
+                break
+            
+            q_data = {
+                'text': q_text,
+                'text_yoruba': request.POST.get(f'question_{question_index}_text_yoruba', ''),
+                'option_a': request.POST.get(f'question_{question_index}_option_a'),
+                'option_b': request.POST.get(f'question_{question_index}_option_b'),
+                'option_c': request.POST.get(f'question_{question_index}_option_c'),
+                'option_d': request.POST.get(f'question_{question_index}_option_d'),
+                'option_a_yoruba': request.POST.get(f'question_{question_index}_option_a_yoruba', ''),
+                'option_b_yoruba': request.POST.get(f'question_{question_index}_option_b_yoruba', ''),
+                'option_c_yoruba': request.POST.get(f'question_{question_index}_option_c_yoruba', ''),
+                'option_d_yoruba': request.POST.get(f'question_{question_index}_option_d_yoruba', ''),
+                'correct_answer': request.POST.get(f'question_{question_index}_correct_answer'),
+                'difficulty': request.POST.get(f'question_{question_index}_difficulty', 'MEDIUM'),
+                'marks': int(request.POST.get(f'question_{question_index}_marks', 1)),
+                'image': request.FILES.get(f'question_{question_index}_image'),
+            }
+            questions_data.append((question_index, q_data))
+            question_index += 1
+        
+        if not questions_data:
+            messages.error(request, 'Please add at least one question.')
+            return redirect('examinations:question_bulk_create')
+        
+        # Validate all questions
+        errors = []
+        for idx, q_data in questions_data:
+            if not q_data.get('text'):
+                errors.append(f'Question {idx + 1}: Text is required')
+            if not q_data.get('correct_answer'):
+                errors.append(f'Question {idx + 1}: Correct answer is required')
+            if not all([q_data.get('option_a'), q_data.get('option_b'), 
+                       q_data.get('option_c'), q_data.get('option_d')]):
+                errors.append(f'Question {idx + 1}: All four options are required')
+        
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+            return redirect('examinations:question_bulk_create')
+        
+        # Create questions
+        created_count = 0
+        with transaction.atomic():
+            for order, q_data in questions_data:
+                question = Question(
+                    exam=selected_exam,
+                    order=order + 1
+                )
+                for field in ['text', 'text_yoruba', 'option_a', 'option_b', 'option_c', 
+                             'option_d', 'option_a_yoruba', 'option_b_yoruba',
+                             'option_c_yoruba', 'option_d_yoruba', 'correct_answer',
+                             'difficulty', 'marks', 'image']:
+                    if field in q_data:
+                        setattr(question, field, q_data[field])
+                question.save()
+                created_count += 1
+            
+            # Handle theory file if provided
+            if 'theory_file' in request.FILES:
+                theory_file = request.FILES['theory_file']
+                # Create or update TheoryQuestion
+                theory_q, _ = TheoryQuestion.objects.update_or_create(
+                    exam=selected_exam,
+                    defaults={
+                        'title': f'{selected_exam.title} - Theory Questions',
+                        'instruction': request.POST.get('theory_instruction', ''),
+                        'file': theory_file
+                    }
+                )
+        
+        messages.success(
+            request,
+            f'✅ Successfully created {created_count} objective question(s)!'
+        )
+        if 'theory_file' in request.FILES:
+            messages.success(request, '✅ Theory file uploaded successfully!')
+        
+        return redirect('examinations:question_list', exam_pk=selected_exam.pk)
+    
+    # GET request - show form
+    elif request.GET.get('exam_id'):
+        try:
+            selected_exam = Exam.objects.get(
+                pk=request.GET.get('exam_id'),
+                created_by=user
+            )
+        except Exam.DoesNotExist:
+            pass
+    
+    return render(request, 'examinations/question_bulk_create.html', {
+        'exams': exams,
+        'selected_exam': selected_exam,
+        'page_title': 'Create Bulk Exam Questions',
+        'current_session': current_session,
+        'current_term': current_term,
+    })
 
 
 # ── THEORY QUESTIONS ──────────────────────────────────────────

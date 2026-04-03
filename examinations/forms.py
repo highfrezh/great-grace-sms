@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from academics.models import Subject, ClassArm, AcademicSession, Term
-from .models import Exam, Question, TheoryQuestion, TheoryScore, ExamResult
+from .models import Exam, Question, TheoryQuestion, TheoryScore, ExamResult, ExamConfiguration
 
 User = get_user_model()
 
@@ -84,13 +84,20 @@ class QuestionForm(forms.ModelForm):
         fields = [
             'text', 'image', 'option_a', 'option_b',
             'option_c', 'option_d', 'correct_answer',
-            'difficulty', 'marks', 'order'
+            'difficulty', 'marks', 'order',
+            'text_yoruba', 'option_a_yoruba', 'option_b_yoruba',
+            'option_c_yoruba', 'option_d_yoruba'
         ]
         widgets = {
+            # ── English Fields ────────────────────
             'text': forms.Textarea(attrs={
                 'rows': 3,
                 'class': 'form-input',
                 'placeholder': 'Question text. Use $...$ for LaTeX math.'
+            }),
+            'image': forms.FileInput(attrs={
+                'class': 'form-input',
+                'accept': 'image/*'
             }),
             'option_a': forms.TextInput(attrs={
                 'class': 'form-input', 'placeholder': 'Option A'
@@ -104,6 +111,27 @@ class QuestionForm(forms.ModelForm):
             'option_d': forms.TextInput(attrs={
                 'class': 'form-input', 'placeholder': 'Option D'
             }),
+            
+            # ── Yoruba Fields ─────────────────────
+            'text_yoruba': forms.Textarea(attrs={
+                'rows': 3,
+                'class': 'form-input',
+                'placeholder': 'Literal translation in Yoruba (optional)'
+            }),
+            'option_a_yoruba': forms.TextInput(attrs={
+                'class': 'form-input', 'placeholder': 'Option A (Yoruba)'
+            }),
+            'option_b_yoruba': forms.TextInput(attrs={
+                'class': 'form-input', 'placeholder': 'Option B (Yoruba)'
+            }),
+            'option_c_yoruba': forms.TextInput(attrs={
+                'class': 'form-input', 'placeholder': 'Option C (Yoruba)'
+            }),
+            'option_d_yoruba': forms.TextInput(attrs={
+                'class': 'form-input', 'placeholder': 'Option D (Yoruba)'
+            }),
+            
+            # ── Metadata ───────────────────────────
             'correct_answer': forms.Select(attrs={'class': 'form-input'}),
             'difficulty': forms.Select(attrs={'class': 'form-input'}),
             'marks': forms.NumberInput(attrs={
@@ -188,3 +216,90 @@ class CAScoreForm(forms.Form):
                         'placeholder': '0'
                     })
                 )
+
+
+class ExamConfigurationForm(forms.ModelForm):
+    """Form for Principals/Vice-Principals to configure exam settings"""
+    
+    class Meta:
+        model = ExamConfiguration
+        fields = [
+            'session', 'term', 'total_marks',
+            'ca1_marks_percentage', 'ca2_marks_percentage', 
+            'obj_marks_percentage', 'theory_marks_percentage',
+            'question_submission_deadline', 'exam_vetting_deadline',
+            'exam_approval_deadline', 'default_exam_duration_minutes',
+            'randomize_questions_by_default', 'show_results_immediately'
+        ]
+        widgets = {
+            'session': forms.Select(attrs={'class': 'form-input'}),
+            'term': forms.Select(attrs={'class': 'form-input'}),
+            'total_marks': forms.NumberInput(attrs={
+                'class': 'form-input', 'min': 50, 'placeholder': '100',
+                'readonly': True
+            }),
+            
+            # Percentages
+            'ca1_marks_percentage': forms.NumberInput(attrs={
+                'class': 'form-input percentage-input', 'min': 0, 'max': 100, 
+                'placeholder': '20',
+                'data-field': 'ca1'
+            }),
+            'ca2_marks_percentage': forms.NumberInput(attrs={
+                'class': 'form-input percentage-input', 'min': 0, 'max': 100, 
+                'placeholder': '20',
+                'data-field': 'ca2'
+            }),
+            'obj_marks_percentage': forms.NumberInput(attrs={
+                'class': 'form-input percentage-input', 'min': 0, 'max': 100, 
+                'placeholder': '30',
+                'data-field': 'obj'
+            }),
+            'theory_marks_percentage': forms.NumberInput(attrs={
+                'class': 'form-input percentage-input', 'min': 0, 'max': 100, 
+                'placeholder': '30',
+                'data-field': 'theory'
+            }),
+            
+            # Deadlines
+            'question_submission_deadline': forms.DateTimeInput(attrs={
+                'type': 'datetime-local',
+                'class': 'form-input'
+            }),
+            'exam_vetting_deadline': forms.DateTimeInput(attrs={
+                'type': 'datetime-local',
+                'class': 'form-input'
+            }),
+            'exam_approval_deadline': forms.DateTimeInput(attrs={
+                'type': 'datetime-local',
+                'class': 'form-input'
+            }),
+            
+            # CBT Settings
+            'default_exam_duration_minutes': forms.NumberInput(attrs={
+                'class': 'form-input', 'min': 5, 'placeholder': '60'
+            }),
+            'randomize_questions_by_default': forms.CheckboxInput(attrs={
+                'class': 'form-checkbox'
+            }),
+            'show_results_immediately': forms.CheckboxInput(attrs={
+                'class': 'form-checkbox'
+            }),
+        }
+    
+    def clean(self):
+        """Validate that percentages sum to 100"""
+        cleaned_data = super().clean()
+        ca1 = cleaned_data.get('ca1_marks_percentage', 0)
+        ca2 = cleaned_data.get('ca2_marks_percentage', 0)
+        obj = cleaned_data.get('obj_marks_percentage', 0)
+        theory = cleaned_data.get('theory_marks_percentage', 0)
+        
+        total_percentage = ca1 + ca2 + obj + theory
+        
+        if total_percentage != 100:
+            raise forms.ValidationError(
+                f"Mark percentages must sum to exactly 100%. Current total: {total_percentage}%"
+            )
+        
+        return cleaned_data

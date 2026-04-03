@@ -1,0 +1,408 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Bulk Exam Questions — Great Grace SMS{% endblock %}
+{% block page_title %}Create Bulk Exam Questions{% endblock %}
+
+{% block content %}
+<div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-7xl mx-auto">
+
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Create Exam Questions</h1>
+          <p class="text-gray-600 mt-2">Add multiple objective and theory questions at once</p>
+        </div>
+        <a href="{% url 'examinations:exam_list' %}" class="text-blue-600 hover:text-blue-900 font-semibold">
+          ← Back to Exams
+        </a>
+      </div>
+    </div>
+
+    <!-- Main Form -->
+    <form method="post" enctype="multipart/form-data" x-data="questionForm()" @submit.prevent="submitForm">
+      {% csrf_token %}
+
+      <!-- Step 1: Select Exam -->
+      <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-8">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+          <h2 class="font-bold text-gray-900">Step 1: Select Exam</h2>
+        </div>
+        <div class="px-6 py-6">
+          {% if exams %}
+            <label class="block text-sm font-semibold text-gray-800 mb-2">
+              Choose an exam to add questions to *
+            </label>
+            <select name="exam_id" x-model="selectedExamId" @change="updateExam" required
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+              <option value="">-- Select an exam --</option>
+              {% for exam in exams %}
+              <option value="{{ exam.id }}">
+                {{ exam.title }} — {{ exam.class_arm }} ({{ exam.session }}, {{ exam.term }})
+              </option>
+              {% endfor %}
+            </select>
+
+            <!-- Exam Summary -->
+            <div x-cloak x-show="selectedExam" class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p class="text-sm font-semibold text-blue-900">
+                📋 <span x-text="`${selectedExam.title} — ${selectedExam.class_arm_name}`"></span>
+              </p>
+              <div class="mt-2 grid grid-cols-4 gap-4 text-xs">
+                <div>
+                  <p class="text-blue-700 font-semibold">Questions</p>
+                  <p class="font-bold text-blue-900" x-text="selectedExam.question_count"></p>
+                </div>
+                <div>
+                  <p class="text-blue-700 font-semibold">Total Marks</p>
+                  <p class="font-bold text-blue-900" x-text="`${selectedExam.obj_marks + selectedExam.theory_marks}`"></p>
+                </div>
+                <div>
+                  <p class="text-blue-700 font-semibold">Status</p>
+                  <p class="font-bold text-blue-900" x-text="selectedExam.status"></p>
+                </div>
+                <div>
+                  <p class="text-blue-700 font-semibold">Duration</p>
+                  <p class="font-bold text-blue-900" x-text="`${selectedExam.duration_minutes} min`"></p>
+                </div>
+              </div>
+            </div>
+          {% else %}
+            <div class="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+              <p class="text-sm text-yellow-900">
+                ℹ️ You haven't created any exams yet. 
+                <a href="{% url 'examinations:exam_create' %}" class="font-bold text-yellow-800 hover:underline">
+                  Create an exam first
+                </a>
+              </p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Step 2: Add Questions (Only if exam selected) -->
+      <template x-if="selectedExamId">
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-8">
+          <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <div class="flex items-center justify-between">
+              <h2 class="font-bold text-gray-900">Step 2: Add Objective Questions</h2>
+              <button type="button" @click="addQuestion" 
+                      class="flex items-center gap-2 px-4 py-2 text-white font-semibold rounded-lg"
+                      style="background: #851A10;">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Add Question
+              </button>
+            </div>
+          </div>
+
+          <div class="px-6 py-6 space-y-8">
+            <!-- Questions List -->
+            <template x-for="(question, index) in questions" :key="index">
+              <div class="border-2 border-gray-200 rounded-lg p-6 relative" :style="`border-color: ${['#EF4444', '#3B82F6', '#10B981', '#F59E0B'][index % 4]}`">
+                <!-- Question Number & Delete -->
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="font-bold text-gray-900">
+                    Question <span x-text="index + 1"></span>
+                  </h3>
+                  <button type="button" @click="removeQuestion(index)" 
+                          class="text-red-600 hover:text-red-900 font-semibold text-sm">
+                    ✕ Remove
+                  </button>
+                </div>
+
+                <!-- English Question -->
+                <div class="mb-6 pb-6 border-b border-gray-200">
+                  <p class="text-xs font-bold text-gray-600 uppercase mb-3">🇬🇧 English</p>
+                  
+                  <!-- Question Text -->
+                  <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-800 mb-2">
+                      Question Text *
+                    </label>
+                    <textarea :name="`question_${index}_text`" x-model="question.text" required
+                              placeholder="Enter question text (supports LaTeX: $x^2 + y^2$)"
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                              rows="3"></textarea>
+                  </div>
+
+                  <!-- Question Image -->
+                  <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-800 mb-2">
+                      Question Image (Optional)
+                    </label>
+                    <input type="file" :name="`question_${index}_image`" accept="image/*"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    <p class="text-xs text-gray-600 mt-1">For diagrams, formulas, or illustrations</p>
+                  </div>
+
+                  <!-- Options Grid -->
+                  <div class="grid grid-cols-2 gap-4 mb-4">
+                    <template x-for="option in ['a', 'b', 'c', 'd']" :key="option">
+                      <div>
+                        <label class="block text-sm font-semibold text-gray-800 mb-1">
+                          Option <span x-text="option.toUpperCase()"></span> *
+                        </label>
+                        <input type="text" :name="`question_${index}_option_${option}`" 
+                               :x-model="`question.options.${option}`" required
+                               :placeholder="`Option ${option.toUpperCase()}`"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm">
+                      </div>
+                    </template>
+                  </div>
+
+                  <!-- Correct Answer -->
+                  <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-800 mb-2">
+                      Correct Answer *
+                    </label>
+                    <select :name="`question_${index}_correct_answer`" x-model="question.correctAnswer" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+                      <option value="">-- Select correct answer --</option>
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      <option value="C">C</option>
+                      <option value="D">D</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Yoruba Question (Optional) -->
+                <div x-data="{ showYoruba: false }" class="mb-6 pb-6 border-b border-gray-200">
+                  <button type="button" @click="showYoruba = !showYoruba" class="text-sm font-semibold text-orange-600 hover:text-orange-900">
+                    <span x-text="showYoruba ? '✓ Yoruba Translation Included' : '+ Add Yoruba Translation'"></span>
+                  </button>
+
+                  <template x-if="showYoruba">
+                    <div class="mt-4 p-4 bg-orange-50 rounded-lg border border-orange-200 space-y-3">
+                      <p class="text-xs font-bold text-gray-600 uppercase">🇳🇬 Yoruba (Optional)</p>
+                      
+                      <div>
+                        <label class="block text-sm font-semibold text-gray-800 mb-1">
+                          Yoruba Question Text
+                        </label>
+                        <textarea :name="`question_${index}_text_yoruba`" x-model="question.textYoruba"
+                                  placeholder="Ibeere ninu ede Yoruba"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" rows="2"></textarea>
+                      </div>
+
+                      <div class="grid grid-cols-2 gap-2">
+                        <template x-for="option in ['a', 'b', 'c', 'd']" :key="option">
+                          <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">
+                              <span x-text="`Option ${option.toUpperCase()}`"></span>
+                            </label>
+                            <input type="text" :name="`question_${index}_option_${option}_yoruba`"
+                                   :x-model="`question.optionsYoruba.${option}`"
+                                   :placeholder="`Ifox ${option.toUpperCase()}`"
+                                   class="w-full px-2 py-1 border border-gray-300 rounded text-xs">
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+
+                <!-- Metadata -->
+                <div class="grid grid-cols-3 gap-4">
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-800 mb-2">Difficulty *</label>
+                    <select :name="`question_${index}_difficulty`" x-model="question.difficulty"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+                      <option value="EASY">🟢 Easy</option>
+                      <option value="MEDIUM" selected>🟡 Medium</option>
+                      <option value="HARD">🔴 Hard</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-800 mb-2">Marks *</label>
+                    <input type="number" :name="`question_${index}_marks`" x-model.number="question.marks"
+                           min="1" value="1" required
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-800 mb-2">Total Questions</label>
+                    <input type="text" disabled :value="questions.length"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100">
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <!-- Add First Question Prompt -->
+            <template x-if="questions.length === 0">
+              <div class="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                <p class="text-gray-600 font-semibold">No questions yet</p>
+                <p class="text-gray-500 text-sm mt-1">Click "Add Question" to start creating questions</p>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <!-- Step 3: Theory File Upload (Optional) -->
+      <template x-if="selectedExamId">
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-8">
+          <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <h2 class="font-bold text-gray-900">Step 3: Upload Theory Questions (Optional)</h2>
+          </div>
+          <div class="px-6 py-6">
+            <div class="p-4 bg-purple-50 rounded-lg border border-purple-200 mb-6">
+              <p class="text-sm text-purple-900">
+                📄 <strong>Theory Questions:</strong> Upload a PDF or Word document containing written exam questions for manual administration and printing.
+              </p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-800 mb-2">
+                Theory Questions File (PDF, DOC, DOCX)
+              </label>
+              <input type="file" name="theory_file" accept=".pdf,.doc,.docx"
+                     class="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg focus:border-orange-500">
+              <p class="text-xs text-gray-600 mt-2">Optional - Leave empty if not using written exam portion</p>
+            </div>
+
+            <!-- Theory Instructions -->
+            <div class="mt-4">
+              <label class="block text-sm font-semibold text-gray-800 mb-2">
+                Special Instructions for Theory (Optional)
+              </label>
+              <textarea name="theory_instruction" placeholder="e.g., 'Answer all questions', 'Essay format required'"
+                        rows="2" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"></textarea>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Summary & Submit -->
+      <template x-if="selectedExamId && questions.length > 0">
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-8">
+          <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <h2 class="font-bold text-gray-900">Summary</h2>
+          </div>
+          <div class="px-6 py-6">
+            <div class="grid grid-cols-3 gap-6">
+              <div class="text-center">
+                <p class="text-3xl font-bold" style="color: #3B82F6;">
+                  <span x-text="questions.length"></span>
+                </p>
+                <p class="text-gray-600 font-semibold">Questions to Create</p>
+              </div>
+              <div class="text-center">
+                <p class="text-3xl font-bold" style="color: #10B981;">
+                  <span x-text="totalMarks"></span>
+                </p>
+                <p class="text-gray-600 font-semibold">Total Marks</p>
+              </div>
+              <div class="text-center">
+                <p class="text-3xl font-bold" style="color: #A855F7;">
+                  <span x-text="questions.filter(q => q.textYoruba).length"></span>
+                </p>
+                <p class="text-gray-600 font-semibold">With Yoruba</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Submit Buttons -->
+      <div class="flex items-center gap-4">
+        <button type="submit" 
+                :disabled="!selectedExamId || questions.length === 0"
+                :class="selectedExamId && questions.length > 0 ? '' : 'opacity-50 cursor-not-allowed'"
+                class="flex items-center gap-2 px-8 py-3 text-white font-semibold rounded-lg transition"
+                style="background: #851A10;">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          Create All Questions
+        </button>
+        <a href="{% url 'examinations:exam_list' %}" class="px-8 py-3 text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-gray-50 transition">
+          Cancel
+        </a>
+      </div>
+    </form>
+
+  </div>
+</div>
+
+<!-- Alpine.js Logic -->
+<script>
+  function questionForm() {
+    return {
+      selectedExamId: '',
+      selectedExam: null,
+      questions: [
+        // Default empty question template
+      ],
+
+      init() {
+        // Get exam data from server if needed
+      },
+
+      addQuestion() {
+        this.questions.push({
+          text: '',
+          textYoruba: '',
+          options: { a: '', b: '', c: '', d: '' },
+          optionsYoruba: { a: '', b: '', c: '', d: '' },
+          correctAnswer: '',
+          difficulty: 'MEDIUM',
+          marks: 1,
+        });
+      },
+
+      removeQuestion(index) {
+        this.questions.splice(index, 1);
+      },
+
+      updateExam() {
+        if (!this.selectedExamId) {
+          this.selectedExam = null;
+          return;
+        }
+
+        // Parse exam data from options
+        const select = document.querySelector('select[name="exam_id"]');
+        const option = select.options[select.selectedIndex];
+        
+        // For now, create a placeholder
+        this.selectedExam = {
+          title: option.textContent.split('—')[0].trim(),
+          class_arm_name: option.textContent.split('—')[1]?.split('(')[0].trim() || '',
+          question_count: 0,
+          obj_marks: 30,
+          theory_marks: 30,
+          status: 'DRAFT',
+          duration_minutes: 60,
+        };
+      },
+
+      get totalMarks() {
+        return this.questions.reduce((sum, q) => sum + (q.marks || 0), 0);
+      },
+
+      submitForm() {
+        if (!this.selectedExamId) {
+          alert('Please select an exam');
+          return;
+        }
+        if (this.questions.length === 0) {
+          alert('Please add at least one question');
+          return;
+        }
+
+        // Submit the form
+        document.querySelector('form').submit();
+      }
+    };
+  }
+</script>
+
+{% endblock %}

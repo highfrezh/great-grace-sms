@@ -1,14 +1,15 @@
 from django.urls import path
-
-app_name = "examinations"
-
-urlpatterns = []
-from django.urls import path
 from . import views
 
 app_name = 'examinations'
 
 urlpatterns = [
+
+    # ── Exam Configuration (Principal/VP) ──────────────
+    path('config/', views.exam_configuration_list, name='exam_config_list'),
+    path('config/create/', views.exam_configuration_create, name='exam_config_create'),
+    path('config/<int:pk>/', views.exam_configuration_detail, name='exam_config_detail'),
+    path('config/<int:pk>/edit/', views.exam_configuration_edit, name='exam_config_edit'),
 
     # ── Exam Management ───────────────────────────────
     path('', views.exam_list, name='exam_list'),
@@ -24,6 +25,7 @@ urlpatterns = [
     path('<int:pk>/preview/', views.exam_preview, name='exam_preview'),
 
     # ── CBT Questions ─────────────────────────────────
+    path('questions/bulk-create/', views.question_bulk_create, name='question_bulk_create'),
     path('<int:exam_pk>/questions/', views.question_list, name='question_list'),
     path('<int:exam_pk>/questions/create/', views.question_create, name='question_create'),
     path('<int:exam_pk>/questions/<int:pk>/edit/', views.question_edit, name='question_edit'),

@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} — Great Grace SMS{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-5xl mx-auto">
+
+    <!-- Back Link -->
+    <div class="text-sm text-gray-500 mb-6">
+      <a href="{% url 'examinations:exam_config_list' %}" class="hover:text-gray-700">
+        ← Back to Configurations
+      </a>
+    </div>
+
+    <!-- Header Card -->
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-6">
+      <div style="background: linear-gradient(135deg, #FFF5F3 0%, #FFFFFF 100%);" class="px-8 py-8">
+        <div class="flex items-start justify-between">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-900">{{ config.session }}</h1>
+            <p class="text-gray-600 mt-2">{{ config.term }}</p>
+          </div>
+          <a href="{% url 'examinations:exam_config_edit' config.pk %}"
+             class="inline-flex items-center gap-2 px-4 py-2 text-white font-semibold rounded-lg"
+             style="background: #FF9800;">
+            ✏️ Edit
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Left Column - Details -->
+      <div class="lg:col-span-2 space-y-6">
+
+        <!-- Marks Distribution -->
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <h2 class="font-bold text-gray-900">Mark Distribution</h2>
+          </div>
+          <div class="px-6 py-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <!-- CA1 -->
+              <div class="text-center">
+                <div class="text-4xl font-bold" style="color: #EF4444;">{{ config.ca1_marks }}</div>
+                <p class="text-sm text-gray-600 mt-2 font-semibold">CA1</p>
+                <p class="text-xs text-gray-500">First Assessment</p>
+              </div>
+
+              <!-- CA2 -->
+              <div class="text-center">
+                <div class="text-4xl font-bold" style="color: #EC4899;">{{ config.ca2_marks }}</div>
+                <p class="text-sm text-gray-600 mt-2 font-semibold">CA2</p>
+                <p class="text-xs text-gray-500">Second Assessment</p>
+              </div>
+
+              <!-- OBJ -->
+              <div class="text-center">
+                <div class="text-4xl font-bold" style="color: #3B82F6;">{{ config.obj_marks }}</div>
+                <p class="text-sm text-gray-600 mt-2 font-semibold">OBJ</p>
+                <p class="text-xs text-gray-500">Multiple Choice</p>
+              </div>
+
+              <!-- Theory -->
+              <div class="text-center">
+                <div class="text-4xl font-bold" style="color: #A855F7;">{{ config.theory_marks }}</div>
+                <p class="text-sm text-gray-600 mt-2 font-semibold">THEORY</p>
+                <p class="text-xs text-gray-500">Written Questions</p>
+              </div>
+            </div>
+
+            <!-- Total -->
+            <div class="mt-6 pt-6 border-t border-gray-200">
+              <div class="text-center">
+                <p class="text-sm text-gray-600 uppercase font-semibold">Total Marks</p>
+                <p class="text-4xl font-bold" style="color: #851A10;">{{ config.total_marks }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Deadlines -->
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <h2 class="font-bold text-gray-900">Deadlines & Milestones</h2>
+          </div>
+          <div class="px-6 py-6 space-y-4">
+            <!-- Question Submission -->
+            <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div class="flex items-start justify-between">
+                <div>
+                  <p class="text-xs text-blue-600 uppercase font-bold">📝 Question Submission</p>
+                  <p class="text-lg font-bold text-gray-900 mt-1">
+                    {{ config.question_submission_deadline|date:"M d, Y • H:i" }}
+                  </p>
+                  <p class="text-xs text-gray-600 mt-1">Teachers must submit exam questions by this date</p>
+                </div>
+                {% if config.is_question_deadline_passed %}
+                  <span class="px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">
+                    PASSED
+                  </span>
+                {% else %}
+                  <span class="px-3 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800">
+                    ACTIVE
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Exam Vetting -->
+            <div class="p-4 bg-purple-50 rounded-lg border border-purple-200">
+              <div class="flex items-start justify-between">
+                <div>
+                  <p class="text-xs text-purple-600 uppercase font-bold">✓ Exam Vetting</p>
+                  <p class="text-lg font-bold text-gray-900 mt-1">
+                    {{ config.exam_vetting_deadline|date:"M d, Y • H:i" }}
+                  </p>
+                  <p class="text-xs text-gray-600 mt-1">Examiner must review and vet questions by this date</p>
+                </div>
+                {% if config.is_vetting_deadline_passed %}
+                  <span class="px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">
+                    PASSED
+                  </span>
+                {% else %}
+                  <span class="px-3 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800">
+                    ACTIVE
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Admin Approval -->
+            <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+              <div class="flex items-start justify-between">
+                <div>
+                  <p class="text-xs text-green-600 uppercase font-bold">✅ Admin Approval</p>
+                  <p class="text-lg font-bold text-gray-900 mt-1">
+                    {{ config.exam_approval_deadline|date:"M d, Y • H:i" }}
+                  </p>
+                  <p class="text-xs text-gray-600 mt-1">Admin/Principal must approve exam by this date</p>
+                </div>
+                {% if config.is_approval_deadline_passed %}
+                  <span class="px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">
+                    PASSED
+                  </span>
+                {% else %}
+                  <span class="px-3 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800">
+                    ACTIVE
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CBT Settings -->
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <h2 class="font-bold text-gray-900">CBT Default Settings</h2>
+          </div>
+          <div class="px-6 py-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p class="text-sm text-gray-600 uppercase font-semibold">Default Exam Duration</p>
+                <p class="text-3xl font-bold text-blue-600 mt-2">
+                  {{ config.default_exam_duration_minutes }} <span class="text-lg text-gray-600">min</span>
+                </p>
+                <p class="text-xs text-gray-500 mt-1">Students get this much time by default</p>
+              </div>
+
+              <div>
+                <p class="text-sm text-gray-600 uppercase font-semibold">Question Order</p>
+                <p class="text-2xl font-bold mt-2">
+                  {% if config.randomize_questions_by_default %}
+                    <span class="inline-block px-3 py-1 text-sm font-bold rounded-full bg-blue-100 text-blue-800">
+                      🔀 Randomized
+                    </span>
+                  {% else %}
+                    <span class="inline-block px-3 py-1 text-sm font-bold rounded-full bg-gray-100 text-gray-800">
+                      📋 Sequential
+                    </span>
+                  {% endif %}
+                </p>
+                <p class="text-xs text-gray-500 mt-2">Question order for each student</p>
+              </div>
+            </div>
+
+            <div class="mt-6 p-4 bg-orange-50 rounded-lg border border-orange-200">
+              <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div>
+                  <p class="font-semibold text-orange-900">Show Results Immediately</p>
+                  <p class="text-sm text-orange-800 mt-1">
+                    {% if config.show_results_immediately %}
+                      ✅ Enabled · Results will be shown to students immediately after submission
+                    {% else %}
+                      ❌ Disabled · Results will be shown after admin review
+                    {% endif %}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column - Info -->
+      <div class="space-y-6">
+
+        <!-- Configuration Info -->
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <h2 class="font-bold text-gray-900">Configuration Info</h2>
+          </div>
+          <div class="px-6 py-4 space-y-4">
+            <div>
+              <p class="text-xs text-gray-600 uppercase font-semibold">Configured By</p>
+              <p class="text-gray-900 font-semibold mt-1">{{ config.configured_by.get_full_name }}</p>
+              <p class="text-xs text-gray-500">{{ config.configured_by.get_role_display }}</p>
+            </div>
+
+            <div class="pt-4 border-t border-gray-200">
+              <p class="text-xs text-gray-600 uppercase font-semibold">Last Updated</p>
+              <p class="text-gray-900 font-semibold mt-1">{{ config.configured_at|date:"M d, Y" }}</p>
+              <p class="text-xs text-gray-500">{{ config.configured_at|time:"H:i" }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary Card -->
+        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl shadow-lg border border-blue-100 p-6">
+          <h3 class="font-bold text-gray-900 mb-3">Configuration Summary</h3>
+          <div class="space-y-2 text-sm">
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Total marks</span>
+              <span class="font-bold" style="color: #851A10;">{{ config.total_marks }}</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Duration</span>
+              <span class="font-bold">{{ config.default_exam_duration_minutes }}m</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Randomization</span>
+              <span class="font-bold">
+                {% if config.randomize_questions_by_default %}Yes{% else %}No{% endif %}
+              </span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Immediate Results</span>
+              <span class="font-bold">
+                {% if config.show_results_immediately %}Yes{% else %}No{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+{% endblock %}

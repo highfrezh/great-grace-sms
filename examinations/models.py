@@ -170,6 +170,8 @@ class Question(models.Model):
         on_delete=models.CASCADE,
         related_name='questions'
     )
+    
+    # ── English Version ───────────────────────────────
     text = models.TextField(
         help_text="Question text. Use LaTeX for math: $x^2 + y^2$"
     )
@@ -181,6 +183,30 @@ class Question(models.Model):
     option_b = models.TextField()
     option_c = models.TextField()
     option_d = models.TextField()
+    
+    # ── Yoruba Translation ────────────────────────────
+    text_yoruba = models.TextField(
+        blank=True,
+        help_text="Yoruba translation of question (optional)"
+    )
+    option_a_yoruba = models.TextField(
+        blank=True,
+        help_text="Yoruba translation of option A"
+    )
+    option_b_yoruba = models.TextField(
+        blank=True,
+        help_text="Yoruba translation of option B"
+    )
+    option_c_yoruba = models.TextField(
+        blank=True,
+        help_text="Yoruba translation of option C"
+    )
+    option_d_yoruba = models.TextField(
+        blank=True,
+        help_text="Yoruba translation of option D"
+    )
+    
+    # ── Metadata ───────────────────────────────────
     correct_answer = models.CharField(
         max_length=1,
         choices=[('A','A'),('B','B'),('C','C'),('D','D')]
@@ -485,3 +511,133 @@ class ExamDeadlinePenalty(models.Model):
             f"{self.teacher.get_full_name()} — "
             f"{self.exam.title} (missed deadline)"
         )
+
+
+class ExamConfiguration(models.Model):
+    """
+    School-wide exam configuration set by Principals.
+    Defines default mark distributions and deadlines for all exams.
+    """
+    
+    session = models.OneToOneField(
+        AcademicSession,
+        on_delete=models.CASCADE,
+        related_name='exam_config'
+    )
+    term = models.ForeignKey(
+        Term,
+        on_delete=models.CASCADE,
+        related_name='exam_configs'
+    )
+    
+    # ── Mark Percentages (Total must equal 100) ────────
+    ca1_marks_percentage = models.PositiveIntegerField(
+        default=20,
+        help_text="CA1 percentage of total marks"
+    )
+    ca2_marks_percentage = models.PositiveIntegerField(
+        default=20,
+        help_text="CA2 percentage of total marks"
+    )
+    obj_marks_percentage = models.PositiveIntegerField(
+        default=30,
+        help_text="OBJ percentage of total marks"
+    )
+    theory_marks_percentage = models.PositiveIntegerField(
+        default=30,
+        help_text="Theory percentage of total marks"
+    )
+    
+    # ── Total Marks (100 for percentage calculation) ────
+    total_marks = models.PositiveIntegerField(
+        default=100,
+        help_text="Total marks for exam (used to calculate actual marks from percentages)"
+    )
+    
+    # ── Deadlines ──────────────────────────────────────
+    question_submission_deadline = models.DateTimeField(
+        help_text="Deadline for teachers to submit exam questions"
+    )
+    exam_vetting_deadline = models.DateTimeField(
+        help_text="Deadline for examiner to vet exam questions"
+    )
+    exam_approval_deadline = models.DateTimeField(
+        help_text="Deadline for admin to approve exam"
+    )
+    
+    # ── CBT Settings ───────────────────────────────────
+    default_exam_duration_minutes = models.PositiveIntegerField(
+        default=60,
+        help_text="Default duration for exam in minutes"
+    )
+    randomize_questions_by_default = models.BooleanField(
+        default=True,
+        help_text="Randomize question order for students by default"
+    )
+    show_results_immediately = models.BooleanField(
+        default=False,
+        help_text="Show exam results immediately after submission"
+    )
+    
+    # ── Metadata ───────────────────────────────────────
+    configured_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='exam_configs_set',
+        limit_choices_to={'roles__name__in': ['PRINCIPAL', 'VICE_PRINCIPAL']}
+    )
+    configured_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['session', 'term']
+        verbose_name_plural = "Exam Configurations"
+    
+    def __str__(self):
+        return f"Exam Config — {self.session} · {self.term}"
+    
+    @property
+    def ca1_marks(self):
+        """Calculate CA1 marks from percentage"""
+        return int((self.ca1_marks_percentage / 100) * self.total_marks)
+    
+    @property
+    def ca2_marks(self):
+        """Calculate CA2 marks from percentage"""
+        return int((self.ca2_marks_percentage / 100) * self.total_marks)
+    
+    @property
+    def obj_marks(self):
+        """Calculate OBJ marks from percentage"""
+        return int((self.obj_marks_percentage / 100) * self.total_marks)
+    
+    @property
+    def theory_marks(self):
+        """Calculate Theory marks from percentage"""
+        return int((self.theory_marks_percentage / 100) * self.total_marks)
+    
+    @property
+    def percentages_total(self):
+        """Check if percentages sum to 100"""
+        return (self.ca1_marks_percentage + self.ca2_marks_percentage + 
+                self.obj_marks_percentage + self.theory_marks_percentage)
+    
+    @property
+    def is_valid_percentages(self):
+        """Validate that percentages sum to 100"""
+        return self.percentages_total == 100
+    
+    @property
+    def is_question_deadline_passed(self):
+        from django.utils import timezone
+        return timezone.now() > self.question_submission_deadline
+    
+    @property
+    def is_vetting_deadline_passed(self):
+        from django.utils import timezone
+        return timezone.now() > self.exam_vetting_deadline
+    
+    @property
+    def is_approval_deadline_passed(self):
+        from django.utils import timezone
+        return timezone.now() > self.exam_approval_deadline

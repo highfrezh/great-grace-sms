@@ -49,6 +49,11 @@ def teaching_staff_required(view_func):
     )(view_func)
 
 
+def subject_teacher_required(view_func):
+    """Only SUBJECT_TEACHER role can access"""
+    return role_required('SUBJECT_TEACHER')(view_func)
+
+
 def examiner_required(view_func):
     return role_required(
         'PRINCIPAL', 'VICE_PRINCIPAL', 'EXAMINER'
