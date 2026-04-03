@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <!-- Header -->
+  <div class="mb-8">
+    <div class="flex items-center gap-2 text-sm text-gray-500 mb-2">
+      <a href="{% url 'students:student_list' %}" class="hover:text-[#851A10]">Students</a>
+      <span>/</span>
+      <span>Bulk Import</span>
+    </div>
+    <h1 class="text-2xl font-bold text-gray-800">Bulk Import Students</h1>
+    <p class="text-gray-500">Import multiple students from Excel file</p>
+  </div>
+
+  <!-- Error Details -->
+  {% if request.session.import_errors %}
+  <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+    <div class="flex items-center gap-2 mb-3">
+      <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <h3 class="font-semibold text-red-800">Import Errors</h3>
+    </div>
+    <ul class="space-y-1 text-sm text-red-700">
+      {% for error in request.session.import_errors %}
+      <li class="flex items-start gap-2">
+        <span class="mt-1">•</span>
+        <span>{{ error }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="text-xs text-red-600 mt-3">Fix these issues and re-upload the file.</p>
+  </div>
+  {% endif %}
+
+  <!-- Upload Form -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-800">Upload File</h2>
+    </div>
+    <div class="p-6">
+      <form method="post" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              {{ form.file.label }}
+            </label>
+            {{ form.file }}
+            {% if form.file.help_text %}
+              <p class="text-xs text-gray-500 mt-1">{{ form.file.help_text }}</p>
+            {% endif %}
+            {% if form.file.errors %}
+              <p class="text-xs text-red-500 mt-1">{{ form.file.errors.0 }}</p>
+            {% endif %}
+          </div>
+          
+          <div class="two-col-grid">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                {{ form.class_arm.label }}
+              </label>
+              {{ form.class_arm }}
+              {% if form.class_arm.help_text %}
+                <p class="text-xs text-gray-500 mt-1">{{ form.class_arm.help_text }}</p>
+              {% endif %}
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                {{ form.session.label }}
+              </label>
+              {{ form.session }}
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                {{ form.term.label }}
+              </label>
+              {{ form.term }}
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-3 pt-4 border-t border-gray-100">
+          <button type="submit" 
+                  class="flex items-center gap-2 px-6 py-2.5 text-white text-sm font-semibold rounded-lg hover:opacity-90 transition"
+                  style="background:#851A10;">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+            </svg>
+            Import Students
+          </button>
+          <a href="{% url 'students:student_list' %}" 
+             class="px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-lg transition">
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Template Info -->
+  <div class="bg-gray-50 rounded-xl p-6">
+    <h3 class="font-semibold text-gray-800 mb-4">File Format Requirements</h3>
+    <p class="text-sm text-gray-600 mb-4">
+      Upload an Excel file (.xlsx) with the following columns:
+    </p>
+    
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-white">
+            <th class="text-left px-4 py-2 font-medium text-gray-700 border">Column</th>
+            <th class="text-left px-4 py-2 font-medium text-gray-700 border">Required</th>
+            <th class="text-left px-4 py-2 font-medium text-gray-700 border">Description</th>
+            <th class="text-left px-4 py-2 font-medium text-gray-700 border">Example</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white">
+          <tr>
+            <td class="px-4 py-2 border font-mono text-xs">first_name</td>
+            <td class="px-4 py-2 border text-green-600">Yes</td>
+            <td class="px-4 py-2 border">Student's first name</td>
+            <td class="px-4 py-2 border text-gray-500">John</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border font-mono text-xs">last_name</td>
+            <td class="px-4 py-2 border text-green-600">Yes</td>
+            <td class="px-4 py-2 border">Student's last name</td>
+            <td class="px-4 py-2 border text-gray-500">Doe</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border font-mono text-xs">other_names</td>
+            <td class="px-4 py-2 border text-gray-400">No</td>
+            <td class="px-4 py-2 border">Middle names (optional)</td>
+            <td class="px-4 py-2 border text-gray-500">Smith</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border font-mono text-xs">date_of_birth</td>
+            <td class="px-4 py-2 border text-green-600">Yes</td>
+            <td class="px-4 py-2 border">Date of birth (YYYY-MM-DD)</td>
+            <td class="px-4 py-2 border text-gray-500">2010-05-15</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border font-mono text-xs">gender</td>
+            <td class="px-4 py-2 border text-green-600">Yes</td>
+            <td class="px-4 py-2 border">M (Male) or F (Female)</td>
+            <td class="px-4 py-2 border text-gray-500">M</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border font-mono text-xs">phone</td>
+            <td class="px-4 py-2 border text-gray-400">No</td>
+            <td class="px-4 py-2 border">Phone number</td>
+            <td class="px-4 py-2 border text-gray-500">08012345678</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border font-mono text-xs">email</td>
+            <td class="px-4 py-2 border text-gray-400">No</td>
+            <td class="px-4 py-2 border">Email address</td>
+            <td class="px-4 py-2 border text-gray-500">john@example.com</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border font-mono text-xs">address</td>
+            <td class="px-4 py-2 border text-gray-400">No</td>
+            <td class="px-4 py-2 border">Home address</td>
+            <td class="px-4 py-2 border text-gray-500">123 Main St</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border font-mono text-xs">guardian_name</td>
+            <td class="px-4 py-2 border text-gray-400">No</td>
+            <td class="px-4 py-2 border">Guardian's full name</td>
+            <td class="px-4 py-2 border text-gray-500">Jane Doe</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border font-mono text-xs">guardian_phone</td>
+            <td class="px-4 py-2 border text-gray-400">No</td>
+            <td class="px-4 py-2 border">Guardian's phone</td>
+            <td class="px-4 py-2 border text-gray-500">08087654321</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border font-mono text-xs">guardian_email</td>
+            <td class="px-4 py-2 border text-gray-400">No</td>
+            <td class="px-4 py-2 border">Guardian's email</td>
+            <td class="px-4 py-2 border text-gray-500">jane@example.com</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 border font-mono text-xs">guardian_relationship</td>
+            <td class="px-4 py-2 border text-gray-400">No</td>
+            <td class="px-4 py-2 border">Relationship to student</td>
+            <td class="px-4 py-2 border text-gray-500">PARENT</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

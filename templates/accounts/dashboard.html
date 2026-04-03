@@ -3,14 +3,131 @@
 {% block title %}Dashboard — Great Grace SMS{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-center h-64">
-  <div class="text-center">
-    <h1 class="text-2xl font-bold text-[#1F4E79]">Welcome to Great Grace SMS</h1>
-    <p class="text-gray-500 mt-2">Dashboard coming soon...</p>
-    <a href="{% url 'accounts:logout' %}"
-       class="mt-4 inline-block bg-red-500 text-white px-4 py-2 rounded-lg text-sm">
-      Logout
-    </a>
+<div class="max-w-7xl mx-auto">
+  <!-- Welcome Header -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+    <div class="flex items-center gap-4">
+      <div class="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold shrink-0"
+           style="background:#851A10;">
+        <span class="text-2xl">{{ request.user.get_full_name|first|upper }}</span>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">
+          Welcome back, {{ request.user.get_full_name }}!
+        </h1>
+        <p class="text-gray-500">
+          {% if request.user.is_superuser %}Superuser{% else %}{{ request.user.primary_role|title }}{% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% if request.user.is_class_teacher %}
+    <!-- Class Teacher Actions -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+      <div class="space-y-3">
+        <a href="{% url 'students:attendance_mark' %}"
+           class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:#851A10;">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2z"/>
+            </svg>
+          </div>
+          <div>
+            <h4 class="font-semibold text-gray-800">Mark Attendance</h4>
+            <p class="text-sm text-gray-500">Take attendance for your class</p>
+          </div>
+        </a>
+        
+        <a href="{% url 'students:student_list' %}"
+           class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-blue-500">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 4.35a8 8 0 100-8 8 8 0 008 8zm0 8v8a8 8 0 100-8 8z"/>
+            </svg>
+          </div>
+          <div>
+            <h4 class="font-semibold text-gray-800">View Students</h4>
+            <p class="text-sm text-gray-500">Browse all students</p>
+          </div>
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if request.user.is_admin_staff %}
+    <!-- Admin Actions -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+      <div class="space-y-3">
+        <a href="{% url 'students:student_create' %}"
+           class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-green-500">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M18 9v3m0 0v-18m0 0h-18m9 9h18m-9-9l-9 9m9-9v18"/>
+            </svg>
+          </div>
+          <div>
+            <h4 class="font-semibold text-gray-800">Admit Student</h4>
+            <p class="text-sm text-gray-500">Register new student</p>
+          </div>
+        </a>
+        
+        <a href="{% url 'students:bulk_import' %}"
+           class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-purple-500">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M7 16a4 4 0 01-4 4m0 4v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h-4"/>
+            </svg>
+          </div>
+          <div>
+            <h4 class="font-semibold text-gray-800">Bulk Import</h4>
+            <p class="text-sm text-gray-500">Import multiple students</p>
+          </div>
+        </a>
+        
+        <a href="{% url 'staff:staff_list' %}"
+           class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-orange-500">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656.126-1.283
+                 -.356-1.857M7 20v-2c0-.656.126-1.283
+                 .356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </div>
+          <div>
+            <h4 class="font-semibold text-gray-800">Manage Staff</h4>
+            <p class="text-sm text-gray-500">View and edit staff</p>
+          </div>
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if request.user.is_student %}
+    <!-- Student Dashboard -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">My Information</h3>
+      <div class="space-y-4">
+        <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+          <span class="text-gray-600">Admission Number:</span>
+          <span class="font-semibold">{{ request.user.student_profile.admission_number }}</span>
+        </div>
+        <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+          <span class="text-gray-600">Current Class:</span>
+          <span class="font-semibold">{{ request.user.student_profile.get_current_enrollment.class_arm.full_name }}</span>
+        </div>
+      </div>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

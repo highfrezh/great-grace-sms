@@ -53,3 +53,9 @@ def examiner_required(view_func):
     return role_required(
         'PRINCIPAL', 'VICE_PRINCIPAL', 'EXAMINER'
     )(view_func)
+
+
+def class_teacher_required(view_func):
+    return role_required(
+        'PRINCIPAL', 'VICE_PRINCIPAL', 'CLASS_TEACHER'
+    )(view_func)

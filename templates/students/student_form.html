@@ -1,0 +1,354 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} — Great Grace SMS{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+
+<style>
+  .form-input {
+    width: 100%;
+    padding: 0.625rem 1rem;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background-color: white;
+    outline: none;
+    color: #374151;
+  }
+  
+  .form-input:focus {
+    border-color: #851A10;
+    box-shadow: 0 0 0 3px rgba(133, 26, 16, 0.1);
+  }
+  
+  .form-input.is-invalid {
+    border-color: #DC2626;
+    background-color: #FEF2F2;
+  }
+  
+  .form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-label .required {
+    color: #851A10;
+    margin-left: 0.25rem;
+  }
+  
+  .form-error {
+    color: #DC2626;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+  }
+  
+  .form-hint {
+    color: #6B7280;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+  }
+  
+  select.form-input {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+    background-position: right 1rem center;
+    background-repeat: no-repeat;
+    background-size: 1.25rem;
+    padding-right: 2.5rem;
+  }
+  
+  textarea.form-input {
+    resize: vertical;
+    min-height: 80px;
+  }
+  
+  .two-col-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+  
+  @media (max-width: 640px) {
+    .two-col-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  .section-card {
+    transition: all 0.2s ease;
+  }
+  
+  .section-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+</style>
+
+<form method="post" class="max-w-5xl mx-auto" enctype="multipart/form-data">
+  {% csrf_token %}
+  
+  <!-- Student Information -->
+  <div class="section-card bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-gray-100" style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
+      <div class="flex items-center gap-3">
+        <div class="w-1 h-8 rounded-full" style="background:#851A10;"></div>
+        <div>
+          <h2 class="text-lg font-bold text-gray-800">Student Information</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Basic personal details</p>
+        </div>
+      </div>
+    </div>
+    <div class="p-6">
+      <div class="two-col-grid">
+        <div>
+          <label class="form-label">
+            First Name <span class="required">*</span>
+          </label>
+          {{ student_form.first_name }}
+          {% if student_form.first_name.errors %}
+            <p class="form-error">{{ student_form.first_name.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <label class="form-label">
+            Last Name <span class="required">*</span>
+          </label>
+          {{ student_form.last_name }}
+          {% if student_form.last_name.errors %}
+            <p class="form-error">{{ student_form.last_name.errors.0 }}</p>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="two-col-grid mt-5">
+        <div>
+          <label class="form-label">Other Names</label>
+          {{ student_form.other_names }}
+          <p class="form-hint">Middle name or other names</p>
+        </div>
+        <div>
+          <label class="form-label">
+            Date of Birth <span class="required">*</span>
+          </label>
+          {{ student_form.date_of_birth }}
+          {% if student_form.date_of_birth.errors %}
+            <p class="form-error">{{ student_form.date_of_birth.errors.0 }}</p>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="two-col-grid mt-5">
+        <div>
+          <label class="form-label">
+            Gender <span class="required">*</span>
+          </label>
+          {{ student_form.gender }}
+          {% if student_form.gender.errors %}
+            <p class="form-error">{{ student_form.gender.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <label class="form-label">Blood Group</label>
+          {{ student_form.blood_group }}
+          <p class="form-hint">For medical records</p>
+        </div>
+      </div>
+      
+      <div class="two-col-grid mt-5">
+        <div>
+          <label class="form-label">Phone Number</label>
+          {{ student_form.phone }}
+          <p class="form-hint">Student's personal phone (if any)</p>
+        </div>
+        <div>
+          <label class="form-label">Email Address</label>
+          {{ student_form.email }}
+          <p class="form-hint">Used for communication</p>
+        </div>
+      </div>
+      
+      <div class="two-col-grid mt-5">
+        <div>
+          <label class="form-label">Home Address</label>
+          {{ student_form.address }}
+          <p class="form-hint">Residential address</p>
+        </div>
+        <div>
+          <label class="form-label">Allergies</label>
+          {{ student_form.allergies }}
+          <p class="form-hint">Any known allergies</p>
+        </div>
+      </div>
+      
+      <div class="two-col-grid mt-5">
+        <div>
+          <label class="form-label">Medical Conditions</label>
+          {{ student_form.medical_conditions }}
+          <p class="form-hint">Chronic conditions</p>
+        </div>
+        <div>
+          <label class="form-label">Emergency Contact</label>
+          {{ student_form.emergency_contact }}
+          <p class="form-hint">Person to contact in emergency</p>
+        </div>
+      </div>
+      
+      <div class="two-col-grid mt-5">
+        <div>
+          <label class="form-label">Emergency Phone</label>
+          {{ student_form.emergency_phone }}
+          <p class="form-hint">Emergency contact number</p>
+        </div>
+      </div>
+      
+      {% if is_edit %}
+      <div class="mt-6 pt-4 border-t border-gray-100">
+        <div class="flex items-center gap-3">
+          {{ student_form.is_active }}
+          <label class="text-sm font-medium text-gray-700">Student is active</label>
+        </div>
+        <p class="form-hint mt-1">Inactive students cannot log in or access the portal</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  
+  {% if not is_edit %}
+  <!-- Enrollment Information -->
+  <div class="section-card bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-gray-100" style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
+      <div class="flex items-center gap-3">
+        <div class="w-1 h-8 rounded-full" style="background:#851A10;"></div>
+        <div>
+          <h2 class="text-lg font-bold text-gray-800">Enrollment Information</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Class placement for the current session</p>
+        </div>
+      </div>
+    </div>
+    <div class="p-6">
+      <div class="two-col-grid">
+        <div>
+          <label class="form-label">Class Arm</label>
+          {{ enrollment_form.class_arm }}
+          <p class="form-hint">Select class and section</p>
+        </div>
+        <div>
+          <label class="form-label">Session</label>
+          {{ enrollment_form.session }}
+          <p class="form-hint">Academic session</p>
+        </div>
+      </div>
+      
+      <div class="mt-5">
+        <label class="form-label">Term</label>
+        {{ enrollment_form.term }}
+        <p class="form-hint">Term/Semester</p>
+      </div>
+      
+      <div class="mt-4 bg-blue-50 rounded-lg p-3">
+        <p class="text-xs text-blue-700">
+          ℹ️ Enrollment can be completed now or later from the student's profile page.
+        </p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Guardian Information -->
+  <div class="section-card bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-gray-100" style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
+      <div class="flex items-center gap-3">
+        <div class="w-1 h-8 rounded-full" style="background:#851A10;"></div>
+        <div>
+          <h2 class="text-lg font-bold text-gray-800">Guardian Information</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Parent or legal guardian details</p>
+        </div>
+      </div>
+    </div>
+    <div class="p-6">
+      <div class="two-col-grid">
+        <div>
+          <label class="form-label">Full Name</label>
+          {{ guardian_form.full_name }}
+          <p class="form-hint">Guardian's complete name</p>
+        </div>
+        <div>
+          <label class="form-label">Relationship</label>
+          {{ guardian_form.relationship }}
+          <p class="form-hint">e.g., Father, Mother, Uncle</p>
+        </div>
+      </div>
+      
+      <div class="two-col-grid mt-5">
+        <div>
+          <label class="form-label">
+            Phone Number <span class="required">*</span>
+          </label>
+          {{ guardian_form.phone }}
+          {% if guardian_form.phone.errors %}
+            <p class="form-error">{{ guardian_form.phone.errors.0 }}</p>
+          {% endif %}
+          <p class="form-hint">Primary contact number</p>
+        </div>
+        <div>
+          <label class="form-label">Email Address</label>
+          {{ guardian_form.email }}
+          <p class="form-hint">For parent portal access</p>
+        </div>
+      </div>
+      
+      <div class="two-col-grid mt-5">
+        <div>
+          <label class="form-label">Occupation</label>
+          {{ guardian_form.occupation }}
+        </div>
+        <div>
+          <label class="form-label">Address</label>
+          {{ guardian_form.address }}
+        </div>
+      </div>
+      
+      <div class="two-col-grid mt-5">
+        <div class="flex items-center gap-3">
+          {{ guardian_form.is_primary }}
+          <label class="text-sm font-medium text-gray-700">Primary Guardian</label>
+        </div>
+        <div class="flex items-center gap-3">
+          {{ guardian_form.portal_enabled }}
+          <label class="text-sm font-medium text-gray-700">Enable Parent Portal Access</label>
+        </div>
+      </div>
+      
+      <div class="mt-4 bg-yellow-50 rounded-lg p-3">
+        <p class="text-xs text-yellow-700">
+          💡 You can add multiple guardians later from the student's profile page.
+        </p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  
+  <!-- Actions -->
+  <div class="flex items-center justify-end gap-3 pb-6">
+    <a href="{% url 'students:student_list' %}"
+       class="px-6 py-2.5 text-gray-600 text-sm font-medium rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition inline-flex items-center gap-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      </svg>
+      Cancel
+    </a>
+    <button type="submit"
+            class="px-6 py-2.5 text-white text-sm font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 inline-flex items-center gap-2"
+            style="background:linear-gradient(135deg,#851A10 0%,#A52318 100%);">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+      </svg>
+      {% if is_edit %}Update Student{% else %}Admit Student{% endif %}
+    </button>
+  </div>
+</form>
+
+{% endblock %}
