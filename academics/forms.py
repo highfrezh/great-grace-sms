@@ -108,13 +108,11 @@ class SubjectForm(forms.ModelForm):
 class SubjectTeacherAssignmentForm(forms.ModelForm):
     class Meta:
         model = SubjectTeacherAssignment
-        fields = ['teacher', 'subject', 'class_arm', 'session', 'term']
+        fields = ['teacher', 'subject', 'class_arm']
         widgets = {
             'teacher': forms.Select(attrs={'class': 'form-input'}),
             'subject': forms.Select(attrs={'class': 'form-input'}),
             'class_arm': forms.Select(attrs={'class': 'form-input'}),
-            'session': forms.Select(attrs={'class': 'form-input'}),
-            'term': forms.Select(attrs={'class': 'form-input'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -126,6 +124,12 @@ class SubjectTeacherAssignmentForm(forms.ModelForm):
                 'VICE_PRINCIPAL', 'PRINCIPAL'
             ]
         ).distinct()
-        # Default to current session and term
-        self.fields['session'].initial = AcademicSession.get_current()
-        self.fields['term'].initial = Term.get_current()
+
+    def save(self, commit=True):
+        """Auto-set session and term to current values"""
+        instance = super().save(commit=False)
+        instance.session = AcademicSession.get_current()
+        instance.term = Term.get_current()
+        if commit:
+            instance.save()
+        return instance

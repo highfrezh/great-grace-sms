@@ -358,6 +358,8 @@ def assignment_list(request):
 @login_required
 @admin_staff_required
 def assignment_create(request):
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
     form = SubjectTeacherAssignmentForm(request.POST or None)
     if form.is_valid():
         form.save()
@@ -366,7 +368,10 @@ def assignment_create(request):
     return render(request, 'academics/form.html', {
         'form': form,
         'page_title': 'Assign Subject Teacher',
-        'back_url': 'academics:assignment_list'
+        'back_url': 'academics:assignment_list',
+        'current_session': current_session,
+        'current_term': current_term,
+        'session_info': f'for {current_session} - {current_term}'
     })
 
 
@@ -382,7 +387,10 @@ def assignment_edit(request, pk):
     return render(request, 'academics/form.html', {
         'form': form,
         'page_title': 'Edit Subject Teacher Assignment',
-        'back_url': 'academics:assignment_list'
+        'back_url': 'academics:assignment_list',
+        'current_session': assignment.session,
+        'current_term': assignment.term,
+        'session_info': f'for {assignment.session} - {assignment.term}'
     })
 
 

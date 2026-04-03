@@ -12,7 +12,7 @@ from accounts.decorators import (
 from academics.models import AcademicSession, Term
 from students.models import Student, StudentEnrollment
 from .models import (
-    Exam, Question, TheoryQuestion, ExamSubmission,
+    Exam, ObjectiveQuestion, TheoryQuestion, ExamSubmission,
     StudentAnswer, TheoryScore, ExamResult, ExamDeadlinePenalty,
     ExamConfiguration
 )

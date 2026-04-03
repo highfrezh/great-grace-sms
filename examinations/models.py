@@ -1,117 +1,52 @@
 from django.db import models
-
-# Create your models here.
-from django.db import models
 from django.conf import settings
+from django.core.validators import FileExtensionValidator
 from academics.models import ClassArm, AcademicSession, Term, Subject
 from students.models import Student
+from staff.models import StaffProfile
 
 
 class Exam(models.Model):
+    """
+    The Header: Stores general exam info, theory file attachment, and metadata.
+    Admin sets the exam configuration, teachers create objective questions.
+    """
 
-    class Status(models.TextChoices):
-        DRAFT = 'DRAFT', 'Draft'
-        PENDING_VETTING = 'PENDING_VETTING', 'Pending Vetting'
-        VETTED = 'VETTED', 'Vetted'
-        APPROVED = 'APPROVED', 'Approved'
-        ACTIVE = 'ACTIVE', 'Active'
-        CLOSED = 'CLOSED', 'Closed'
-
-    class ExamType(models.TextChoices):
-        CA1 = 'CA1', 'First Continuous Assessment'
-        CA2 = 'CA2', 'Second Continuous Assessment'
-        EXAM = 'EXAM', 'End of Term Examination'
-
-    # ── Core Info ─────────────────────────────────────
-    title = models.CharField(max_length=200)
-    subject = models.ForeignKey(
-        Subject,
-        on_delete=models.CASCADE,
-        related_name='exams'
-    )
-    class_arm = models.ForeignKey(
-        ClassArm,
-        on_delete=models.CASCADE,
-        related_name='exams'
-    )
-    session = models.ForeignKey(
-        AcademicSession,
-        on_delete=models.CASCADE,
-        related_name='exams'
-    )
-    term = models.ForeignKey(
-        Term,
-        on_delete=models.CASCADE,
-        related_name='exams'
-    )
-    exam_type = models.CharField(
-        max_length=10,
-        choices=ExamType.choices,
-        default=ExamType.EXAM
-    )
-
-    # ── Marks Breakdown ───────────────────────────────
-    obj_marks = models.PositiveIntegerField(
-        default=30,
-        help_text="Maximum marks for CBT/Objective section"
-    )
-    theory_marks = models.PositiveIntegerField(
-        default=30,
-        help_text="Maximum marks for Theory section"
-    )
-    ca1_marks = models.PositiveIntegerField(
-        default=20,
-        help_text="Maximum marks for CA1"
-    )
-    ca2_marks = models.PositiveIntegerField(
-        default=20,
-        help_text="Maximum marks for CA2"
-    )
-
-    # ── CBT Settings ──────────────────────────────────
-    duration_minutes = models.PositiveIntegerField(
-        default=30,
-        help_text="CBT exam duration in minutes"
-    )
-    randomize_questions = models.BooleanField(default=True)
-    show_result_immediately = models.BooleanField(default=False)
-
-    # ── Deadline & Penalty ────────────────────────────
-    submission_deadline = models.DateTimeField(
-        null=True, blank=True,
-        help_text="Deadline for teacher to submit/activate this exam"
-    )
-    deadline_penalty_logged = models.BooleanField(default=False)
-
-    # ── Status & Workflow ─────────────────────────────
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-        default=Status.DRAFT
-    )
-
-    # ── People ────────────────────────────────────────
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+    # ── Core Relationships ────────────────────────────
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='exams')
+    class_arm = models.ForeignKey(ClassArm, on_delete=models.CASCADE, related_name='exams')
+    teacher = models.ForeignKey(
+        StaffProfile,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='exams_created'
+        blank=True,
+        related_name='exams_teaching',
+        help_text="Subject teacher assigned to create questions for this exam"
     )
-    vetted_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='exams_vetted'
+    term = models.ForeignKey(Term, on_delete=models.CASCADE, related_name='exams')
+    session = models.ForeignKey(AcademicSession, on_delete=models.CASCADE, related_name='exams')
+
+    # ── Title & Duration ──────────────────────────────
+    title = models.CharField(max_length=255, help_text="e.g., First Term Examination")
+    duration_minutes = models.PositiveIntegerField(
+        default=60,
+        help_text="Duration for the CBT (objective) section in minutes"
     )
-    approved_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='exams_approved'
+
+    # ── Theory File Upload (for manual administration) ─
+    theory_attachment = models.FileField(
+        upload_to='exams/theory_files/',
+        null=True,
+        blank=True,
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'docx', 'doc'])],
+        help_text="Upload theory/written questions file for printing (PDF, DOCX, DOC only)"
     )
-    vetted_at = models.DateTimeField(null=True, blank=True)
-    approved_at = models.DateTimeField(null=True, blank=True)
-    vetting_comment = models.TextField(blank=True)
+
+    # ── Publication Status ────────────────────────────
+    is_published = models.BooleanField(
+        default=False,
+        help_text="Admin must set to True for students to see and access this exam"
+    )
 
     # ── Timestamps ────────────────────────────────────
     created_at = models.DateTimeField(auto_now_add=True)
@@ -119,114 +54,75 @@ class Exam(models.Model):
 
     class Meta:
         ordering = ['-created_at']
-        unique_together = ['subject', 'class_arm', 'session', 'term', 'exam_type']
+        unique_together = ['subject', 'class_arm', 'teacher', 'session', 'term']
 
     def __str__(self):
-        return f"{self.title} — {self.class_arm} ({self.session})"
+        return f"{self.subject} - {self.class_arm} ({self.term})"
 
     @property
-    def total_marks(self):
-        return self.obj_marks + self.theory_marks + self.ca1_marks + self.ca2_marks
+    def objective_count(self):
+        """Count of objective questions in this exam"""
+        return self.objectives.count()
 
     @property
-    def question_count(self):
-        return self.questions.count()
-
-    @property
-    def theory_question_count(self):
-        return self.theory_questions.count()
-
-    @property
-    def is_active(self):
-        return self.status == self.Status.ACTIVE
-
-    @property
-    def is_submittable(self):
-        return self.status == self.Status.DRAFT
-
-    @property
-    def can_be_vetted(self):
-        return self.status == self.Status.PENDING_VETTING
-
-    @property
-    def can_be_approved(self):
-        return self.status == self.Status.VETTED
-
-    @property
-    def can_be_activated(self):
-        return self.status == self.Status.APPROVED
+    def has_theory_file(self):
+        """Check if theory file has been uploaded"""
+        return bool(self.theory_attachment)
 
 
-class Question(models.Model):
-    """CBT Objective Questions"""
+class ObjectiveQuestion(models.Model):
+    """
+    The Detail: Individual multiple-choice questions for the CBT section.
+    Teachers create these for their assigned exams.
+    Supports Yoruba characters and Unicode via TextField.
+    """
 
-    class Difficulty(models.TextChoices):
-        EASY = 'EASY', 'Easy'
-        MEDIUM = 'MEDIUM', 'Medium'
-        HARD = 'HARD', 'Hard'
+    class CorrectAnswerChoices(models.TextChoices):
+        A = 'A', 'Option A'
+        B = 'B', 'Option B'
+        C = 'C', 'Option C'
+        D = 'D', 'Option D'
 
+    # ── Relationship ──────────────────────────────────
     exam = models.ForeignKey(
         Exam,
         on_delete=models.CASCADE,
-        related_name='questions'
+        related_name='objectives'
     )
-    
-    # ── English Version ───────────────────────────────
-    text = models.TextField(
-        help_text="Question text. Use LaTeX for math: $x^2 + y^2$"
+
+    # ── Question Content ──────────────────────────────
+    question_text = models.TextField(
+        help_text="Type the question here (supports Yoruba Unicode characters: ṣ, ọ, ẹ, etc.)"
     )
-    image = models.ImageField(
-        upload_to='exam_questions/',
-        null=True, blank=True
-    )
-    option_a = models.TextField()
-    option_b = models.TextField()
-    option_c = models.TextField()
-    option_d = models.TextField()
-    
-    # ── Yoruba Translation ────────────────────────────
-    text_yoruba = models.TextField(
+
+    question_image = models.ImageField(
+        upload_to='exams/question_images/',
+        null=True,
         blank=True,
-        help_text="Yoruba translation of question (optional)"
+        help_text="Diagram, graph, or math equation visual"
     )
-    option_a_yoruba = models.TextField(
-        blank=True,
-        help_text="Yoruba translation of option A"
-    )
-    option_b_yoruba = models.TextField(
-        blank=True,
-        help_text="Yoruba translation of option B"
-    )
-    option_c_yoruba = models.TextField(
-        blank=True,
-        help_text="Yoruba translation of option C"
-    )
-    option_d_yoruba = models.TextField(
-        blank=True,
-        help_text="Yoruba translation of option D"
-    )
-    
-    # ── Metadata ───────────────────────────────────
-    correct_answer = models.CharField(
+
+    # ── Options ───────────────────────────────────────
+    option_a = models.CharField(max_length=500, verbose_name="Option A")
+    option_b = models.CharField(max_length=500, verbose_name="Option B")
+    option_c = models.CharField(max_length=500, verbose_name="Option C")
+    option_d = models.CharField(max_length=500, verbose_name="Option D")
+
+    # ── Answer & Grading ──────────────────────────────
+    correct_option = models.CharField(
         max_length=1,
-        choices=[('A','A'),('B','B'),('C','C'),('D','D')]
+        choices=CorrectAnswerChoices.choices,
+        help_text="Select the correct answer for auto-grading when students take the exam"
     )
-    difficulty = models.CharField(
-        max_length=10,
-        choices=Difficulty.choices,
-        default=Difficulty.MEDIUM
-    )
-    marks = models.PositiveIntegerField(
-        default=1,
-        help_text="Marks for this question"
-    )
-    order = models.PositiveIntegerField(default=0)
 
     class Meta:
-        ordering = ['order', 'id']
+        ordering = ['id']  # Keep questions in order of creation
+        verbose_name = "Objective Question"
+        verbose_name_plural = "Objective Questions"
 
     def __str__(self):
-        return f"Q{self.order}: {self.text[:50]}..."
+        return f"Question for {self.exam.subject}"
+
 
 
 class TheoryQuestion(models.Model):
@@ -329,7 +225,7 @@ class StudentAnswer(models.Model):
         related_name='answers'
     )
     question = models.ForeignKey(
-        Question,
+        ObjectiveQuestion,
         on_delete=models.CASCADE,
         related_name='student_answers'
     )
@@ -352,7 +248,7 @@ class StudentAnswer(models.Model):
         # Auto-check if answer is correct
         if self.selected_option:
             self.is_correct = (
-                self.selected_option == self.question.correct_answer
+                self.selected_option == self.question.correct_option
             )
         super().save(*args, **kwargs)
 

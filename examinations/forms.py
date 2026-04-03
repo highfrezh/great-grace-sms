@@ -1,103 +1,74 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from academics.models import Subject, ClassArm, AcademicSession, Term
-from .models import Exam, Question, TheoryQuestion, TheoryScore, ExamResult, ExamConfiguration
+from staff.models import StaffProfile
+from .models import Exam, ObjectiveQuestion, TheoryQuestion, TheoryScore, ExamResult, ExamConfiguration
 
 User = get_user_model()
 
 
 class ExamForm(forms.ModelForm):
+    """Form for creating/editing exams"""
     class Meta:
         model = Exam
         fields = [
-            'title', 'subject', 'class_arm', 'session', 'term',
-            'exam_type', 'obj_marks', 'theory_marks',
-            'ca1_marks', 'ca2_marks', 'duration_minutes',
-            'randomize_questions', 'show_result_immediately',
-            'submission_deadline',
+            'title', 'subject', 'class_arm', 'teacher', 'session', 'term',
+            'duration_minutes', 'theory_attachment', 'is_published'
         ]
         widgets = {
             'title': forms.TextInput(attrs={
-                'placeholder': 'e.g. Mathematics First Term Exam 2024',
+                'placeholder': 'e.g. First Term Examination',
                 'class': 'form-input'
             }),
             'subject': forms.Select(attrs={'class': 'form-input'}),
             'class_arm': forms.Select(attrs={'class': 'form-input'}),
+            'teacher': forms.Select(attrs={'class': 'form-input'}),
             'session': forms.Select(attrs={'class': 'form-input'}),
             'term': forms.Select(attrs={'class': 'form-input'}),
-            'exam_type': forms.Select(attrs={'class': 'form-input'}),
-            'obj_marks': forms.NumberInput(attrs={
-                'class': 'form-input', 'min': 0
-            }),
-            'theory_marks': forms.NumberInput(attrs={
-                'class': 'form-input', 'min': 0
-            }),
-            'ca1_marks': forms.NumberInput(attrs={
-                'class': 'form-input', 'min': 0
-            }),
-            'ca2_marks': forms.NumberInput(attrs={
-                'class': 'form-input', 'min': 0
-            }),
             'duration_minutes': forms.NumberInput(attrs={
-                'class': 'form-input', 'min': 5
+                'class': 'form-input', 'min': 5, 'value': 60
             }),
-            'submission_deadline': forms.DateTimeInput(attrs={
-                'type': 'datetime-local',
-                'class': 'form-input'
+            'theory_attachment': forms.FileInput(attrs={
+                'class': 'form-input',
+                'accept': '.pdf,.docx,.doc'
             }),
-            'randomize_questions': forms.CheckboxInput(attrs={
-                'class': 'form-checkbox'
-            }),
-            'show_result_immediately': forms.CheckboxInput(attrs={
+            'is_published': forms.CheckboxInput(attrs={
                 'class': 'form-checkbox'
             }),
         }
 
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         current_session = AcademicSession.get_current()
         current_term = Term.get_current()
+        
+        # Set current session and term as defaults
         self.fields['session'].initial = current_session
         self.fields['term'].initial = current_term
-
-        # If subject teacher filter to their assigned subjects
-        if user and user.is_subject_teacher and not user.is_admin_staff:
-            from academics.models import SubjectTeacherAssignment
-            assigned = SubjectTeacherAssignment.objects.filter(
-                teacher=user,
-                session=current_session
-            ).values_list('subject_id', 'class_arm_id')
-            subject_ids = list(set([a[0] for a in assigned]))
-            class_ids = list(set([a[1] for a in assigned]))
-            self.fields['subject'].queryset = Subject.objects.filter(
-                id__in=subject_ids
-            )
-            self.fields['class_arm'].queryset = ClassArm.objects.filter(
-                id__in=class_ids
-            )
-
+        
+        # Filter to only teaching staff
+        self.fields['teacher'].queryset = StaffProfile.objects.filter(
+            user__roles__name__in=['SUBJECT_TEACHER', 'CLASS_TEACHER', 'VICE_PRINCIPAL', 'PRINCIPAL']
+        ).distinct()
 
 class QuestionForm(forms.ModelForm):
+    """Form for creating objective questions"""
     class Meta:
-        model = Question
+        model = ObjectiveQuestion
         fields = [
-            'text', 'image', 'option_a', 'option_b',
-            'option_c', 'option_d', 'correct_answer',
-            'difficulty', 'marks', 'order',
-            'text_yoruba', 'option_a_yoruba', 'option_b_yoruba',
-            'option_c_yoruba', 'option_d_yoruba'
+            'question_text', 'question_image', 'option_a', 'option_b',
+            'option_c', 'option_d', 'correct_option'
         ]
         widgets = {
-            # ── English Fields ────────────────────
-            'text': forms.Textarea(attrs={
+            'question_text': forms.Textarea(attrs={
                 'rows': 3,
                 'class': 'form-input',
-                'placeholder': 'Question text. Use $...$ for LaTeX math.'
+                'placeholder': 'Question text (supports Yoruba Unicode characters)'
             }),
-            'image': forms.FileInput(attrs={
+            'question_image': forms.FileInput(attrs={
                 'class': 'form-input',
-                'accept': 'image/*'
+                'accept': 'image/*',
+                'help_text': 'Upload diagram, graph, or math equation image'
             }),
             'option_a': forms.TextInput(attrs={
                 'class': 'form-input', 'placeholder': 'Option A'
@@ -111,36 +82,9 @@ class QuestionForm(forms.ModelForm):
             'option_d': forms.TextInput(attrs={
                 'class': 'form-input', 'placeholder': 'Option D'
             }),
-            
-            # ── Yoruba Fields ─────────────────────
-            'text_yoruba': forms.Textarea(attrs={
-                'rows': 3,
-                'class': 'form-input',
-                'placeholder': 'Literal translation in Yoruba (optional)'
-            }),
-            'option_a_yoruba': forms.TextInput(attrs={
-                'class': 'form-input', 'placeholder': 'Option A (Yoruba)'
-            }),
-            'option_b_yoruba': forms.TextInput(attrs={
-                'class': 'form-input', 'placeholder': 'Option B (Yoruba)'
-            }),
-            'option_c_yoruba': forms.TextInput(attrs={
-                'class': 'form-input', 'placeholder': 'Option C (Yoruba)'
-            }),
-            'option_d_yoruba': forms.TextInput(attrs={
-                'class': 'form-input', 'placeholder': 'Option D (Yoruba)'
-            }),
-            
-            # ── Metadata ───────────────────────────
-            'correct_answer': forms.Select(attrs={'class': 'form-input'}),
-            'difficulty': forms.Select(attrs={'class': 'form-input'}),
-            'marks': forms.NumberInput(attrs={
-                'class': 'form-input', 'min': 1
-            }),
-            'order': forms.NumberInput(attrs={
-                'class': 'form-input', 'min': 1
-            }),
+            'correct_option': forms.Select(attrs={'class': 'form-input'}),
         }
+
 
 
 class TheoryQuestionForm(forms.ModelForm):

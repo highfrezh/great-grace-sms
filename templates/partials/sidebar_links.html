@@ -42,7 +42,7 @@
   </button>
 
   <div x-show="studentsOpen" x-transition x-cloak class="mt-1 space-y-0.5">
-
+    {% if request.user.is_admin_staff or request.user.is_principal or request.user.is_vice_principal %}
     <a href="{% url 'students:student_list' %}"
        class="flex items-center gap-2 py-2 text-xs text-white transition
               {% if request.resolver_match.url_name == 'student_list' %}
@@ -87,6 +87,7 @@
       </svg>
       <span x-show="sidebarOpen" class="whitespace-nowrap">Bulk Import</span>
     </a>
+    {% endif %}
 
     <a href="{% url 'students:attendance_mark_default' %}"
        class="flex items-center gap-2 py-2 text-xs text-white transition
@@ -109,6 +110,7 @@
 </div>
 
 <!-- Staff -->
+ {% if request.user.is_admin_staff or request.user.is_principal or request.user.is_vice_principal %}
 <div x-data="{ staffOpen: {% if current_app == 'staff' %}true{% else %}false{% endif %} }">
 
   <button @click="staffOpen = !staffOpen"
@@ -158,8 +160,10 @@
 
   </div>
 </div>
+{% endif %}
 
 <!-- Academics -->
+ {% if request.user.is_admin_staff %}
 <div x-data="{ academicsOpen: {% if current_app == 'academics' %}true{% else %}false{% endif %} }">
 
   <!-- Toggle -->
@@ -274,6 +278,7 @@
 
   </div>
 </div>
+ {% endif %}
 
 <!-- Examinations -->
 <div x-data="{ examinationsOpen: {% if current_app == 'examinations' %}true{% else %}false{% endif %} }">
@@ -334,24 +339,6 @@
               d="M8.5 13m0 0l4 4m-4-4l-4 4m4-4v6m0-6L8.5 9m0 0l4-4m-4 4l-4-4"/>
       </svg>
       <span x-show="sidebarOpen" class="whitespace-nowrap">📝 Create Questions</span>
-    </a>
-    {% endif %}
-
-    <!-- Pending Vetting (for Examiners) -->
-    {% if request.user.is_examiner %}
-    <a href="{% url 'examinations:exam_list' %}?status=PENDING_VETTING"
-       class="flex items-center gap-2 py-2 text-xs text-white transition
-              {% if request.GET.status == 'PENDING_VETTING' %}
-              opacity-100{% else %}opacity-50 hover:opacity-90{% endif %}"
-       style="padding-left:3.25rem;
-              {% if request.GET.status == 'PENDING_VETTING' %}
-              background:rgba(133,26,16,0.4);border-left:2px solid #C2B0A1;
-              {% else %}border-left:2px solid rgba(255,255,255,0.1);{% endif %}">
-      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M9 12l2 2 4-4M7 12a5 5 0 1110 0A5 5 0 017 12z"/>
-      </svg>
-      <span x-show="sidebarOpen" class="whitespace-nowrap">Pending Vetting</span>
     </a>
     {% endif %}
 

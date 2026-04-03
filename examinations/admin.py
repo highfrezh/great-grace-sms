@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import (
-    Exam, Question, TheoryQuestion, ExamSubmission,
+    Exam, ObjectiveQuestion, TheoryQuestion, ExamSubmission,
     StudentAnswer, TheoryScore, ExamResult, ExamDeadlinePenalty,
     ExamConfiguration
 )
