@@ -23,7 +23,7 @@
     <thead>
       <tr style="background:#635E57;">
         <th class="text-left px-6 py-4 text-white font-semibold">Subject Name</th>
-        <th class="text-left px-6 py-4 text-white font-semibold">Code</th>
+        <th class="text-left px-6 py-4 text-white font-semibold">Class</th>
         <th class="text-left px-6 py-4 text-white font-semibold">Description</th>
         <th class="text-left px-6 py-4 text-white font-semibold">Status</th>
         <th class="text-left px-6 py-4 text-white font-semibold">Actions</th>
@@ -38,7 +38,7 @@
           <td class="px-6 py-4">
             <span class="px-3 py-1 text-xs font-bold rounded-lg
                          bg-gray-100 text-gray-700 tracking-wide">
-              {{ subject.code }}
+              {{ subject.class_arms.first.class_arm|default:"—" }}
             </span>
           </td>
           <td class="px-6 py-4 text-gray-500 max-w-xs truncate">
@@ -119,7 +119,7 @@
         </tr>
       {% empty %}
         <tr>
-          <td colspan="5" class="px-6 py-12 text-center text-gray-400">
+          <td colspan="4" class="px-6 py-12 text-center text-gray-400">
             No subjects yet.
             <a href="{% url 'academics:subject_create' %}"
                class="font-medium" style="color:#851A10;">Create one</a>

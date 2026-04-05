@@ -43,5 +43,6 @@ urlpatterns = [
     path('assignments/create/', views.assignment_create, name='assignment_create'),
     path('assignments/<int:pk>/edit/', views.assignment_edit, name='assignment_edit'),
     path('assignments/<int:pk>/delete/', views.assignment_delete, name='assignment_delete'),
+    path('ajax/available-subjects/', views.ajax_available_subjects, name='ajax_available_subjects'),
 
 ]

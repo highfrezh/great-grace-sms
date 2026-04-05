@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Question Approval Dashboard — Great Grace SMS{% endblock %}
+{% block page_title %}Question Approval Dashboard{% endblock %}
+
+{% block content %}
+<style>
+  .stat-card {
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid #F3F4F6;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.2s ease;
+  }
+  
+  .stat-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+  }
+  
+  .stat-pending { color: #F59E0B; }
+  .stat-approved { color: #059669; }
+  .stat-rejected { color: #DC2626; }
+  
+  .class-card {
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid #F3F4F6;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+    display: block;
+  }
+  
+  .class-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+  
+  .class-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .class-name {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #635E57;
+  }
+  
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .badge-info {
+    background: #DBEAFE;
+    color: #1E40AF;
+  }
+  
+  .class-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #F3F4F6;
+  }
+  
+  .stat-small {
+    text-align: center;
+  }
+  
+  .stat-small-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  
+  .stat-small-label {
+    font-size: 0.75rem;
+    color: #6B7280;
+  }
+  
+  .filter-active {
+    background: #EEF2FF;
+    border: 1px solid #C7D2FE;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  /* Ensure all stat cards have equal height */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  
+  @media (max-width: 768px) {
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<!-- Header -->
+<div class="mb-8">
+  <div class="flex items-center gap-3 mb-2">
+    <div class="w-1 h-10 rounded-full" style="background:#851A10;"></div>
+    <h1 class="text-2xl font-bold" style="color:#635E57;">Exam Question Approval</h1>
+  </div>
+  <p class="text-sm text-gray-500 ml-4">Review and approve exam questions submitted by teachers</p>
+</div>
+
+<!-- Quick Stats - 3 cards in a row -->
+<div class="stats-grid mb-6">
+  <div class="stat-card">
+    <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Pending Review</div>
+    <div class="stat-value stat-pending">{{ pending_exams }}</div>
+  </div>
+  
+  <div class="stat-card">
+    <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Approved</div>
+    <div class="stat-value stat-approved">{{ approved_exams }}</div>
+  </div>
+  
+  <div class="stat-card">
+    <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Rejected</div>
+    <div class="stat-value stat-rejected">{{ rejected_exams }}</div>
+  </div>
+</div>
+
+<!-- Question Stats Row - 3 cards in a row -->
+<div class="stats-grid mb-6">
+  <div class="stat-card">
+    <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Subjects Yet to Submit</div>
+    <div class="stat-value" style="color:#EF4444;">{{ subjects_not_submitted }}</div>
+  </div>
+  
+  <div class="stat-card">
+    <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Subjects Submitted</div>
+    <div class="stat-value" style="color:#8B5CF6;">{{ subjects_with_submissions }}</div>
+  </div>
+  
+  <div class="stat-card">
+    <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Total Classes</div>
+    <div class="stat-value" style="color:#06B6D4;">{{ total_classes }}</div>
+  </div>
+</div>
+
+<!-- Academic Period -->
+{% if current_session and current_term %}
+<div class="bg-gradient-to-r from-blue-50 to-white rounded-xl p-4 border border-blue-100 mb-6">
+  <div class="flex items-center gap-3">
+    <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+      <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+    </div>
+    <div>
+      <p class="text-xs text-gray-500">Current Academic Period</p>
+      <p class="text-sm font-semibold" style="color:#635E57;">{{ current_session.name }} • {{ current_term.get_name_display }}</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Filter Section -->
+<div class="bg-white rounded-xl border border-gray-100 p-6 mb-6 shadow-sm">
+  <div class="flex items-center gap-3 mb-4">
+    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+    </svg>
+    <h3 class="font-semibold text-gray-700">Filter by Class</h3>
+  </div>
+  
+  <form method="GET" class="flex flex-col sm:flex-row gap-3 items-end">
+    <div class="flex-1 w-full">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Select Class</label>
+      <select name="class_filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#851A10]/10 focus:border-[#851A10]">
+        <option value="">All Classes</option>
+        {% for class_arm in all_class_arms %}
+          <option value="{{ class_arm.pk }}" {% if selected_class_id|stringformat:"s" == class_arm.pk|stringformat:"s" %}selected{% endif %}>
+            {{ class_arm.level.name }} - {{ class_arm.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="px-4 py-2 bg-[#851A10] text-white rounded-lg text-sm font-medium hover:opacity-90 transition">
+      Apply Filter
+    </button>
+    {% if selected_class_id %}
+      <a href="{% url 'examinations:examiner_dashboard' %}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition text-center">
+        Clear Filter
+      </a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Active Filter Indicator -->
+{% if selected_class_id %}
+<div class="filter-active mb-6">
+  <div class="flex items-center gap-2">
+    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+    </svg>
+    <p class="text-sm text-blue-800">
+      <strong>Filtered View:</strong> Showing classes with exams that match your selection
+    </p>
+  </div>
+  <a href="{% url 'examinations:examiner_dashboard' %}" class="text-sm text-blue-600 hover:text-blue-800">
+    Clear Filter
+  </a>
+</div>
+{% endif %}
+
+<!-- Classes Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  {% for class_arm in class_arms %}
+    <a href="{% url 'examinations:examiner_class_subjects' class_arm.pk %}{% if selected_class_id %}?class_filter={{ selected_class_id }}{% endif %}" class="class-card">
+      <div class="class-header">
+        <div class="class-name">{{ class_arm.level_name }} - {{ class_arm.class_name }}</div>
+        <span class="badge badge-info">{{ class_arm.exam_count }} Exam{{ class_arm.exam_count|pluralize }}</span>
+      </div>
+      
+      <p class="text-xs text-gray-500 mb-3">
+        {% if class_arm.exam_count %}
+          Review and approve exam questions for this class
+        {% else %}
+          No exams available for this class yet
+        {% endif %}
+      </p>
+      
+      {% if class_arm.exam_count %}
+      <div class="class-stats">
+        <div class="stat-small">
+          <div class="stat-small-value" style="color:#F59E0B;">
+            {{ class_arm.pending_count|default:"0" }}
+          </div>
+          <div class="stat-small-label">Pending</div>
+        </div>
+        
+        <div class="stat-small">
+          <div class="stat-small-value" style="color:#059669;">
+            {{ class_arm.approved_count|default:"0" }}
+          </div>
+          <div class="stat-small-label">Approved</div>
+        </div>
+        
+        <div class="stat-small">
+          <div class="stat-small-value" style="color:#6366F1;">
+            {{ class_arm.total_questions|default:"0" }}
+          </div>
+          <div class="stat-small-label">Questions</div>
+        </div>
+      </div>
+      {% endif %}
+    </a>
+  {% empty %}
+    <div class="col-span-full text-center py-12 bg-white rounded-xl border border-gray-100">
+      <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      <h3 class="text-lg font-bold text-gray-700 mb-1">No Classes Found</h3>
+      <p class="text-sm text-gray-500">
+        {% if selected_class_id %}
+          No exams available for the selected class filter.
+        {% else %}
+          There are no exams with questions to review at this time.
+        {% endif %}
+      </p>
+      {% if selected_class_id %}
+        <a href="{% url 'examinations:examiner_dashboard' %}" class="inline-block mt-4 px-4 py-2 bg-[#851A10] text-white rounded-lg text-sm font-medium hover:opacity-90">
+          Clear Filter
+        </a>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+
+<!-- Legend -->
+<div class="mt-8 bg-gray-50 rounded-xl p-4 border border-gray-100">
+  <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Status Legend</h4>
+  <div class="flex flex-wrap gap-4">
+    <div class="flex items-center gap-2">
+      <div class="w-3 h-3 rounded-full" style="background:#F59E0B;"></div>
+      <span class="text-xs text-gray-600">Pending - Awaiting your review</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="w-3 h-3 rounded-full" style="background:#059669;"></div>
+      <span class="text-xs text-gray-600">Approved - Ready for publication</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="w-3 h-3 rounded-full" style="background:#DC2626;"></div>
+      <span class="text-xs text-gray-600">Rejected - Needs revision</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="w-3 h-3 rounded-full" style="background:#6366F1;"></div>
+      <span class="text-xs text-gray-600">Questions - Total objective questions</span>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

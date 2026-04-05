@@ -1,14 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.http import JsonResponse
 from accounts.decorators import admin_staff_required
-from .models import AcademicSession, Term, ClassLevel, ClassArm, Subject
+from .models import AcademicSession, Term, ClassLevel, ClassArm, Subject, ClassArmSubject, SubjectTeacherAssignment
 from .forms import (
     AcademicSessionForm, TermForm, ClassLevelForm,
-    ClassArmForm, SubjectForm
+    ClassArmForm, SubjectForm, SubjectTeacherAssignmentForm
 )
-from .models import SubjectTeacherAssignment
-from .forms import SubjectTeacherAssignmentForm
 
 
 # ── ACADEMIC SESSIONS ─────────────────────────────────────────
@@ -223,8 +222,11 @@ def class_arm_edit(request, pk):
     class_arm = get_object_or_404(ClassArm, pk=pk)
     form = ClassArmForm(request.POST or None, instance=class_arm)
     if form.is_valid():
-        form.save()
-        messages.success(request, 'Class updated successfully.')
+        if form.has_changed():
+            form.save()
+            messages.success(request, 'Class updated successfully.')
+        else:
+            messages.info(request, 'No changes were made.')
         return redirect('academics:class_arm_list')
     return render(request, 'academics/form.html', {
         'form': form,
@@ -266,14 +268,18 @@ def subject_edit(request, pk):
     subject = get_object_or_404(Subject, pk=pk)
     form = SubjectForm(request.POST or None, instance=subject)
     if form.is_valid():
-        form.save()
-        messages.success(request, 'Subject updated successfully.')
+        if form.has_changed():
+            form.save()
+            messages.success(request, 'Subject updated successfully.')
+        else:
+            messages.info(request, 'No changes were made.')
         return redirect('academics:subject_list')
     return render(request, 'academics/form.html', {
         'form': form,
         'page_title': f'Edit — {subject.name}',
         'back_url': 'academics:subject_list'
     })
+
 
 @login_required
 @admin_staff_required
@@ -362,10 +368,13 @@ def assignment_create(request):
     current_term = Term.get_current()
     form = SubjectTeacherAssignmentForm(request.POST or None)
     if form.is_valid():
-        form.save()
-        messages.success(request, 'Assignment created successfully.')
-        return redirect('academics:assignment_list')
-    return render(request, 'academics/form.html', {
+        try:
+            form.save()
+            messages.success(request, 'Assignment created successfully.')
+            return redirect('academics:assignment_list')
+        except IntegrityError:
+            messages.error(request, 'This teacher is already assigned to this subject in the selected class for the current session and term.')
+    return render(request, 'academics/assignment_form.html', {
         'form': form,
         'page_title': 'Assign Subject Teacher',
         'back_url': 'academics:assignment_list',
@@ -381,10 +390,13 @@ def assignment_edit(request, pk):
     assignment = get_object_or_404(SubjectTeacherAssignment, pk=pk)
     form = SubjectTeacherAssignmentForm(request.POST or None, instance=assignment)
     if form.is_valid():
-        form.save()
-        messages.success(request, 'Assignment updated successfully.')
+        if form.has_changed():
+            form.save()
+            messages.success(request, 'Assignment updated successfully.')
+        else:
+            messages.info(request, 'No changes were made.')
         return redirect('academics:assignment_list')
-    return render(request, 'academics/form.html', {
+    return render(request, 'academics/assignment_form.html', {
         'form': form,
         'page_title': 'Edit Subject Teacher Assignment',
         'back_url': 'academics:assignment_list',
@@ -402,3 +414,64 @@ def assignment_delete(request, pk):
         assignment.delete()
         messages.success(request, 'Assignment removed successfully.')
     return redirect('academics:assignment_list')
+
+
+@login_required
+@admin_staff_required
+def ajax_available_subjects(request):
+    """API endpoint to fetch subjects available for assignment in a class arm"""
+    class_arm_id = request.GET.get('class_arm')
+    assignment_id = request.GET.get('assignment_id')  # For editing
+    
+    if not class_arm_id:
+        return JsonResponse({'error': 'Missing class_arm parameter'}, status=400)
+    
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
+    
+    if not current_session or not current_term:
+        return JsonResponse({'error': 'No active session/term'}, status=400)
+    
+    try:
+        # Get the class arm
+        class_arm = ClassArm.objects.get(pk=class_arm_id)
+        
+        # Get subjects available for this class arm (via ClassArmSubject relationship)
+        available_subjects_for_arm = ClassArmSubject.objects.filter(
+            class_arm=class_arm
+        ).values_list('subject_id', flat=True)
+        
+        # Get subjects already assigned to ANY teacher in this class
+        assigned_subject_ids = SubjectTeacherAssignment.objects.filter(
+            class_arm_id=class_arm_id,
+            session=current_session,
+            term=current_term
+        ).values_list('subject_id', flat=True)
+        
+        # If editing, exclude the current assignment's subject from the exclusion list
+        if assignment_id:
+            try:
+                current_assignment = SubjectTeacherAssignment.objects.get(pk=assignment_id)
+                assigned_subject_ids = [sid for sid in assigned_subject_ids if sid != current_assignment.subject_id]
+            except SubjectTeacherAssignment.DoesNotExist:
+                pass
+        
+        # Get subjects that are:
+        # 1. Available for this class arm
+        # 2. Not already assigned to any teacher
+        # 3. Active
+        available_subjects = Subject.objects.filter(
+            id__in=available_subjects_for_arm,
+            is_active=True
+        ).exclude(
+            id__in=assigned_subject_ids
+        ).values('id', 'name', 'code').order_by('name')
+        
+        return JsonResponse({
+            'success': True,
+            'subjects': list(available_subjects)
+        })
+    except ClassArm.DoesNotExist:
+        return JsonResponse({'error': 'Invalid class arm'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

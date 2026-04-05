@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} — Great Grace SMS{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<style>
+  .exam-header {
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid #F3F4F6;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+  
+  .header-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .header-item {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .header-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+  }
+  
+  .header-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+  }
+  
+  .question-card {
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid #F3F4F6;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .question-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: #851A10;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-right: 0.75rem;
+  }
+  
+  .question-header {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+  
+  .question-text {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #374151;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+  }
+  
+  .options {
+    display: grid;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .option {
+    padding: 0.75rem 1rem;
+    background: #F9FAFB;
+    border-radius: 0.5rem;
+    border-left: 3px solid #E5E7EB;
+    font-size: 0.875rem;
+  }
+  
+  .option.correct {
+    background: #DCFCE7;
+    border-left-color: #059669;
+  }
+  
+  .option-label {
+    font-weight: 600;
+    color: #374151;
+  }
+  
+  .option-text {
+    margin-left: 0.5rem;
+  }
+  
+  .approval-section {
+    background: linear-gradient(135deg, #FFF5F3 0%, #FFFFFF 100%);
+    border-radius: 1rem;
+    border: 1px solid #F3F4F6;
+    padding: 2rem;
+    margin-top: 2rem;
+  }
+  
+  .approval-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #635E57;
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+  }
+  
+  .form-control:focus {
+    outline: none;
+    border-color: #851A10;
+    box-shadow: 0 0 0 3px rgba(133, 26, 16, 0.1);
+  }
+  
+  textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+  }
+  
+  .button-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+  
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    flex: 1;
+  }
+  
+  .btn-approve {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    color: white;
+  }
+  
+  .btn-approve:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.3);
+  }
+  
+  .btn-reject {
+    background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+    color: white;
+  }
+  
+  .btn-reject:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.3);
+  }
+  
+  .info-box {
+    background: #EFF6FF;
+    border-left: 4px solid #3B82F6;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .info-text {
+    font-size: 0.875rem;
+    color: #1E40AF;
+  }
+</style>
+
+<!-- Back Link -->
+<a href="{% url 'examinations:examiner_class_subjects' exam.class_arm.pk %}" 
+   style="display: inline-flex; align-items: center; gap: 0.5rem; color: #3B82F6; text-decoration: none; font-weight: 500; margin-bottom: 1rem;">
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+  </svg>
+  Back to Subjects
+</a>
+
+<!-- Exam Header -->
+<div class="exam-header">
+  <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+    <div style="flex: 1;">
+      <h1 style="font-size: 1.875rem; font-weight: 700; color: #635E57; margin-bottom: 0.25rem;">{{ exam.title }}</h1>
+      <p style="font-size: 0.875rem; color: #6B7280;">{{ exam.subject.name }} • {{ exam.class_arm.level.level_name }} - {{ exam.class_arm.name }}</p>
+    </div>
+    <div style="text-align: right;">
+      {% if exam.approval_status == 'PENDING' %}
+        <span style="background: #FEF3C7; color: #92400E; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-block;">
+          ⏳ Pending Review
+        </span>
+      {% elif exam.approval_status == 'APPROVED' %}
+        <span style="background: #DCFCE7; color: #166534; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-block;">
+          ✓ Approved
+        </span>
+      {% elif exam.approval_status == 'REJECTED' %}
+        <span style="background: #FEE2E2; color: #991B1B; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-block;">
+          ✗ Rejected
+        </span>
+      {% endif %}
+    </div>
+  </div>
+  
+  <div class="header-grid">
+    <div class="header-item">
+      <span class="header-label">Created By</span>
+      <span class="header-value">{{ teacher_name }}</span>
+    </div>
+    <div class="header-item">
+      <span class="header-label">Duration</span>
+      <span class="header-value">{{ exam.duration_minutes }} minutes</span>
+    </div>
+    <div class="header-item">
+      <span class="header-label">Total Questions</span>
+      <span class="header-value">{{ objectives|length }}</span>
+    </div>
+    <div class="header-item">
+      <span class="header-label">Theory File</span>
+      <span class="header-value">
+        {% if exam.theory_attachment %}
+          <span style="color: #059669;">✓ Uploaded</span>
+        {% else %}
+          <span style="color: #DC2626;">✗ Not Uploaded</span>
+        {% endif %}
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Questions in Exam -->
+<h2 style="font-size: 1.25rem; font-weight: 700; color: #635E57; margin-bottom: 1.5rem;">
+  📋 Exam Questions ({{ objectives|length }} total)
+</h2>
+
+{% if objectives %}
+  {% for objective in objectives %}
+    <div class="question-card">
+      <div class="question-header">
+        <div class="question-number">{{ forloop.counter }}</div>
+        <div style="flex: 1;">
+          <div class="question-text">{{ objective.question_text }}</div>
+        </div>
+      </div>
+      
+      {% if objective.question_image %}
+        <div style="margin-bottom: 1rem;">
+          <img src="{{ objective.question_image.url }}" alt="Question Image" style="max-width: 100%; height: auto; border-radius: 0.5rem; max-height: 300px;">
+        </div>
+      {% endif %}
+      
+      <div class="options">
+        <div class="option {% if objective.correct_option == 'A' %}correct{% endif %}">
+          <span class="option-label">A.</span>
+          <span class="option-text">{{ objective.option_a }}</span>
+          {% if objective.correct_option == 'A' %}
+            <span style="margin-left: auto; color: #059669; font-weight: 600;">✓ Correct</span>
+          {% endif %}
+        </div>
+        
+        <div class="option {% if objective.correct_option == 'B' %}correct{% endif %}">
+          <span class="option-label">B.</span>
+          <span class="option-text">{{ objective.option_b }}</span>
+          {% if objective.correct_option == 'B' %}
+            <span style="margin-left: auto; color: #059669; font-weight: 600;">✓ Correct</span>
+          {% endif %}
+        </div>
+        
+        <div class="option {% if objective.correct_option == 'C' %}correct{% endif %}">
+          <span class="option-label">C.</span>
+          <span class="option-text">{{ objective.option_c }}</span>
+          {% if objective.correct_option == 'C' %}
+            <span style="margin-left: auto; color: #059669; font-weight: 600;">✓ Correct</span>
+          {% endif %}
+        </div>
+        
+        <div class="option {% if objective.correct_option == 'D' %}correct{% endif %}">
+          <span class="option-label">D.</span>
+          <span class="option-text">{{ objective.option_d }}</span>
+          {% if objective.correct_option == 'D' %}
+            <span style="margin-left: auto; color: #059669; font-weight: 600;">✓ Correct</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+{% else %}
+  <div style="text-align: center; padding: 2rem; background: white; border-radius: 1rem; border: 1px solid #F3F4F6;">
+    <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+    </svg>
+    <h3 class="text-lg font-bold text-gray-700 mb-1">No Questions Added</h3>
+    <p class="text-sm text-gray-500">The teacher has not added any questions to this exam yet.</p>
+  </div>
+{% endif %}
+
+<!-- Approval Form -->
+<form method="post" class="approval-section">
+  {% csrf_token %}
+  
+  <div class="approval-title">
+    ✓ Review & Approval
+  </div>
+  
+  {% if exam.approval_status != 'PENDING' %}
+    <div class="info-box">
+      <p class="info-text">
+        ℹ️ This exam has been {{ exam.approval_status|lower }}.
+        {% if exam.approved_by %}
+          Approved by {{ exam.approved_by.get_full_name }} on {{ exam.approved_at|date:"M d, Y H:i" }}.
+        {% endif %}
+        You can update the decision below.
+      </p>
+    </div>
+  {% endif %}
+  
+  <div class="form-group">
+    <label class="form-label">Comments or Suggestions (Optional)</label>
+    <textarea name="comments" class="form-control" placeholder="Provide feedback for the teacher...">{{ exam.approval_comments }}</textarea>
+    <p style="font-size: 0.75rem; color: #9CA3AF; margin-top: 0.25rem;">These comments will be visible to the teacher</p>
+  </div>
+  
+  <div class="button-group">
+    <button type="submit" name="action" value="APPROVED" class="btn btn-approve">
+      ✓ Approve Questions
+    </button>
+    <button type="submit" name="action" value="REJECTED" class="btn btn-reject">
+      ✗ Request Modifications
+    </button>
+  </div>
+</form>
+
+{% endblock %}

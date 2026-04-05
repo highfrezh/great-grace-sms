@@ -92,6 +92,22 @@
     border-left-color: #C2B0A1;
   }
 </style>
+
+<!-- MathJax for LaTeX rendering -->
+<script>
+  MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      displayMath: [['$$', '$$'], ['\\[', '\\]']]
+    },
+    svg: { fontCache: 'global' }
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+<!-- Noto Sans for Yoruba Unicode support -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
 </head>
 <body class="bg-gray-100 font-sans text-gray-800" 
       x-data="{ 

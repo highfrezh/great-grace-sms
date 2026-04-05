@@ -48,6 +48,32 @@ class Exam(models.Model):
         help_text="Admin must set to True for students to see and access this exam"
     )
 
+    # ── Approval Status ────────────────────────────────
+    class ApprovalStatus(models.TextChoices):
+        PENDING = 'PENDING', 'Pending Review'
+        APPROVED = 'APPROVED', 'Approved'
+        REJECTED = 'REJECTED', 'Rejected'
+
+    approval_status = models.CharField(
+        max_length=20,
+        choices=ApprovalStatus.choices,
+        default=ApprovalStatus.PENDING,
+        help_text="Question approval status by examiner/VP/Principal"
+    )
+    approved_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='exams_approved'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approval_comments = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Comments from examiner/VP/Principal"
+    )
+
     # ── Timestamps ────────────────────────────────────
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

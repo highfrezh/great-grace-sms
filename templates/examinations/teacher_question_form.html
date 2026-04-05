@@ -1,0 +1,1129 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+
+
+{% block title %}{{ page_title }} — Great Grace SMS{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+
+
+{% block extra_css %}
+
+<!-- MathJax -->
+
+<script>
+
+  MathJax = {
+
+    tex: {
+
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+
+      displayMath: [['$$', '$$'], ['\\[', '\\]']]
+
+    },
+
+    svg: { fontCache: 'global' }
+
+  };
+
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+<!-- Noto Sans for Yoruba -->
+
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+{% endblock %}
+
+
+
+{% block content %}
+
+<style>
+
+  .form-section {
+
+    background: white;
+
+    border-radius: 1rem;
+
+    border: 1px solid #F3F4F6;
+
+    padding: 2rem;
+
+    margin-bottom: 2rem;
+
+  }
+
+
+
+  .form-group { margin-bottom: 1.5rem; }
+
+
+
+  .form-group label {
+
+    display: block;
+
+    font-weight: 600;
+
+    color: #374151;
+
+    margin-bottom: 0.5rem;
+
+    font-size: 0.875rem;
+
+  }
+
+
+
+  .form-group input[type="text"],
+
+  .form-group input[type="file"],
+
+  .form-group textarea,
+
+  .option-input {
+
+    width: 100%;
+
+    padding: 0.75rem;
+
+    border: 1.5px solid #D1D5DB;
+
+    border-radius: 0.5rem;
+
+    font-size: 0.875rem;
+
+    font-family: 'Noto Sans', sans-serif;
+
+    outline: none;
+
+    transition: border-color 0.2s;
+
+  }
+
+
+
+  .form-group input[type="text"]:focus,
+
+  .form-group textarea:focus,
+
+  .option-input:focus {
+
+    border-color: #851A10;
+
+    box-shadow: 0 0 0 3px rgba(133,26,16,0.1);
+
+  }
+
+
+
+  .form-group textarea {
+
+    resize: vertical;
+
+    min-height: 100px;
+
+  }
+
+
+
+  /* Toolbar */
+
+  .input-toolbar {
+
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 0.375rem;
+
+    margin-bottom: 0.5rem;
+
+  }
+
+
+
+  .toolbar-btn {
+
+    padding: 0.25rem 0.625rem;
+
+    font-size: 0.75rem;
+
+    font-weight: 600;
+
+    border-radius: 0.375rem;
+
+    border: 1px solid;
+
+    cursor: pointer;
+
+    transition: all 0.15s;
+
+    font-family: 'Noto Sans', sans-serif;
+
+  }
+
+
+
+  .toolbar-btn.math {
+
+    background: #EFF6FF;
+
+    color: #1D4ED8;
+
+    border-color: #BFDBFE;
+
+  }
+
+
+
+  .toolbar-btn.math:hover {
+
+    background: #DBEAFE;
+
+  }
+
+
+
+  .toolbar-btn.yoruba {
+
+    background: #F0FDF4;
+
+    color: #166534;
+
+    border-color: #BBF7D0;
+
+  }
+
+
+
+  .toolbar-btn.yoruba:hover {
+
+    background: #DCFCE7;
+
+  }
+
+
+
+  /* Preview box */
+
+  .preview-box {
+
+    margin-top: 0.5rem;
+
+    padding: 0.75rem 1rem;
+
+    background: #FAFAFA;
+
+    border: 1px solid #E5E7EB;
+
+    border-radius: 0.5rem;
+
+    font-family: 'Noto Sans', sans-serif;
+
+    font-size: 0.9rem;
+
+    line-height: 1.7;
+
+    min-height: 44px;
+
+    display: none;
+
+  }
+
+
+
+  .preview-label {
+
+    font-size: 0.7rem;
+
+    color: #9CA3AF;
+
+    margin-bottom: 0.25rem;
+
+    font-weight: 600;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.05em;
+
+  }
+
+
+
+  .option-group {
+
+    background: #F9FAFB;
+
+    padding: 1rem;
+
+    border-radius: 0.5rem;
+
+    margin-bottom: 1rem;
+
+  }
+
+
+
+  .option-label {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 0.5rem;
+
+    font-size: 0.875rem;
+
+    font-weight: 600;
+
+    color: #374151;
+
+    margin-bottom: 0.5rem;
+
+  }
+
+
+
+  .correct-answer-section {
+
+    background: #FEF3C7;
+
+    border: 1px solid #FCD34D;
+
+    border-radius: 0.5rem;
+
+    padding: 1.5rem;
+
+    margin-bottom: 1.5rem;
+
+  }
+
+
+
+  .correct-answer-title {
+
+    font-weight: 700;
+
+    color: #92400E;
+
+    margin-bottom: 1rem;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 0.5rem;
+
+  }
+
+
+
+  .correct-answer-section label {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 0.5rem;
+
+    margin-right: 1.5rem;
+
+    margin-bottom: 0.5rem;
+
+    font-weight: 600;
+
+    color: #92400E;
+
+    cursor: pointer;
+
+  }
+
+
+
+  .image-preview {
+
+    max-width: 300px;
+
+    max-height: 300px;
+
+    border-radius: 0.5rem;
+
+    margin-top: 1rem;
+
+    border: 1px solid #D1D5DB;
+
+  }
+
+
+
+  .button-group {
+
+    display: flex;
+
+    gap: 1rem;
+
+    margin-top: 2rem;
+
+  }
+
+
+
+  .btn {
+
+    padding: 0.75rem 1.5rem;
+
+    border-radius: 0.5rem;
+
+    font-weight: 600;
+
+    text-decoration: none;
+
+    border: none;
+
+    cursor: pointer;
+
+    font-size: 0.875rem;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 0.5rem;
+
+    transition: all 0.2s ease;
+
+  }
+
+
+
+  .btn-primary { background: #851A10; color: white; }
+
+  .btn-primary:hover { background: #6B140C; }
+
+  .btn-secondary { background: #E5E7EB; color: #374151; }
+
+  .btn-secondary:hover { background: #D1D5DB; }
+
+</style>
+
+
+
+<div class="max-w-4xl mx-auto">
+
+
+
+  <!-- Header -->
+
+  <div class="mb-8 flex items-center justify-between">
+
+    <div>
+
+      <h1 class="text-3xl font-bold" style="color:#635E57;">{{ page_title }}</h1>
+
+      <p class="text-sm text-gray-500 mt-2">
+
+        {{ exam.title }} — {{ exam.subject.name }}
+
+      </p>
+
+    </div>
+
+    <a href="{% url 'examinations:teacher_exam_detail' exam.pk %}"
+
+       class="btn btn-secondary">
+
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+
+      </svg>
+
+      Back to Exam
+
+    </a>
+
+  </div>
+
+
+
+  <!-- MathJax Help Banner -->
+
+  <div class="mb-6 p-4 rounded-xl border border-blue-200 bg-blue-50 text-sm text-blue-800">
+
+    <p class="font-semibold mb-1">📐 Math & Language Support</p>
+
+    <p>
+
+      Use <code class="bg-blue-100 px-1 rounded">$...$</code> for inline math —
+
+      e.g. <code class="bg-blue-100 px-1 rounded">$x^2 + y^2 = r^2$</code><br>
+
+      Use <code class="bg-blue-100 px-1 rounded">$$...$$</code> for block math —
+
+      e.g. <code class="bg-blue-100 px-1 rounded">$$\frac{a}{b} = c$$</code><br>
+
+      Use the Yoruba buttons to insert special characters directly into any field.
+
+    </p>
+
+  </div>
+
+
+
+  {% if messages %}
+
+    {% for message in messages %}
+
+      <div class="mb-4 px-4 py-3 rounded-lg text-sm font-medium
+
+        {% if message.tags == 'success' %}bg-green-50 text-green-700 border border-green-200
+
+        {% elif message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200
+
+        {% else %}bg-yellow-50 text-yellow-700 border border-yellow-200{% endif %}">
+
+        {{ message }}
+
+      </div>
+
+    {% endfor %}
+
+  {% endif %}
+
+
+
+  <form method="POST" enctype="multipart/form-data">
+
+    {% csrf_token %}
+
+
+
+    <!-- Question Text -->
+
+    <div class="form-section">
+
+      <h2 class="text-lg font-bold mb-4" style="color:#851A10;">Question Text</h2>
+
+
+
+      <div class="form-group">
+
+        <label>
+
+          Question <span style="color:#CD5C5C;">*</span>
+
+        </label>
+
+
+
+        <!-- Toolbar -->
+
+        <div class="input-toolbar" data-target="question_text">
+
+          <span class="text-xs text-gray-400 self-center mr-1">Math:</span>
+
+          <button type="button" class="toolbar-btn math"
+
+                  onclick="insertText('question_text', '$  $', 1)">
+
+            $ Inline $
+
+          </button>
+
+          <button type="button" class="toolbar-btn math"
+
+                  onclick="insertText('question_text', '$$  $$', 2)">
+
+            $$ Block $$
+
+          </button>
+
+          <button type="button" class="toolbar-btn math"
+
+                  onclick="insertText('question_text', '\\frac{  }{  }', 7)">
+
+            ÷ Fraction
+
+          </button>
+
+          <button type="button" class="toolbar-btn math"
+
+                  onclick="insertText('question_text', '\\sqrt{  }', 7)">
+
+            √ Sqrt
+
+          </button>
+
+          <span class="text-xs text-gray-400 self-center ml-2 mr-1">Yoruba:</span>
+
+          {% for char in "ẹọṣàáèéìíòóùú" %}
+
+            <button type="button" class="toolbar-btn yoruba"
+
+                    onclick="insertChar('question_text', '{{ char }}')">
+
+              {{ char }}
+
+            </button>
+
+          {% endfor %}
+
+        </div>
+
+
+
+        <textarea name="question_text"
+
+                  id="question_text"
+
+                  required
+
+                  oninput="updatePreview('question_text', 'preview_question')"
+
+                  >{{ question.question_text }}</textarea>
+
+
+
+        <!-- Live Preview -->
+
+        <div class="preview-box" id="preview_question">
+
+          <div class="preview-label">Preview</div>
+
+          <div class="preview-content">{{ question.question_text }}</div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- Image -->
+
+      <div class="form-group">
+
+        <label>Question Image <span class="text-gray-400 font-normal">(Optional)</span></label>
+
+        <input type="file" name="question_image" accept="image/*"
+
+               onchange="previewImage(this)">
+
+        {% if question.question_image %}
+
+          <div class="mt-3">
+
+            <p class="text-sm text-gray-500 mb-1">Current image:</p>
+
+            <img src="{{ question.question_image.url }}" alt="Question image"
+
+                 class="image-preview" id="imgPreview">
+
+            <label class="mt-2 flex items-center gap-2 text-sm text-gray-600">
+
+              <input type="checkbox" name="remove_image">
+
+              Remove current image
+
+            </label>
+
+          </div>
+
+        {% else %}
+
+          <img id="imgPreview" class="image-preview" style="display:none;">
+
+        {% endif %}
+
+      </div>
+
+    </div>
+
+
+
+    <!-- Options -->
+
+    <div class="form-section">
+
+      <h2 class="text-lg font-bold mb-4" style="color:#851A10;">Answer Options</h2>
+
+
+
+        <!-- Option A -->
+
+        <div class="option-group">
+
+          <div class="option-label">
+
+            <span style="width:24px;height:24px;background:#851A10;color:white;
+
+                         border-radius:50%;display:flex;align-items:center;
+
+                         justify-content:center;font-size:0.75rem;font-weight:bold;">
+
+              A
+
+            </span>
+
+            Option A
+
+          </div>
+
+          <div class="input-toolbar">
+
+            <span class="text-xs text-gray-400 self-center mr-1">Math:</span>
+
+            <button type="button" class="toolbar-btn math"
+
+                    onclick="insertText('option_a', '$  $', 1)">$…$</button>
+
+            <button type="button" class="toolbar-btn math"
+
+                    onclick="insertText('option_a', '\\frac{}{  }', 7)">÷</button>
+
+            <span class="text-xs text-gray-400 self-center ml-2 mr-1">Yoruba:</span>
+
+            {% for char in "ẹọṣàáèé" %}
+
+              <button type="button" class="toolbar-btn yoruba"
+
+                      onclick="insertChar('option_a', '{{ char }}')">{{ char }}</button>
+
+            {% endfor %}
+
+          </div>
+
+          <input type="text" name="option_a" id="option_a" class="option-input"
+
+                 value="{{ question.option_a }}" required
+
+                 oninput="updatePreview('option_a', 'preview_opt_a')">
+
+          <div class="preview-box" id="preview_opt_a">
+
+            <div class="preview-label">Preview</div>
+
+            <div class="preview-content">{{ question.option_a }}</div>
+
+          </div>
+
+        </div>
+
+
+
+        <!-- Option B -->
+
+        <div class="option-group">
+
+          <div class="option-label">
+
+            <span style="width:24px;height:24px;background:#851A10;color:white;
+
+                         border-radius:50%;display:flex;align-items:center;
+
+                         justify-content:center;font-size:0.75rem;font-weight:bold;">
+
+              B
+
+            </span>
+
+            Option B
+
+          </div>
+
+          <div class="input-toolbar">
+
+            <span class="text-xs text-gray-400 self-center mr-1">Math:</span>
+
+            <button type="button" class="toolbar-btn math"
+
+                    onclick="insertText('option_b', '$  $', 1)">$…$</button>
+
+            <button type="button" class="toolbar-btn math"
+
+                    onclick="insertText('option_b', '\\frac{}{  }', 7)">÷</button>
+
+            <span class="text-xs text-gray-400 self-center ml-2 mr-1">Yoruba:</span>
+
+            {% for char in "ẹọṣàáèé" %}
+
+              <button type="button" class="toolbar-btn yoruba"
+
+                      onclick="insertChar('option_b', '{{ char }}')">{{ char }}</button>
+
+            {% endfor %}
+
+          </div>
+
+          <input type="text" name="option_b" id="option_b" class="option-input"
+
+                 value="{{ question.option_b }}" required
+
+                 oninput="updatePreview('option_b', 'preview_opt_b')">
+
+          <div class="preview-box" id="preview_opt_b">
+
+            <div class="preview-label">Preview</div>
+
+            <div class="preview-content">{{ question.option_b }}</div>
+
+          </div>
+
+        </div>
+
+
+
+        <!-- Option C -->
+
+        <div class="option-group">
+
+          <div class="option-label">
+
+            <span style="width:24px;height:24px;background:#851A10;color:white;
+
+                         border-radius:50%;display:flex;align-items:center;
+
+                         justify-content:center;font-size:0.75rem;font-weight:bold;">
+
+              C
+
+            </span>
+
+            Option C
+
+          </div>
+
+          <div class="input-toolbar">
+
+            <span class="text-xs text-gray-400 self-center mr-1">Math:</span>
+
+            <button type="button" class="toolbar-btn math"
+
+                    onclick="insertText('option_c', '$  $', 1)">$…$</button>
+
+            <button type="button" class="toolbar-btn math"
+
+                    onclick="insertText('option_c', '\\frac{}{  }', 7)">÷</button>
+
+            <span class="text-xs text-gray-400 self-center ml-2 mr-1">Yoruba:</span>
+
+            {% for char in "ẹọṣàáèé" %}
+
+              <button type="button" class="toolbar-btn yoruba"
+
+                      onclick="insertChar('option_c', '{{ char }}')">{{ char }}</button>
+
+            {% endfor %}
+
+          </div>
+
+          <input type="text" name="option_c" id="option_c" class="option-input"
+
+                 value="{{ question.option_c }}" required
+
+                 oninput="updatePreview('option_c', 'preview_opt_c')">
+
+          <div class="preview-box" id="preview_opt_c">
+
+            <div class="preview-label">Preview</div>
+
+            <div class="preview-content">{{ question.option_c }}</div>
+
+          </div>
+
+        </div>
+
+
+
+        <!-- Option D -->
+
+        <div class="option-group">
+
+          <div class="option-label">
+
+            <span style="width:24px;height:24px;background:#851A10;color:white;
+
+                         border-radius:50%;display:flex;align-items:center;
+
+                         justify-content:center;font-size:0.75rem;font-weight:bold;">
+
+              D
+
+            </span>
+
+            Option D
+
+          </div>
+
+          <div class="input-toolbar">
+
+            <span class="text-xs text-gray-400 self-center mr-1">Math:</span>
+
+            <button type="button" class="toolbar-btn math"
+
+                    onclick="insertText('option_d', '$  $', 1)">$…$</button>
+
+            <button type="button" class="toolbar-btn math"
+
+                    onclick="insertText('option_d', '\\frac{}{  }', 7)">÷</button>
+
+            <span class="text-xs text-gray-400 self-center ml-2 mr-1">Yoruba:</span>
+
+            {% for char in "ẹọṣàáèé" %}
+
+              <button type="button" class="toolbar-btn yoruba"
+
+                      onclick="insertChar('option_d', '{{ char }}')">{{ char }}</button>
+
+            {% endfor %}
+
+          </div>
+
+          <input type="text" name="option_d" id="option_d" class="option-input"
+
+                 value="{{ question.option_d }}" required
+
+                 oninput="updatePreview('option_d', 'preview_opt_d')">
+
+          <div class="preview-box" id="preview_opt_d">
+
+            <div class="preview-label">Preview</div>
+
+            <div class="preview-content">{{ question.option_d }}</div>
+
+          </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- Correct Answer -->
+
+    <div class="form-section">
+
+      <div class="correct-answer-section">
+
+        <div class="correct-answer-title">
+
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+
+          </svg>
+
+          Correct Answer <span style="color:#CD5C5C;">*</span>
+
+        </div>
+
+        <div class="flex flex-wrap gap-4">
+
+          {% for opt in "ABCD" %}
+
+            <label>
+
+              <input type="radio" name="correct_option" value="{{ opt }}"
+
+                     {% if question.correct_option == opt %}checked{% endif %}
+
+                     required>
+
+              Option {{ opt }}
+
+            </label>
+
+          {% endfor %}
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+
+    <div class="button-group">
+
+      <button type="submit" class="btn btn-primary">
+
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+
+                d="M5 13l4 4L19 7"/>
+
+        </svg>
+
+        Save Question
+
+      </button>
+
+      <a href="{% url 'examinations:teacher_exam_detail' exam.pk %}"
+
+         class="btn btn-secondary">
+
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+
+                d="M6 18L18 6M6 6l12 12"/>
+
+        </svg>
+
+        Cancel
+
+      </a>
+
+    </div>
+
+
+
+  </form>
+
+</div>
+
+
+
+<script>
+
+  // ── Insert text at cursor position ──────────────────
+
+  function insertText(fieldId, template, cursorOffset) {
+
+    const el = document.getElementById(fieldId);
+
+    if (!el) return;
+
+    const start = el.selectionStart;
+
+    const end   = el.selectionEnd;
+
+    el.value = el.value.slice(0, start) + template + el.value.slice(end);
+
+    el.selectionStart = el.selectionEnd = start + cursorOffset;
+
+    el.focus();
+
+    updatePreview(fieldId, 'preview_' + fieldId.replace('option_', 'opt_'));
+
+  }
+
+
+
+  // ── Insert single Yoruba character ──────────────────
+
+  function insertChar(fieldId, char) {
+
+    const el = document.getElementById(fieldId);
+
+    if (!el) return;
+
+    const start = el.selectionStart;
+
+    el.value = el.value.slice(0, start) + char + el.value.slice(el.selectionEnd);
+
+    el.selectionStart = el.selectionEnd = start + 1;
+
+    el.focus();
+
+    updatePreview(fieldId, 'preview_' + fieldId.replace('option_', 'opt_'));
+
+  }
+
+
+
+  // ── Live preview with MathJax ────────────────────────
+
+  function updatePreview(fieldId, previewId) {
+
+    const el      = document.getElementById(fieldId);
+
+    const preview = document.getElementById(previewId);
+
+    if (!el || !preview) return;
+
+    const text = el.value.trim();
+
+    if (!text) { preview.style.display = 'none'; return; }
+
+
+
+    preview.style.display = 'block';
+
+    const content = preview.querySelector('.preview-content');
+
+    content.innerHTML = '';
+
+    content.appendChild(document.createTextNode(text));
+
+
+
+    if (window.MathJax) {
+
+      MathJax.typesetClear([content]);
+
+      MathJax.typesetPromise([content]).catch(err => console.warn(err));
+
+    }
+
+  }
+
+
+
+  // ── Image preview ────────────────────────────────────
+
+  function previewImage(input) {
+
+    const img = document.getElementById('imgPreview');
+
+    if (input.files && input.files[0]) {
+
+      img.src = URL.createObjectURL(input.files[0]);
+
+      img.style.display = 'block';
+
+    }
+
+  }
+
+
+
+  // ── Render existing values on page load ──────────────
+
+  document.addEventListener('DOMContentLoaded', function () {
+
+    ['question_text', 'option_a', 'option_b', 'option_c', 'option_d'].forEach(id => {
+
+      const el = document.getElementById(id);
+
+      if (el && el.value.trim()) {
+
+        const previewId = id === 'question_text'
+
+          ? 'preview_question'
+
+          : 'preview_opt_' + id.replace('option_', '');
+
+        updatePreview(id, previewId);
+
+      }
+
+    });
+
+  });
+
+</script>
+
+{% endblock %}

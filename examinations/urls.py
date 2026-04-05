@@ -19,6 +19,8 @@ urlpatterns = [
     path('teacher/<int:pk>/publish/', views.teacher_exam_publish, name='teacher_exam_publish'),
     path('teacher/<int:pk>/delete/', views.teacher_exam_delete, name='teacher_exam_delete'),
     path('teacher/<int:exam_pk>/add-questions/', views.teacher_add_questions, name='teacher_add_questions'),
+    path('teacher/<int:exam_pk>/questions/<int:pk>/edit/', views.teacher_question_edit, name='teacher_question_edit'),
+    path('teacher/<int:exam_pk>/questions/<int:pk>/delete/', views.teacher_question_delete, name='teacher_question_delete'),
 
     # ── Exam Management ───────────────────────────────
     path('', views.exam_list, name='exam_list'),
@@ -61,5 +63,10 @@ urlpatterns = [
     # ── Results ───────────────────────────────────────
     path('<int:pk>/results/', views.exam_results, name='exam_results'),
     path('<int:pk>/results/publish/', views.exam_publish_results, name='exam_publish_results'),
+
+    # ── Examiner Dashboard (Examiner/VP/Principal) ────
+    path('examiner/dashboard/', views.examiner_dashboard, name='examiner_dashboard'),
+    path('examiner/class/<int:class_arm_id>/subjects/', views.examiner_class_subjects, name='examiner_class_subjects'),
+    path('examiner/exam/<int:exam_id>/review/', views.examiner_exam_review, name='examiner_exam_review'),
 
 ]

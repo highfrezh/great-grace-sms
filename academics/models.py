@@ -155,8 +155,8 @@ class ClassArm(models.Model):
 
 class Subject(models.Model):
     """Subject catalog"""
-    name = models.CharField(max_length=100, unique=True)
-    code = models.CharField(max_length=10, unique=True)
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=10, blank=True, null=True)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
 
@@ -164,18 +164,44 @@ class Subject(models.Model):
         ordering = ['name']
 
     def __str__(self):
-        return f"{self.name} ({self.code})"
+        return self.name
+
+
+class ClassArmSubject(models.Model):
+    """
+    Which subjects are offered in which class arm
+    e.g. Mathematics in JSS1A, Biology in JSS1B
+    Allows customization per class arm
+    """
+    class_arm = models.ForeignKey(
+        ClassArm,
+        on_delete=models.CASCADE,
+        related_name='subjects'
+    )
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.CASCADE,
+        related_name='class_arms'
+    )
+    is_compulsory = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ['class_arm', 'subject']
+
+    def __str__(self):
+        return f"{self.subject.name} — {self.class_arm}"
 
 
 class ClassSubject(models.Model):
     """
+    [DEPRECATED - Kept for backward compatibility]
     Which subjects are offered in which class level
-    e.g. Yoruba is offered in JSS1, JSS2, JSS3
+    Use ClassArmSubject instead for per-arm customization
     """
     class_level = models.ForeignKey(
         ClassLevel,
         on_delete=models.CASCADE,
-        related_name='subjects'
+        related_name='level_subjects'
     )
     subject = models.ForeignKey(
         Subject,
@@ -223,7 +249,7 @@ class SubjectTeacherAssignment(models.Model):
     )
 
     class Meta:
-        unique_together = ['teacher', 'subject', 'class_arm', 'session', 'term']
+        unique_together = ['subject', 'class_arm', 'session', 'term']
 
     def __str__(self):
         return f"{self.teacher} — {self.subject} — {self.class_arm}"
