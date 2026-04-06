@@ -110,8 +110,20 @@
   /* Ensure all stat cards have equal height */
   .stats-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 1rem;
+  }
+  
+  @media (max-width: 1280px) {
+    .stats-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  
+  @media (max-width: 1024px) {
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
   
   @media (max-width: 768px) {
@@ -125,16 +137,16 @@
 <div class="mb-8">
   <div class="flex items-center gap-3 mb-2">
     <div class="w-1 h-10 rounded-full" style="background:#851A10;"></div>
-    <h1 class="text-2xl font-bold" style="color:#635E57;">Exam Question Approval</h1>
+    <h1 class="text-2xl font-bold" style="color:#635E57;">Exam Approval Dashboard</h1>
   </div>
-  <p class="text-sm text-gray-500 ml-4">Review and approve exam questions submitted by teachers</p>
+  <p class="text-sm text-gray-500 ml-4">Review and approve exams submitted by teachers for examination</p>
 </div>
 
-<!-- Quick Stats - 3 cards in a row -->
+<!-- Quick Stats - 5 cards in a row -->
 <div class="stats-grid mb-6">
   <div class="stat-card">
-    <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Pending Review</div>
-    <div class="stat-value stat-pending">{{ pending_exams }}</div>
+    <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Awaiting Approval</div>
+    <div class="stat-value stat-pending">{{ awaiting_approval }}</div>
   </div>
   
   <div class="stat-card">
@@ -146,23 +158,15 @@
     <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Rejected</div>
     <div class="stat-value stat-rejected">{{ rejected_exams }}</div>
   </div>
-</div>
-
-<!-- Question Stats Row - 3 cards in a row -->
-<div class="stats-grid mb-6">
+  
   <div class="stat-card">
-    <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Subjects Yet to Submit</div>
-    <div class="stat-value" style="color:#EF4444;">{{ subjects_not_submitted }}</div>
+    <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Draft (Not Submitted)</div>
+    <div class="stat-value" style="color:#6B7280;">{{ draft_exams }}</div>
   </div>
   
   <div class="stat-card">
-    <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Subjects Submitted</div>
-    <div class="stat-value" style="color:#8B5CF6;">{{ subjects_with_submissions }}</div>
-  </div>
-  
-  <div class="stat-card">
-    <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Total Classes</div>
-    <div class="stat-value" style="color:#06B6D4;">{{ total_classes }}</div>
+    <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Total Exams</div>
+    <div class="stat-value" style="color:#3B82F6;">{{ total_exams }}</div>
   </div>
 </div>
 
@@ -199,7 +203,7 @@
         <option value="">All Classes</option>
         {% for class_arm in all_class_arms %}
           <option value="{{ class_arm.pk }}" {% if selected_class_id|stringformat:"s" == class_arm.pk|stringformat:"s" %}selected{% endif %}>
-            {{ class_arm.level.name }} - {{ class_arm.name }}
+            {{ class_arm.level.name }}  {{ class_arm.name }}
           </option>
         {% endfor %}
       </select>
@@ -237,15 +241,15 @@
   {% for class_arm in class_arms %}
     <a href="{% url 'examinations:examiner_class_subjects' class_arm.pk %}{% if selected_class_id %}?class_filter={{ selected_class_id }}{% endif %}" class="class-card">
       <div class="class-header">
-        <div class="class-name">{{ class_arm.level_name }} - {{ class_arm.class_name }}</div>
+        <div class="class-name">{{ class_arm.level_name }}  {{ class_arm.class_name }}</div>
         <span class="badge badge-info">{{ class_arm.exam_count }} Exam{{ class_arm.exam_count|pluralize }}</span>
       </div>
       
       <p class="text-xs text-gray-500 mb-3">
         {% if class_arm.exam_count %}
-          Review and approve exam questions for this class
+          {{ class_arm.exam_count }} exam{{ class_arm.exam_count|pluralize }} awaiting your approval
         {% else %}
-          No exams available for this class yet
+          No exams awaiting approval for this class
         {% endif %}
       </p>
       
@@ -253,23 +257,23 @@
       <div class="class-stats">
         <div class="stat-small">
           <div class="stat-small-value" style="color:#F59E0B;">
-            {{ class_arm.pending_count|default:"0" }}
+            {{ class_arm.exam_count }}
           </div>
-          <div class="stat-small-label">Pending</div>
+          <div class="stat-small-label">Exams</div>
         </div>
         
         <div class="stat-small">
-          <div class="stat-small-value" style="color:#059669;">
-            {{ class_arm.approved_count|default:"0" }}
-          </div>
-          <div class="stat-small-label">Approved</div>
-        </div>
-        
-        <div class="stat-small">
-          <div class="stat-small-value" style="color:#6366F1;">
+          <div class="stat-small-value" style="color:#3B82F6;">
             {{ class_arm.total_questions|default:"0" }}
           </div>
           <div class="stat-small-label">Questions</div>
+        </div>
+        
+        <div class="stat-small">
+          <div class="stat-small-value" style="color:#06B6D4;">
+            → Review
+          </div>
+          <div class="stat-small-label">Action</div>
         </div>
       </div>
       {% endif %}
@@ -279,12 +283,12 @@
       <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
       </svg>
-      <h3 class="text-lg font-bold text-gray-700 mb-1">No Classes Found</h3>
+      <h3 class="text-lg font-bold text-gray-700 mb-1">No Exams Awaiting Approval</h3>
       <p class="text-sm text-gray-500">
         {% if selected_class_id %}
-          No exams available for the selected class filter.
+          No exams awaiting approval for the selected class.
         {% else %}
-          There are no exams with questions to review at this time.
+          All exams have been reviewed or no exams have been submitted yet.
         {% endif %}
       </p>
       {% if selected_class_id %}
@@ -302,19 +306,19 @@
   <div class="flex flex-wrap gap-4">
     <div class="flex items-center gap-2">
       <div class="w-3 h-3 rounded-full" style="background:#F59E0B;"></div>
-      <span class="text-xs text-gray-600">Pending - Awaiting your review</span>
+      <span class="text-xs text-gray-600">Awaiting Approval - Needs your review</span>
     </div>
     <div class="flex items-center gap-2">
       <div class="w-3 h-3 rounded-full" style="background:#059669;"></div>
-      <span class="text-xs text-gray-600">Approved - Ready for publication</span>
+      <span class="text-xs text-gray-600">Approved - Exam is approved</span>
     </div>
     <div class="flex items-center gap-2">
-      <div class="w-3 h-3 rounded-full" style="background:#DC2626;"></div>
-      <span class="text-xs text-gray-600">Rejected - Needs revision</span>
+      <div class="w-3 h-3 rounded-full" style="background:#6B7280;"></div>
+      <span class="text-xs text-gray-600">Draft - Teacher still editing</span>
     </div>
     <div class="flex items-center gap-2">
-      <div class="w-3 h-3 rounded-full" style="background:#6366F1;"></div>
-      <span class="text-xs text-gray-600">Questions - Total objective questions</span>
+      <div class="w-3 h-3 rounded-full" style="background:#3B82F6;"></div>
+      <span class="text-xs text-gray-600">Total Exams - All exams in system</span>
     </div>
   </div>
 </div>

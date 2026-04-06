@@ -205,7 +205,7 @@
       <div class="flex items-center gap-2 ml-4">
         <span class="text-sm text-gray-500">{{ exam.subject.name }}</span>
         <span class="text-gray-300">•</span>
-        <span class="text-sm text-gray-500">{{ exam.class_arm.level.name }} - {{ exam.class_arm.name }}</span>
+        <span class="text-sm text-gray-500">{{ exam.class_arm.level.name }} {{ exam.class_arm.name }}</span>
         <span class="text-gray-300">•</span>
       </div>
     </div>
@@ -216,15 +216,35 @@
         </svg>
         Back to Exams
       </a>
+      {% if exam.status == 'DRAFT' %}
       <a href="{% url 'examinations:teacher_exam_edit' exam.pk %}" class="btn-primary">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
         </svg>
         Edit Exam
       </a>
+      {% endif %}
     </div>
   </div>
 </div>
+
+{% if exam.rejection_reason and exam.status == 'DRAFT' %}
+<!-- Rejection Feedback Alert -->
+<div style="background: #FEE2E2; border: 1px solid #FECACA; border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem;">
+  <div style="display: flex; gap: 1rem;">
+    <div style="flex-shrink: 0;">
+      <svg class="w-6 h-6" style="color: #DC2626;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+    </div>
+    <div style="flex: 1;">
+      <h3 style="font-weight: 700; color: #7F1D1D; margin-bottom: 0.5rem;">Exam Returned for Revision</h3>
+      <p style="font-size: 0.875rem; color: #991B1B; margin-bottom: 0.75rem;">{{ exam.rejection_reason }}</p>
+      <p style="font-size: 0.75rem; color: #9CA3AF;">Please make the necessary changes and resubmit for approval.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <!-- Stats Cards -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -233,19 +253,26 @@
     <div class="flex items-start justify-between">
       <div>
         <p class="stat-label">Status</p>
-        {% if exam.is_published %}
-          <div class="status-badge published mt-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            Published
-          </div>
-        {% else %}
+        {% if exam.status == 'DRAFT' %}
           <div class="status-badge draft mt-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             Draft
+          </div>
+        {% elif exam.status == 'AWAITING_APPROVAL' %}
+          <div style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.75rem; background: #FEF3C7; color: #92400E; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; margin-top: 0.5rem;">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Awaiting Approval
+          </div>
+        {% elif exam.status == 'APPROVED' %}
+          <div class="status-badge published mt-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Approved
           </div>
         {% endif %}
       </div>
@@ -329,12 +356,14 @@
             <span class="text-sm text-gray-600">Total Questions</span>
             <span class="px-2 py-1 text-xs font-semibold rounded-full" style="background:#DCFCE7; color:#166534;">{{ objective_count }}</span>
           </div>
+          {% if exam.status == 'DRAFT' %}
           <a href="{% url 'examinations:teacher_add_questions' exam.pk %}" class="btn-success text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
             Add Questions
           </a>
+          {% endif %}
         </div>
         
         {% if objective_questions %}
@@ -360,6 +389,7 @@
                   <span class="px-2 py-1 text-xs font-medium rounded-full" style="background:#FEF3C7; color:#92400E;">
                     Answer: {{ question.correct_option }}
                   </span>
+                  {% if exam.status == 'DRAFT' %}
                   <div class="flex gap-1">
                     <a href="{% url 'examinations:teacher_question_edit' exam.pk question.pk %}" class="text-blue-600 hover:text-blue-700 p-1" title="Edit">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -372,6 +402,7 @@
                       </svg>
                     </button>
                   </div>
+                  {% endif %}
                 </div>
               </div>
             </div>
@@ -413,9 +444,11 @@
                   Download File
                 </a>
               </div>
+              {% if exam.status == 'DRAFT' %}
               <a href="{% url 'examinations:teacher_exam_edit' exam.pk %}" class="text-sm text-green-600 hover:text-green-700">
                 Replace
               </a>
+              {% endif %}
             </div>
           </div>
         {% else %}
@@ -425,12 +458,14 @@
             </svg>
             <p class="text-gray-500 text-sm">No theory file uploaded yet</p>
             <p class="text-xs text-gray-400 mt-1">Upload a PDF or DOCX file for written questions</p>
+            {% if exam.status == 'DRAFT' %}
             <a href="{% url 'examinations:teacher_exam_edit' exam.pk %}" class="inline-flex items-center gap-2 mt-4 btn-primary text-sm">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
               </svg>
               Upload Theory File
             </a>
+            {% endif %}
           </div>
         {% endif %}
       </div>
@@ -464,24 +499,34 @@
         <div class="section-title">Publication</div>
       </div>
       <div class="p-6">
-        {% if exam.is_published %}
+        {% if exam.status == 'APPROVED' %}
           <div class="bg-green-50 rounded-lg p-4 mb-4">
             <div class="flex items-center gap-2">
               <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
-              <p class="text-sm font-medium text-green-800">Published and visible to students</p>
+              <p class="text-sm font-medium text-green-800">Exam has been approved</p>
             </div>
           </div>
-        {% else %}
+        {% elif exam.status == 'AWAITING_APPROVAL' %}
           <div class="bg-yellow-50 rounded-lg p-4 mb-4">
             <div class="flex items-center gap-2">
               <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
-              <p class="text-sm font-medium text-yellow-800">Still in draft mode</p>
+              <p class="text-sm font-medium text-yellow-800">Awaiting examiner approval</p>
             </div>
-            <p class="text-xs text-yellow-700 mt-2">Complete all sections and publish when ready</p>
+            <p class="text-xs text-yellow-700 mt-2">The examiner is reviewing your exam</p>
+          </div>
+        {% else %}
+          <div class="bg-blue-50 rounded-lg p-4 mb-4">
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <p class="text-sm font-medium text-blue-800">Still in draft mode</p>
+            </div>
+            <p class="text-xs text-blue-700 mt-2">Complete all sections and publish when ready</p>
           </div>
         {% endif %}
       </div>
@@ -496,11 +541,11 @@
         <div class="space-y-3">
           <div class="flex justify-between items-center pb-2 border-b border-gray-100">
             <span class="text-sm text-gray-600">Session</span>
-            <span class="text-sm font-semibold" style="color:#635E57;">{{ exam.session.title }}</span>
+            <span class="text-sm font-semibold" style="color:#635E57;">{{ exam.session.name }}</span>
           </div>
           <div class="flex justify-between items-center pb-2 border-b border-gray-100">
             <span class="text-sm text-gray-600">Term</span>
-            <span class="text-sm font-semibold" style="color:#635E57;">{{ exam.term.term_name }}</span>
+            <span class="text-sm font-semibold" style="color:#635E57;">{{ exam.term.get_name_display }}</span>
           </div>
           <div class="flex justify-between items-center">
             <span class="text-sm text-gray-600">Created</span>
@@ -545,8 +590,8 @@
             <span class="text-xs font-medium">{% if exam.theory_attachment %}✓{% else %}—{% endif %}</span>
           </div>
           
-          <div class="checklist-item {% if exam.is_published %}completed{% else %}pending{% endif %}">
-            {% if exam.is_published %}
+          <div class="checklist-item {% if exam.status != 'DRAFT' %}completed{% else %}pending{% endif %}">
+            {% if exam.status != 'DRAFT' %}
               <svg class="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
@@ -556,10 +601,11 @@
               </svg>
             {% endif %}
             <span class="flex-1 text-sm text-gray-700">Publish exam</span>
+            <span class="text-xs font-medium">{{ exam.get_status_display }}</span>
           </div>
         </div>
         
-        {% if objective_count > 0 and exam.theory_attachment and not exam.is_published %}
+        {% if objective_count > 0 and exam.theory_attachment and exam.status == 'DRAFT' %}
           <div class="mt-4 pt-3 border-t border-gray-100">
             <form method="post" action="{% url 'examinations:teacher_exam_publish' exam.pk %}" class="w-full">
               {% csrf_token %}

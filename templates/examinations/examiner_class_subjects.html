@@ -173,7 +173,7 @@
     <div class="flex items-center gap-3">
       <div class="w-1 h-10 rounded-full" style="background:#851A10;"></div>
       <div>
-        <h1 class="text-2xl font-bold" style="color:#635E57;">{{ class_arm.level.name }} - {{ class_arm.name }}</h1>
+        <h1 class="text-2xl font-bold" style="color:#635E57;">{{ class_arm.level.name }}  {{ class_arm.name }}</h1>
         <p class="text-sm text-gray-500">Subjects and exam questions for review</p>
       </div>
     </div>
@@ -194,30 +194,9 @@
     <div class="subject-card">
       <div class="subject-header">
         <div class="subject-title">{{ subject_item.subject.name }}</div>
-        <div class="subject-code">Code: {{ subject_item.subject.code|default:"N/A" }}</div>
       </div>
       
-      <div class="subject-content">
-        <!-- Teachers Section -->
-        <div class="teachers-section">
-          <div class="section-label">Teachers Assigned ({{ subject_item.teachers.count }})</div>
-          <div>
-            {% for teacher in subject_item.teachers %}
-              <div class="teacher-item">
-                <div class="teacher-badge">
-                  {{ teacher.user.first_name|slice:":1" }}{{ teacher.user.last_name|slice:":1" }}
-                </div>
-                <div>
-                  <div style="font-weight: 500;">{{ teacher.user.get_full_name }}</div>
-                  <div style="color: #9CA3AF; font-size: 0.75rem;">{{ teacher.user.email|default:"No email" }}</div>
-                </div>
-              </div>
-            {% empty %}
-              <p style="color: #9CA3AF; font-size: 0.875rem;">No teachers assigned to this subject-class combination</p>
-            {% endfor %}
-          </div>
-        </div>
-        
+      <div class="subject-content">        
         <!-- Exams Section -->
         <div>
           <div class="section-label">Exams ({{ subject_item.exams.count }})</div>

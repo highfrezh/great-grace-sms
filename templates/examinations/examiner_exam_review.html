@@ -204,12 +204,12 @@
 </style>
 
 <!-- Back Link -->
-<a href="{% url 'examinations:examiner_class_subjects' exam.class_arm.pk %}" 
+<a href="{% url 'examinations:examiner_dashboard' %}" 
    style="display: inline-flex; align-items: center; gap: 0.5rem; color: #3B82F6; text-decoration: none; font-weight: 500; margin-bottom: 1rem;">
   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
   </svg>
-  Back to Subjects
+  Back to Approvals
 </a>
 
 <!-- Exam Header -->
@@ -220,17 +220,17 @@
       <p style="font-size: 0.875rem; color: #6B7280;">{{ exam.subject.name }} • {{ exam.class_arm.level.level_name }} - {{ exam.class_arm.name }}</p>
     </div>
     <div style="text-align: right;">
-      {% if exam.approval_status == 'PENDING' %}
+      {% if exam.status == 'AWAITING_APPROVAL' %}
         <span style="background: #FEF3C7; color: #92400E; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-block;">
-          ⏳ Pending Review
+          ⏳ Awaiting Approval
         </span>
-      {% elif exam.approval_status == 'APPROVED' %}
+      {% elif exam.status == 'APPROVED' %}
         <span style="background: #DCFCE7; color: #166534; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-block;">
           ✓ Approved
         </span>
-      {% elif exam.approval_status == 'REJECTED' %}
-        <span style="background: #FEE2E2; color: #991B1B; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-block;">
-          ✗ Rejected
+      {% elif exam.status == 'DRAFT' %}
+        <span style="background: #E5E7EB; color: #374151; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-block;">
+          ✎ Draft
         </span>
       {% endif %}
     </div>
@@ -261,6 +261,54 @@
     </div>
   </div>
 </div>
+
+<!-- Theory Questions (if any) -->
+{% if theory_questions or exam.theory_attachment %}
+  <h2 style="font-size: 1.25rem; font-weight: 700; color: #635E57; margin-bottom: 1.5rem;">
+    📝 Theory Questions
+  </h2>
+  
+  <!-- Theory Database Records -->
+  {% if theory_questions %}
+    {% for theory in theory_questions %}
+      <div class="question-card">
+        <div class="question-header">
+          <div class="question-number">T{{ forloop.counter }}</div>
+          <div style="flex: 1;">
+            <div class="question-text">{{ theory.text }}</div>
+            <div style="font-size: 0.85rem; color: #6B7280; margin-top: 0.5rem;">
+              <strong>Max Marks:</strong> {{ theory.max_marks }}
+              {% if theory.marking_guide %}<br><strong>Marking Guide:</strong> {{ theory.marking_guide }}{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% endif %}
+  
+  <!-- Theory File Attachment -->
+  {% if exam.theory_attachment %}
+    <div class="question-card">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <div style="width: 3rem; height: 3rem; border-radius: 0.75rem; background: #DCFCE7; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+        </div>
+        <div style="flex: 1;">
+          <p style="font-size: 0.95rem; font-weight: 600; color: #059669; margin-bottom: 0.25rem;">Theory File Uploaded</p>
+          <p style="font-size: 0.85rem; color: #6B7280;">{{ exam.theory_attachment.name|default:"theory_file" }}</p>
+          <a href="{{ exam.theory_attachment.url }}" style="display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; color: #059669; text-decoration: none; font-weight: 600; font-size: 0.875rem;" download>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Download Theory File
+          </a>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+{% endif %}
 
 <!-- Questions in Exam -->
 <h2 style="font-size: 1.25rem; font-weight: 700; color: #635E57; margin-bottom: 1.5rem;">
@@ -336,32 +384,62 @@
     ✓ Review & Approval
   </div>
   
-  {% if exam.approval_status != 'PENDING' %}
+  {% if exam.status != 'AWAITING_APPROVAL' %}
     <div class="info-box">
       <p class="info-text">
-        ℹ️ This exam has been {{ exam.approval_status|lower }}.
+        ℹ️ This exam is currently in "{{ exam.get_status_display }}" status.
         {% if exam.approved_by %}
           Approved by {{ exam.approved_by.get_full_name }} on {{ exam.approved_at|date:"M d, Y H:i" }}.
         {% endif %}
-        You can update the decision below.
       </p>
     </div>
   {% endif %}
   
-  <div class="form-group">
-    <label class="form-label">Comments or Suggestions (Optional)</label>
-    <textarea name="comments" class="form-control" placeholder="Provide feedback for the teacher...">{{ exam.approval_comments }}</textarea>
-    <p style="font-size: 0.75rem; color: #9CA3AF; margin-top: 0.25rem;">These comments will be visible to the teacher</p>
+  <div id="rejection-reason-group" class="form-group" style="display: none;">
+    <label class="form-label">Reason for Rejection *</label>
+    <textarea id="reason-textarea" name="reason" class="form-control" placeholder="Explain what needs to be changed or fixed..."></textarea>
+    <p style="font-size: 0.75rem; color: #9CA3AF; margin-top: 0.25rem;">The teacher will see this feedback and make corrections before resubmitting.</p>
   </div>
   
   <div class="button-group">
-    <button type="submit" name="action" value="APPROVED" class="btn btn-approve">
-      ✓ Approve Questions
+    <button type="submit" name="action" value="APPROVE" class="btn btn-approve">
+      ✓ Approve Exam
     </button>
-    <button type="submit" name="action" value="REJECTED" class="btn btn-reject">
+    <button type="submit" name="action" value="REJECT" class="btn btn-reject">
       ✗ Request Modifications
     </button>
   </div>
 </form>
+
+<script>
+const form = document.querySelector('form');
+const rejectBtn = document.querySelector('button[value="REJECT"]');
+const reasonField = document.getElementById('reason-textarea');
+const reasonGroup = document.getElementById('rejection-reason-group');
+
+// Handle reject button click - show reason field
+rejectBtn.addEventListener('click', function(e) {
+  // If reason field not visible yet, show it and prevent submission
+  if (reasonGroup.style.display === 'none') {
+    e.preventDefault();
+    reasonGroup.style.display = 'block';
+    reasonField.focus();
+  } else {
+    // If reason field is visible, validate it
+    if (!reasonField.value.trim()) {
+      e.preventDefault();
+      alert('Please provide a reason for rejection.');
+      reasonField.focus();
+    }
+  }
+});
+
+// Show rejection reason field if there's already a reason from previous submission
+document.addEventListener('DOMContentLoaded', function() {
+  if (reasonField && reasonField.value.trim()) {
+    reasonGroup.style.display = 'block';
+  }
+});
+</script>
 
 {% endblock %}

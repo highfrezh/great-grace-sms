@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.core.validators import FileExtensionValidator
+from django.utils import timezone
 from academics.models import ClassArm, AcademicSession, Term, Subject
 from students.models import Student
 from staff.models import StaffProfile
@@ -42,24 +43,20 @@ class Exam(models.Model):
         help_text="Upload theory/written questions file for printing (PDF, DOCX, DOC only)"
     )
 
-    # ── Publication Status ────────────────────────────
-    is_published = models.BooleanField(
-        default=False,
-        help_text="Admin must set to True for students to see and access this exam"
-    )
-
-    # ── Approval Status ────────────────────────────────
-    class ApprovalStatus(models.TextChoices):
-        PENDING = 'PENDING', 'Pending Review'
+    # ── Publication & Approval Status ────────────────────────────
+    class ExamStatus(models.TextChoices):
+        DRAFT = 'DRAFT', 'Draft (Editing)'
+        AWAITING_APPROVAL = 'AWAITING_APPROVAL', 'Awaiting Examiner Approval'
         APPROVED = 'APPROVED', 'Approved'
-        REJECTED = 'REJECTED', 'Rejected'
 
-    approval_status = models.CharField(
+    status = models.CharField(
         max_length=20,
-        choices=ApprovalStatus.choices,
-        default=ApprovalStatus.PENDING,
-        help_text="Question approval status by examiner/VP/Principal"
+        choices=ExamStatus.choices,
+        default=ExamStatus.DRAFT,
+        help_text="Exam workflow status"
     )
+
+    # ── Approval Details ──────────────────────────────
     approved_by = models.ForeignKey(
         'accounts.User',
         on_delete=models.SET_NULL,
@@ -68,11 +65,21 @@ class Exam(models.Model):
         related_name='exams_approved'
     )
     approved_at = models.DateTimeField(null=True, blank=True)
-    approval_comments = models.TextField(
+    
+    # ── Rejection Details ──────────────────────────────
+    rejection_reason = models.TextField(
         null=True,
         blank=True,
-        help_text="Comments from examiner/VP/Principal"
+        help_text="Reason why the exam was rejected by examiner"
     )
+    rejected_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='exams_rejected'
+    )
+    rejected_at = models.DateTimeField(null=True, blank=True)
 
     # ── Timestamps ────────────────────────────────────
     created_at = models.DateTimeField(auto_now_add=True)
@@ -94,6 +101,44 @@ class Exam(models.Model):
     def has_theory_file(self):
         """Check if theory file has been uploaded"""
         return bool(self.theory_attachment)
+
+    # ── Workflow Methods ──────────────────────────────
+    def can_edit(self):
+        """Teacher can only edit if exam is in DRAFT status"""
+        return self.status == self.ExamStatus.DRAFT
+
+    def publish(self):
+        """Publish exam for examiner review"""
+        if self.can_edit():
+            self.status = self.ExamStatus.AWAITING_APPROVAL
+            self.save()
+            return True
+        return False
+
+    def approve(self, user):
+        """Examiner approves the exam"""
+        if self.status == self.ExamStatus.AWAITING_APPROVAL:
+            self.status = self.ExamStatus.APPROVED
+            self.approved_by = user
+            self.approved_at = timezone.now()
+            # Clear rejection reason when approving
+            self.rejection_reason = None
+            self.rejected_by = None
+            self.rejected_at = None
+            self.save()
+            return True
+        return False
+
+    def reject(self, user, reason):
+        """Examiner rejects the exam with reason, reverts to DRAFT"""
+        if self.status == self.ExamStatus.AWAITING_APPROVAL:
+            self.status = self.ExamStatus.DRAFT
+            self.rejected_by = user
+            self.rejected_at = timezone.now()
+            self.rejection_reason = reason
+            self.save()
+            return True
+        return False
 
 
 class ObjectiveQuestion(models.Model):

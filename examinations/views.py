@@ -802,9 +802,10 @@ def teacher_exam_list(request):
     current_session = AcademicSession.get_current()
     current_term = Term.get_current()
     
-    # Count published and unpublished exams
-    published_count = exams.filter(is_published=True).count()
-    draft_count = exams.filter(is_published=False).count()
+    # Count exams by status
+    draft_count = exams.filter(status=Exam.ExamStatus.DRAFT).count()
+    awaiting_approval_count = exams.filter(status=Exam.ExamStatus.AWAITING_APPROVAL).count()
+    approved_count = exams.filter(status=Exam.ExamStatus.APPROVED).count()
     
     # Count total questions across all exams
     total_questions = ObjectiveQuestion.objects.filter(exam__in=exams).count()
@@ -831,8 +832,9 @@ def teacher_exam_list(request):
         'page_title': 'My Exams',
         'current_session': current_session,
         'current_term': current_term,
-        'published_count': published_count,
         'draft_count': draft_count,
+        'awaiting_approval_count': awaiting_approval_count,
+        'approved_count': approved_count,
         'total_questions': total_questions,
     })
 
@@ -917,6 +919,16 @@ def teacher_exam_edit(request, pk):
         return redirect('accounts:dashboard')
     
     exam = get_object_or_404(Exam, pk=pk, teacher=staff_profile)
+    
+    # Check if exam can be edited (must be in DRAFT status)
+    if exam.status != Exam.ExamStatus.DRAFT:
+        messages.error(
+            request,
+            f'Cannot edit exam. It is currently in "{exam.get_status_display()}" status. '
+            'You can only edit exams in draft status.'
+        )
+        return redirect('examinations:teacher_exam_detail', pk=exam.pk)
+    
     form = TeacherExamForm(request.POST or None, request.FILES or None, instance=exam)
     
     if form.is_valid():
@@ -935,7 +947,7 @@ def teacher_exam_edit(request, pk):
 @subject_teacher_required
 @require_POST
 def teacher_exam_publish(request, pk):
-    """Publish exam created by current teacher"""
+    """Publish exam created by current teacher for examiner review"""
     try:
         staff_profile = StaffProfile.objects.get(user=request.user)
     except StaffProfile.DoesNotExist:
@@ -944,9 +956,9 @@ def teacher_exam_publish(request, pk):
     
     exam = get_object_or_404(Exam, pk=pk, teacher=staff_profile)
     
-    # Check if exam can be published
-    if exam.is_published:
-        messages.warning(request, 'Exam is already published.')
+    # Check if exam is already published/awaiting approval/approved
+    if exam.status != Exam.ExamStatus.DRAFT:
+        messages.warning(request, f'Exam is already in {exam.get_status_display()} status.')
         return redirect('examinations:teacher_exam_detail', pk=exam.pk)
     
     # Check prerequisites
@@ -958,10 +970,9 @@ def teacher_exam_publish(request, pk):
         messages.error(request, 'Cannot publish exam without theory file.')
         return redirect('examinations:teacher_exam_detail', pk=exam.pk)
     
-    # Publish the exam
-    exam.is_published = True
-    exam.save()
-    messages.success(request, f'Exam "{exam.title}" has been published successfully!')
+    # Publish the exam - change status to AWAITING_APPROVAL
+    exam.publish()
+    messages.success(request, f'Exam "{exam.title}" has been published for examiner approval!')
     return redirect('examinations:teacher_exam_detail', pk=exam.pk)
 
 
@@ -978,9 +989,9 @@ def teacher_exam_delete(request, pk):
     
     exam = get_object_or_404(Exam, pk=pk, teacher=staff_profile)
     
-    # Only allow deletion if exam is not published
-    if exam.is_published:
-        messages.error(request, 'Cannot delete a published exam. Unpublish it first.')
+    # Only allow deletion if exam is in DRAFT status
+    if exam.status != Exam.ExamStatus.DRAFT:
+        messages.error(request, 'Cannot delete an exam that has been published. Contact the examiner to reject it first.')
         return redirect('examinations:teacher_exam_detail', pk=exam.pk)
     
     exam_title = exam.title
@@ -1292,74 +1303,58 @@ def exam_committee_required(view_func):
 
 
 @login_required
-@exam_committee_required
+@examiner_required
 def examiner_dashboard(request):
-    """Show examiner dashboard with classes and subjects for question approval"""
-    from django.db.models import Count, Q, Sum, Case, When, Value, IntegerField
-    
+    """Show examiner dashboard with exams awaiting approval"""
     current_session = AcademicSession.get_current()
     current_term = Term.get_current()
     
     # Get filter parameter
     selected_class_id = request.GET.get('class_filter')
     
-    # Base queryset for exams
+    # Base queryset - only show exams AWAITING_APPROVAL
     exams_queryset = Exam.objects.filter(
         session=current_session,
-        term=current_term
-    )
+        term=current_term,
+        status=Exam.ExamStatus.AWAITING_APPROVAL
+    ).select_related('subject', 'class_arm', 'teacher')
     
     # Apply class filter if specified
     if selected_class_id:
         exams_queryset = exams_queryset.filter(class_arm_id=selected_class_id)
     
-    # Calculate overall stats
-    total_exams = exams_queryset.count()
-    pending_exams = exams_queryset.filter(approval_status=Exam.ApprovalStatus.PENDING).count()
-    approved_exams = exams_queryset.filter(approval_status=Exam.ApprovalStatus.APPROVED).count()
-    rejected_exams = exams_queryset.filter(approval_status=Exam.ApprovalStatus.REJECTED).count()
+    # Get all exams regardless of status for overall stats
+    all_exams_queryset = Exam.objects.filter(
+        session=current_session,
+        term=current_term
+    )
     
-    # Total submitted questions
-    total_submitted_questions = ObjectiveQuestion.objects.filter(
+    # Calculate overall stats
+    total_exams = all_exams_queryset.count()
+    awaiting_approval = exams_queryset.count()
+    approved_exams = all_exams_queryset.filter(status=Exam.ExamStatus.APPROVED).count()
+    draft_exams = all_exams_queryset.filter(status=Exam.ExamStatus.DRAFT).count()
+    rejected_exams = all_exams_queryset.filter(
+        status=Exam.ExamStatus.DRAFT,
+        rejection_reason__isnull=False
+    ).count()
+    
+    # Total submitted questions in exams awaiting approval
+    total_awaiting_questions = ObjectiveQuestion.objects.filter(
         exam__in=exams_queryset
     ).count()
     
-    # Subjects statistics
-    subjects_with_submissions = exams_queryset.filter(
-        objectives__isnull=False
-    ).values('subject').distinct().count()
-    
-    # Also include exams with only theory files
-    if subjects_with_submissions == 0:
-        subjects_with_submissions = exams_queryset.values('subject').distinct().count()
-    
-    total_assigned_subjects = Subject.objects.filter(
-        teacher_assignments__session=current_session,
-        teacher_assignments__term=current_term
-    ).distinct().count()
-    
-    subjects_not_submitted = max(0, total_assigned_subjects - subjects_with_submissions)
-    
-    # Get all class arms that have exams
+    # Get all class arms that have exams awaiting approval
     class_arms = ClassArm.objects.filter(
         exams__in=exams_queryset
     ).distinct().order_by('level__name', 'name')
     
-    # Annotate each class arm with statistics
-    from django.db.models import Count, Q, Sum, IntegerField, Value
-    from django.db.models import Case, When
-    
+    # Get classe arms with stats
     class_arms_with_stats = []
     for class_arm in class_arms:
-        # Get exams for this class arm
         class_exams = exams_queryset.filter(class_arm=class_arm)
         
-        # Calculate counts
         exam_count = class_exams.count()
-        pending_count = class_exams.filter(approval_status=Exam.ApprovalStatus.PENDING).count()
-        approved_count = class_exams.filter(approval_status=Exam.ApprovalStatus.APPROVED).count()
-        
-        # Count total objective questions for this class
         total_questions = ObjectiveQuestion.objects.filter(
             exam__in=class_exams
         ).count()
@@ -1372,9 +1367,8 @@ def examiner_dashboard(request):
             'level_name': class_arm.level.name if class_arm.level else '',
             'class_name': class_arm.name,  
             'exam_count': exam_count,
-            'pending_count': pending_count,
-            'approved_count': approved_count,
             'total_questions': total_questions,
+            'exams': list(class_exams)
         })
     
     # Get all class arms for filter dropdown
@@ -1388,114 +1382,131 @@ def examiner_dashboard(request):
         except ClassArm.DoesNotExist:
             pass
     
-    # Total classes count
-    total_classes = len(class_arms_with_stats)
+    # Prepare list of all exams awaiting approval
+    exams_list = list(exams_queryset.order_by('-created_at'))
     
     context = {
-        'page_title': 'Exam Question Approval Dashboard',
+        'page_title': 'Exam Approval Dashboard',
         'current_session': current_session,
         'current_term': current_term,
-        'class_arms': class_arms_with_stats,  # Now with statistics
+        'class_arms': class_arms_with_stats,
         'all_class_arms': all_class_arms,
         'total_exams': total_exams,
-        'pending_exams': pending_exams,
+        'awaiting_approval': awaiting_approval,
         'approved_exams': approved_exams,
+        'draft_exams': draft_exams,
         'rejected_exams': rejected_exams,
-        'total_submitted_questions': total_submitted_questions,
-        'subjects_not_submitted': subjects_not_submitted,
-        'subjects_with_submissions': subjects_with_submissions,
-        'total_classes': total_classes,
+        'total_awaiting_questions': total_awaiting_questions,
+        'exams_list': exams_list,
         'selected_class_id': selected_class_id,
         'selected_class_arm': selected_class_arm,
     }
     return render(request, 'examinations/examiner_dashboard.html', context)
 
 @login_required
-@exam_committee_required
+@examiner_required
 def examiner_class_subjects(request, class_arm_id):
-    """Show all subjects and their teacher assignments for a class"""
+    """Show all exams for a class awaiting approval"""
     class_arm = get_object_or_404(ClassArm, pk=class_arm_id)
     current_session = AcademicSession.get_current()
     current_term = Term.get_current()
     
-    # Get all subjects taught in this class with teacher assignments
+    # Get exams awaiting approval for this class
+    exams = Exam.objects.filter(
+        class_arm=class_arm,
+        session=current_session,
+        term=current_term,
+        status=Exam.ExamStatus.AWAITING_APPROVAL
+    ).select_related('subject', 'teacher').order_by('-created_at')
+    
+    # Get all unique subjects taught in this class
+    from academics.models import Subject
     subjects = Subject.objects.filter(
         teacher_assignments__class_arm=class_arm
-    ).distinct().prefetch_related(
-        'teacher_assignments'
-    )
+    ).distinct().order_by('name')
     
-    # Prepare data for template
+    # Organize data by subject
     subject_data = []
     for subject in subjects:
-        # Get teachers assigned to this subject-class
-        assignments = subject.teacher_assignments.filter(
-            class_arm=class_arm,
-            session=current_session,
-            term=current_term
-        )
-        
-        # Get the staff profiles for these teachers
-        teacher_ids = assignments.values_list('teacher_id', flat=True)
-        teachers = StaffProfile.objects.filter(user_id__in=teacher_ids).distinct()
-        
-        # Get exams for this subject-class combination
-        exams = Exam.objects.filter(
+        subject_exams = exams.filter(subject=subject)
+        # Get all teachers for this subject-class combination
+        teachers_assignments = SubjectTeacherAssignment.objects.filter(
             subject=subject,
-            class_arm=class_arm,
-            session=current_session,
-            term=current_term
-        )
+            class_arm=class_arm
+        ).select_related('teacher')
+        teachers = [assignment.teacher for assignment in teachers_assignments]
         
         subject_data.append({
             'subject': subject,
             'teachers': teachers,
-            'exams': exams,
-            'total_questions': sum([exam.objectives.count() for exam in exams]),
-            'has_theory_file': any([exam.theory_attachment for exam in exams]),
-            'pending_count': exams.filter(approval_status=Exam.ApprovalStatus.PENDING).count(),
-            'approved_count': exams.filter(approval_status=Exam.ApprovalStatus.APPROVED).count(),
+            'exams': subject_exams
         })
     
     context = {
-        'page_title': f'Subject Exams — {class_arm}',
+        'page_title': f'Exams Awaiting Approval — {class_arm}',
         'class_arm': class_arm,
         'current_session': current_session,
         'current_term': current_term,
         'subject_data': subject_data,
+        'exams': exams,
     }
     return render(request, 'examinations/examiner_class_subjects.html', context)
 
 
 @login_required
-@exam_committee_required
+@examiner_required
 def examiner_exam_review(request, exam_id):
     """Review and approve/reject an exam's questions"""
-    exam = get_object_or_404(Exam, pk=exam_id)
+    exam = get_object_or_404(Exam, pk=exam_id, status=Exam.ExamStatus.AWAITING_APPROVAL)
     objectives = exam.objectives.all().order_by('id')
+    theory_questions = exam.theory_questions.all().order_by('order', 'id')
     
     if request.method == 'POST':
-        action = request.POST.get('action')
-        comments = request.POST.get('comments', '')
+        action = request.POST.get('action', '').upper()
+        reason = request.POST.get('reason', '').strip() if action == 'REJECT' else ''
         
-        if action in ['APPROVED', 'REJECTED']:
-            exam.approval_status = action
-            exam.approved_by = request.user
-            exam.approved_at = timezone.now()
-            exam.approval_comments = comments
-            exam.save()
-            
-            status_text = 'approved' if action == 'APPROVED' else 'rejected'
-            messages.success(
-                request,
-                f'Exam "{exam.title}" has been {status_text} successfully.'
-            )
-            return redirect('examinations:examiner_class_subjects', class_arm_id=exam.class_arm.pk)
+        if action == 'APPROVE':
+            if exam.approve(request.user):
+                messages.success(
+                    request,
+                    f'Exam "{exam.title}" has been approved successfully.'
+                )
+            else:
+                messages.error(request, 'Could not approve exam. Please try again.')
+        elif action == 'REJECT':
+            if not reason:
+                messages.error(request, 'You must provide a rejection reason.')
+                return render(request, 'examinations/examiner_exam_review.html', {
+                    'page_title': f'Review Exam — {exam.title}',
+                    'exam': exam,
+                    'objectives': objectives,
+                    'theory_questions': theory_questions,
+                    'teacher_name': exam.teacher.user.get_full_name() if exam.teacher else 'Unknown',
+                })
+            if exam.reject(request.user, reason):
+                messages.success(
+                    request,
+                    f'Exam "{exam.title}" has been rejected and returned to teacher for revision.'
+                )
+            else:
+                messages.error(request, 'Could not reject exam. Please try again.')
+        else:
+            messages.error(request, 'Invalid action.')
+            return render(request, 'examinations/examiner_exam_review.html', {
+                'page_title': f'Review Exam — {exam.title}',
+                'exam': exam,
+                'objectives': objectives,
+                'theory_questions': theory_questions,
+                'teacher_name': exam.teacher.user.get_full_name() if exam.teacher else 'Unknown',
+            })
+        
+        return redirect('examinations:examiner_dashboard')
     
     context = {
         'page_title': f'Review Exam — {exam.title}',
         'exam': exam,
         'objectives': objectives,
+        'theory_questions': theory_questions,
         'teacher_name': exam.teacher.user.get_full_name() if exam.teacher else 'Unknown',
     }
     return render(request, 'examinations/examiner_exam_review.html', context)

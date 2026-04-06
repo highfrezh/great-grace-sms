@@ -13,7 +13,7 @@ class ExamForm(forms.ModelForm):
         model = Exam
         fields = [
             'title', 'subject', 'class_arm', 'teacher', 'session', 'term',
-            'duration_minutes', 'theory_attachment', 'is_published'
+            'duration_minutes', 'theory_attachment'
         ]
         widgets = {
             'title': forms.TextInput(attrs={
@@ -31,9 +31,6 @@ class ExamForm(forms.ModelForm):
             'theory_attachment': forms.FileInput(attrs={
                 'class': 'form-input',
                 'accept': '.pdf,.docx,.doc'
-            }),
-            'is_published': forms.CheckboxInput(attrs={
-                'class': 'form-checkbox'
             }),
         }
 
@@ -58,7 +55,7 @@ class TeacherExamForm(forms.ModelForm):
         model = Exam
         fields = [
             'title', 'subject', 'class_arm', 'session', 'term',
-            'duration_minutes', 'theory_attachment', 'is_published'
+            'duration_minutes', 'theory_attachment'
         ]
         widgets = {
             'title': forms.TextInput(attrs={
@@ -75,9 +72,6 @@ class TeacherExamForm(forms.ModelForm):
             'theory_attachment': forms.FileInput(attrs={
                 'class': 'form-control',
                 'accept': '.pdf,.docx,.doc'
-            }),
-            'is_published': forms.CheckboxInput(attrs={
-                'class': 'form-checkbox'
             }),
         }
 
@@ -113,15 +107,13 @@ class TeacherExamForm(forms.ModelForm):
             assigned_class_arms = assignments.values_list('class_arm', flat=True).distinct()
             self.fields['class_arm'].queryset = ClassArm.objects.filter(id__in=assigned_class_arms)
         
-        # Disable fields if exam is already published
-        # IMPORTANT: disabled fields don't get sent in POST, so use disabled=True
-        if self.instance and self.instance.is_published:
-            # Fields to disable when published
+        # Disable fields if exam is in a published state (not DRAFT)
+        if self.instance and self.instance.status != 'DRAFT':
+            # Fields to disable when exam is not in draft
             fields_to_disable = ['title', 'subject', 'class_arm', 'session', 'term', 'duration_minutes']
             for field_name in fields_to_disable:
                 if field_name in self.fields:
                     self.fields[field_name].disabled = True
-            # is_published can be toggled to unpublish
 
 
 class QuestionForm(forms.ModelForm):
