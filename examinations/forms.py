@@ -91,6 +91,10 @@ class TeacherExamForm(forms.ModelForm):
             if field.widget.input_type != 'checkbox':
                 field.widget.attrs.update({'class': 'form-control'})
         
+        # Add data attributes for dynamic filtering
+        self.fields['subject'].widget.attrs['id'] = 'id_subject'
+        self.fields['class_arm'].widget.attrs['id'] = 'id_class_arm'
+        
         # Filter subject and class_arm based on teacher's assignments
         if teacher:
             # Get teacher's assignments
@@ -114,6 +118,31 @@ class TeacherExamForm(forms.ModelForm):
             for field_name in fields_to_disable:
                 if field_name in self.fields:
                     self.fields[field_name].disabled = True
+    
+    def clean(self):
+        """Validate that this subject/class/session/term combination doesn't already have an exam"""
+        cleaned_data = super().clean()
+        subject = cleaned_data.get('subject')
+        class_arm = cleaned_data.get('class_arm')
+        session = cleaned_data.get('session')
+        term = cleaned_data.get('term')
+        
+        if subject and class_arm and session and term:
+            # Check if exam already exists for this combination
+            existing_exam = Exam.objects.filter(
+                subject=subject,
+                class_arm=class_arm,
+                session=session,
+                term=term
+            ).exclude(pk=self.instance.pk if self.instance.pk else None).first()
+            
+            if existing_exam:
+                raise forms.ValidationError(
+                    'An exam already exists for this subject-class-session-term combination. '
+                    'You can only create one exam per combination.'
+                )
+        
+        return cleaned_data
 
 
 class QuestionForm(forms.ModelForm):

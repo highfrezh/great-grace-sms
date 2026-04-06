@@ -14,6 +14,7 @@ urlpatterns = [
     # ── Teacher Exam Management (Simplified Workflow) ─
     path('teacher/', views.teacher_exam_list, name='teacher_exam_list'),
     path('teacher/create/', views.teacher_exam_create, name='teacher_exam_create'),
+    path('api/available-subjects/', views.get_available_subjects, name='get_available_subjects'),
     path('teacher/<int:pk>/', views.teacher_exam_detail, name='teacher_exam_detail'),
     path('teacher/<int:pk>/edit/', views.teacher_exam_edit, name='teacher_exam_edit'),
     path('teacher/<int:pk>/publish/', views.teacher_exam_publish, name='teacher_exam_publish'),

@@ -245,7 +245,7 @@
 </div>
 
 <!-- Form -->
-<div class="max-w-4xl">
+<div class="max-w-4xl mx-auto">
   <div class="section-card">
     <form method="post" enctype="multipart/form-data" id="examForm">
       {% csrf_token %}
@@ -261,7 +261,7 @@
         <div class="section-title">Basic Information</div>
       </div>
       <div class="section-content">
-        <div class="grid md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-2 gap-6">
           <div class="form-group">
             <label class="form-label">
               Exam Title <span class="required">*</span>
@@ -296,11 +296,10 @@
             <div>
               <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Subject</p>
               <p class="text-base font-semibold" style="color:#635E57;">{{ exam.subject.name }}</p>
-              <p class="text-xs text-gray-400 mt-1">Subject Code: {{ exam.subject.code|default:"N/A" }}</p>
             </div>
             <div>
               <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Class</p>
-              <p class="text-base font-semibold" style="color:#635E57;">{{ exam.class_arm.level.name }} - {{ exam.class_arm.name }}</p>
+              <p class="text-base font-semibold" style="color:#635E57;">{{ exam.class_arm.level.name }}  {{ exam.class_arm.name }}</p>
             </div>
           </div>
         </div>
@@ -319,7 +318,7 @@
         <div class="section-title">Academic Period</div>
       </div>
       <div class="section-content">
-        <div class="grid md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-2 gap-6">
           <div class="form-group">
             <label class="form-label">
               Academic Session <span class="required">*</span>
@@ -408,7 +407,7 @@
       <div class="section-content">
         <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
           <div>
-            <p class="font-medium text-gray-800">Exam Visibility</p>
+            <p class="font-medium text-gray-800">Is Published ?</p>
             <p class="text-xs text-gray-500 mt-1">
               {% if exam.is_published %}
                 Students can view and take this exam

@@ -389,26 +389,37 @@
       <p class="info-text">
         ℹ️ This exam is currently in "{{ exam.get_status_display }}" status.
         {% if exam.approved_by %}
-          Approved by {{ exam.approved_by.get_full_name }} on {{ exam.approved_at|date:"M d, Y H:i" }}.
+          ✓ Approved by {{ exam.approved_by.get_full_name }} on {{ exam.approved_at|date:"M d, Y H:i" }}.
+        {% elif exam.rejection_reason %}
+          ✗ Rejected on {{ exam.rejected_at|date:"M d, Y H:i" }}. Reason: {{ exam.rejection_reason }}
         {% endif %}
       </p>
     </div>
   {% endif %}
   
-  <div id="rejection-reason-group" class="form-group" style="display: none;">
-    <label class="form-label">Reason for Rejection *</label>
-    <textarea id="reason-textarea" name="reason" class="form-control" placeholder="Explain what needs to be changed or fixed..."></textarea>
-    <p style="font-size: 0.75rem; color: #9CA3AF; margin-top: 0.25rem;">The teacher will see this feedback and make corrections before resubmitting.</p>
-  </div>
-  
-  <div class="button-group">
-    <button type="submit" name="action" value="APPROVE" class="btn btn-approve">
-      ✓ Approve Exam
-    </button>
-    <button type="submit" name="action" value="REJECT" class="btn btn-reject">
-      ✗ Request Modifications
-    </button>
-  </div>
+  {% if exam.status == 'AWAITING_APPROVAL' %}
+    <div id="rejection-reason-group" class="form-group" style="display: none;">
+      <label class="form-label">Reason for Rejection *</label>
+      <textarea id="reason-textarea" name="reason" class="form-control" placeholder="Explain what needs to be changed or fixed..."></textarea>
+      <p style="font-size: 0.75rem; color: #9CA3AF; margin-top: 0.25rem;">The teacher will see this feedback and make corrections before resubmitting.</p>
+    </div>
+    
+    <div class="button-group">
+      <button type="submit" name="action" value="APPROVE" class="btn btn-approve">
+        ✓ Approve Exam
+      </button>
+      <button type="submit" name="action" value="REJECT" class="btn btn-reject">
+        ✗ Request Modifications
+      </button>
+    </div>
+  {% else %}
+    <div style="text-align: center; padding: 1.5rem; background: #F0FDF4; border: 1px solid #DCFCE7; border-radius: 0.75rem;">
+      <p style="color: #166534; font-weight: 500; margin-bottom: 1rem;">This exam is in read-only mode</p>
+      <a href="{% url 'examinations:examiner_dashboard' %}" class="btn btn-secondary">
+        Back to Dashboard
+      </a>
+    </div>
+  {% endif %}
 </form>
 
 <script>
