@@ -3,13 +3,13 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Count, Avg
 from django.core.paginator import Paginator
+from django.utils import timezone
 from accounts.decorators import admin_staff_required, class_teacher_required
-from academics.models import AcademicSession, Term, ClassArm
+from academics.models import AcademicSession, Term, ClassArm, SubjectTeacherAssignment, Subject
 from accounts.models import User
 from staff.models import StaffProfile
-from .models import Student, Guardian, StudentEnrollment, Attendance
 from .models import Student, Guardian, StudentEnrollment, Attendance, generate_admission_number
 from .forms import StudentForm, GuardianForm, StudentEnrollmentForm, StudentSearchForm, BulkStudentImportForm
 
@@ -531,6 +531,157 @@ def attendance_mark(request, pk=None):
         term=current_term
     ).values('date', 'marked_by__first_name',
              'marked_by__last_name').distinct().order_by('-date')
+
+    return render(request, 'students/attendance_mark.html', {
+        'class_arm': class_arm,
+        'current_session': current_session,
+        'current_term': current_term,
+        'student_stats': student_stats,
+        'history_dates': history_dates,
+    })
+
+
+# ── STUDENT DASHBOARD ──────────────────────────────────────
+
+@login_required
+def student_dashboard(request):
+    """
+    Student dashboard - view profile, current session, subjects, and available exams
+    """
+    try:
+        student = request.user.student_profile
+    except Student.DoesNotExist:
+        messages.error(request, 'Student profile not found.')
+        return redirect('accounts:dashboard')
+    
+    # Get current session and term
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
+    
+    if not current_session or not current_term:
+        messages.warning(request, 'No active session or term configured.')
+        current_session = None
+        current_term = None
+    
+    # Get current enrollment
+    current_enrollment = student.enrollments.filter(
+        is_active=True,
+        session=current_session
+    ).select_related('class_arm__level').first()
+    
+    class_arm = current_enrollment.class_arm if current_enrollment else None
+    
+    # Get subjects for current class/term
+    subjects_data = []
+    if class_arm and current_term:
+        # Get all assignments, deduplicate by subject in Python (SQLite doesn't support DISTINCT ON)
+        assignments_list = SubjectTeacherAssignment.objects.filter(
+            class_arm=class_arm,
+            term=current_term
+        ).select_related('subject', 'teacher')
+        
+        # Deduplicate: keep first assignment per subject
+        seen_subjects = {}
+        for assignment in assignments_list:
+            if assignment.subject_id not in seen_subjects:
+                seen_subjects[assignment.subject_id] = assignment
+        
+        subjects = seen_subjects.values()
+        
+        for assignment in subjects:
+            subject = assignment.subject
+            
+            # Check if exam is available
+            from examinations.models import Exam, ExamSubmission
+            
+            exam = Exam.objects.filter(
+                subject=subject,
+                class_arms=class_arm,
+                term=current_term,
+                session=current_session,
+                status=Exam.ExamStatus.APPROVED
+            ).first()
+            
+            # Check submission status
+            submission = None
+            exam_status = None
+            if exam:
+                submission = ExamSubmission.objects.filter(
+                    exam=exam,
+                    student=student
+                ).first()
+                
+                if submission:
+                    exam_status = submission.status
+            
+            subjects_data.append({
+                'subject': subject,
+                'teacher': assignment.teacher,
+                'exam': exam,
+                'submission': submission,
+                'exam_status': exam_status,
+                'can_take_exam': exam is not None and (submission is None or submission.status == ExamSubmission.SubmissionStatus.IN_PROGRESS)
+            })
+    
+    # Get recent exam results
+    from examinations.models import ExamResult
+    recent_results = ExamResult.objects.filter(
+        student=student,
+        is_published=True
+    ).select_related('exam__subject', 'submission').order_by('-updated_at')[:5]
+    
+    # Calculate stats
+    total_subjects = len(subjects_data)
+    total_exams_available = sum(1 for s in subjects_data if s['exam'])
+    exams_completed = ExamSubmission.objects.filter(
+        student=student,
+        status__in=[
+            ExamSubmission.SubmissionStatus.SUBMITTED,
+            ExamSubmission.SubmissionStatus.AUTO_SUBMITTED
+        ]
+    ).count()
+    
+    results_published = recent_results.count()
+    avg_score = ExamResult.objects.filter(
+        student=student,
+        is_published=True
+    ).aggregate(Avg('total_score'))['total_score__avg'] or 0
+    
+    # Get upcoming exams
+    from examinations.models import Exam
+    upcoming_exams = Exam.objects.filter(
+        class_arms=class_arm,
+        term=current_term,
+        session=current_session,
+        status=Exam.ExamStatus.APPROVED
+    ).select_related('subject').order_by('created_at')[:5]
+    
+    # Get malpractice violations if any
+    from examinations.models import MalpracticeViolation, ExamSubmission
+    recent_violations = MalpracticeViolation.objects.filter(
+        submission__student=student
+    ).select_related('submission__exam__subject').order_by('-timestamp')[:3]
+    
+    context = {
+        'student': student,
+        'current_session': current_session,
+        'current_term': current_term,
+        'class_arm': class_arm,
+        'current_enrollment': current_enrollment,
+        'subjects_data': subjects_data,
+        'recent_results': recent_results,
+        'upcoming_exams': upcoming_exams,
+        'recent_violations': recent_violations,
+        # Stats
+        'total_subjects': total_subjects,
+        'total_exams_available': total_exams_available,
+        'exams_completed': exams_completed,
+        'results_published': results_published,
+        'avg_score': round(avg_score, 2),
+        'page_title': 'Student Dashboard'
+    }
+    
+    return render(request, 'students/student_dashboard.html', context)
 
     attendance_history = []
     for entry in history_dates:

@@ -1,0 +1,1248 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+
+
+{% block title %}Student Dashboard{% endblock %}
+
+
+
+{% block extra_css %}
+
+<style>
+
+    :root {
+
+        --primary: #851A10;
+
+        --secondary: #f39c12;
+
+        --danger: #e74c3c;
+
+        --success: #27ae60;
+
+        --info: #3498db;
+
+        --light: #ecf0f1;
+
+        --dark: #2c3e50;
+
+    }
+
+
+
+    .dashboard-container {
+
+        background-color: #f8f9fa;
+
+        min-height: 100vh;
+
+        padding: 30px 0;
+
+    }
+
+
+
+    .dashboard-header {
+
+        background: linear-gradient(135deg, var(--primary) 0%, #a02212 100%);
+
+        color: white;
+
+        padding: 40px 0;
+
+        margin-bottom: 40px;
+
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+
+    }
+
+
+
+    .header-content {
+
+        display: flex;
+
+        justify-content: space-between;
+
+        align-items: center;
+
+        gap: 30px;
+
+        flex-wrap: wrap;
+
+    }
+
+
+
+    .profile-section {
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 20px;
+
+        flex: 1;
+
+        min-width: 250px;
+
+    }
+
+
+
+    .profile-avatar {
+
+        width: 80px;
+
+        height: 80px;
+
+        border-radius: 50%;
+
+        background: rgba(255,255,255,0.2);
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        font-size: 2rem;
+
+        font-weight: bold;
+
+        border: 3px solid white;
+
+    }
+
+
+
+    .profile-info h1 {
+
+        margin: 0;
+
+        font-size: 1.8rem;
+
+        font-weight: bold;
+
+    }
+
+
+
+    .profile-meta {
+
+        font-size: 0.9rem;
+
+        opacity: 0.95;
+
+        margin-top: 5px;
+
+    }
+
+
+
+    .session-info {
+
+        background: rgba(255,255,255,0.1);
+
+        padding: 15px 20px;
+
+        border-radius: 8px;
+
+        backdrop-filter: blur(5px);
+
+        text-align: center;
+
+    }
+
+
+
+    .session-info-item {
+
+        margin: 0;
+
+        font-size: 0.9rem;
+
+    }
+
+
+
+    .session-info-value {
+
+        font-weight: bold;
+
+        font-size: 1.1rem;
+
+        display: block;
+
+    }
+
+
+
+    /* Stats Cards */
+
+    .stats-grid {
+
+        display: grid;
+
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+
+        gap: 20px;
+
+        margin-bottom: 40px;
+
+    }
+
+
+
+    .stat-card {
+
+        background: white;
+
+        padding: 25px;
+
+        border-radius: 8px;
+
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+
+        border-left: 4px solid var(--primary);
+
+        transition: all 0.3s ease;
+
+    }
+
+
+
+    .stat-card:hover {
+
+        transform: translateY(-3px);
+
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
+    }
+
+
+
+    .stat-card.success {
+
+        border-left-color: var(--success);
+
+    }
+
+
+
+    .stat-card.warning {
+
+        border-left-color: var(--secondary);
+
+    }
+
+
+
+    .stat-card.danger {
+
+        border-left-color: var(--danger);
+
+    }
+
+
+
+    .stat-card.info {
+
+        border-left-color: var(--info);
+
+    }
+
+
+
+    .stat-value {
+
+        font-size: 2.5rem;
+
+        font-weight: bold;
+
+        color: var(--primary);
+
+        margin: 0;
+
+    }
+
+
+
+    .stat-card.success .stat-value {
+
+        color: var(--success);
+
+    }
+
+
+
+    .stat-card.warning .stat-value {
+
+        color: var(--secondary);
+
+    }
+
+
+
+    .stat-card.danger .stat-value {
+
+        color: var(--danger);
+
+    }
+
+
+
+    .stat-card.info .stat-value {
+
+        color: var(--info);
+
+    }
+
+
+
+    .stat-label {
+
+        font-size: 0.9rem;
+
+        color: #666;
+
+        margin: 10px 0 0 0;
+
+        font-weight: 500;
+
+    }
+
+
+
+    /* Content Sections */
+
+    .section {
+
+        background: white;
+
+        border-radius: 8px;
+
+        padding: 30px;
+
+        margin-bottom: 30px;
+
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+
+    }
+
+
+
+    .section-title {
+
+        font-size: 1.3rem;
+
+        font-weight: bold;
+
+        color: var(--dark);
+
+        margin: 0 0 20px 0;
+
+        padding-bottom: 15px;
+
+        border-bottom: 2px solid var(--light);
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 10px;
+
+    }
+
+
+
+    .section-icon {
+
+        font-size: 1.5rem;
+
+    }
+
+
+
+    /* Subject List */
+
+    .subjects-table {
+
+        width: 100%;
+
+        border-collapse: collapse;
+
+    }
+
+
+
+    .subjects-table thead {
+
+        background-color: var(--light);
+
+    }
+
+
+
+    .subjects-table th {
+
+        padding: 15px;
+
+        text-align: left;
+
+        font-weight: 600;
+
+        color: var(--dark);
+
+        border-bottom: 2px solid var(--dark);
+
+    }
+
+
+
+    .subjects-table td {
+
+        padding: 15px;
+
+        border-bottom: 1px solid var(--light);
+
+    }
+
+
+
+    .subjects-table tbody tr:hover {
+
+        background-color: #fafafa;
+
+    }
+
+
+
+    .subject-name {
+
+        font-weight: 600;
+
+        color: var(--primary);
+
+    }
+
+
+
+    .teacher-name {
+
+        color: #666;
+
+        font-size: 0.9rem;
+
+    }
+
+
+
+    .exam-status {
+
+        display: inline-block;
+
+        padding: 6px 12px;
+
+        border-radius: 20px;
+
+        font-size: 0.85rem;
+
+        font-weight: 600;
+
+    }
+
+
+
+    .exam-status.available {
+
+        background-color: #d4edda;
+
+        color: #155724;
+
+    }
+
+
+
+    .exam-status.in-progress {
+
+        background-color: #fff3cd;
+
+        color: #856404;
+
+    }
+
+
+
+    .exam-status.completed {
+
+        background-color: #d1ecf1;
+
+        color: #0c5460;
+
+    }
+
+
+
+    .exam-status.not-available {
+
+        background-color: #f8d7da;
+
+        color: #721c24;
+
+    }
+
+
+
+    .take-exam-btn {
+
+        display: inline-block;
+
+        padding: 8px 16px;
+
+        background-color: var(--primary);
+
+        color: white;
+
+        border: none;
+
+        border-radius: 6px;
+
+        font-size: 0.9rem;
+
+        font-weight: 600;
+
+        text-decoration: none;
+
+        cursor: pointer;
+
+        transition: all 0.3s ease;
+
+    }
+
+
+
+    .take-exam-btn:hover {
+
+        background-color: #6d160b;
+
+        transform: translateX(2px);
+
+    }
+
+
+
+    .take-exam-btn:disabled,
+
+    .take-exam-btn.disabled {
+
+        background-color: #ccc;
+
+        cursor: not-allowed;
+
+        transform: none;
+
+    }
+
+
+
+    /* Results Section */
+
+    .results-list {
+
+        display: grid;
+
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+
+        gap: 20px;
+
+    }
+
+
+
+    .result-card {
+
+        background: linear-gradient(135deg, rgba(133, 26, 16, 0.05) 0%, rgba(243, 156, 18, 0.05) 100%);
+
+        border: 1px solid var(--light);
+
+        border-radius: 8px;
+
+        padding: 20px;
+
+        transition: all 0.3s ease;
+
+    }
+
+
+
+    .result-card:hover {
+
+        transform: translateY(-3px);
+
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
+    }
+
+
+
+    .result-subject {
+
+        font-weight: 600;
+
+        color: var(--primary);
+
+        margin-bottom: 10px;
+
+    }
+
+
+
+    .result-score {
+
+        font-size: 2rem;
+
+        font-weight: bold;
+
+        color: var(--success);
+
+        margin: 10px 0;
+
+    }
+
+
+
+    .result-grade {
+
+        background-color: var(--primary);
+
+        color: white;
+
+        display: inline-block;
+
+        padding: 4px 12px;
+
+        border-radius: 20px;
+
+        font-weight: bold;
+
+        font-size: 0.9rem;
+
+    }
+
+
+
+    .result-meta {
+
+        font-size: 0.85rem;
+
+        color: #666;
+
+        margin-top: 10px;
+
+    }
+
+
+
+    /* Violations Alert */
+
+    .violations-alert {
+
+        background-color: #fff3cd;
+
+        border-left: 4px solid var(--danger);
+
+        padding: 20px;
+
+        border-radius: 6px;
+
+        margin-bottom: 20px;
+
+    }
+
+
+
+    .violations-alert-title {
+
+        font-weight: bold;
+
+        color: var(--danger);
+
+        margin-bottom: 10px;
+
+    }
+
+
+
+    .violation-item {
+
+        font-size: 0.9rem;
+
+        color: #666;
+
+        margin: 8px 0;
+
+        padding-left: 20px;
+
+        position: relative;
+
+    }
+
+
+
+    .violation-item:before {
+
+        content: "⚠";
+
+        position: absolute;
+
+        left: 0;
+
+        color: var(--danger);
+
+    }
+
+
+
+    /* Empty States */
+
+    .empty-state {
+
+        text-align: center;
+
+        padding: 40px 20px;
+
+        color: #999;
+
+    }
+
+
+
+    .empty-state-icon {
+
+        font-size: 3rem;
+
+        margin-bottom: 15px;
+
+    }
+
+
+
+    .empty-state-text {
+
+        font-size: 0.95rem;
+
+    }
+
+
+
+    /* Responsive */
+
+    @media (max-width: 768px) {
+
+        .header-content {
+
+            flex-direction: column;
+
+        }
+
+
+
+        .profile-section {
+
+            justify-content: center;
+
+        }
+
+
+
+        .session-info {
+
+            text-align: left;
+
+        }
+
+
+
+        .stats-grid {
+
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+
+        }
+
+
+
+        .results-list {
+
+            grid-template-columns: 1fr;
+
+        }
+
+
+
+        .subjects-table {
+
+            font-size: 0.9rem;
+
+        }
+
+
+
+        .subjects-table th,
+
+        .subjects-table td {
+
+            padding: 10px;
+
+        }
+
+    }
+
+</style>
+
+{% endblock %}
+
+
+
+{% block content %}
+
+<!-- Header -->
+
+<div class="dashboard-header">
+
+    <div class="container">
+
+        <div class="header-content">
+
+            <div class="profile-section">
+
+                <div class="profile-avatar">{{ student.initials }}</div>
+
+                <div class="profile-info">
+
+                    <h1>{{ student.full_name }}</h1>
+
+                    <div class="profile-meta">
+
+                        <strong>Admission #:</strong> {{ student.admission_number }}
+
+                        {% if class_arm %}<br><strong>Class:</strong> {{ class_arm }}{% endif %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            {% if current_session and current_term %}
+
+            <div class="session-info">
+
+                <p class="session-info-item">
+
+                    <span class="session-info-value">{{ current_session }}</span>
+
+                    <small>Session</small>
+
+                </p>
+
+                <p class="session-info-item">
+
+                    <span class="session-info-value">{{ current_term }}</span>
+
+                    <small>Term</small>
+
+                </p>
+
+            </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<div class="container">
+
+    <!-- Statistics Cards -->
+
+    <div class="stats-grid">
+
+        <div class="stat-card info">
+
+            <p class="stat-value">{{ total_subjects }}</p>
+
+            <p class="stat-label">📚 Total Subjects</p>
+
+        </div>
+
+
+
+        <div class="stat-card warning">
+
+            <p class="stat-value">{{ total_exams_available }}</p>
+
+            <p class="stat-label">📝 Exams Available</p>
+
+        </div>
+
+
+
+        <div class="stat-card success">
+
+            <p class="stat-value">{{ exams_completed }}</p>
+
+            <p class="stat-label">✓ Exams Completed</p>
+
+        </div>
+
+
+
+        <div class="stat-card">
+
+            <p class="stat-value">{{ avg_score }}%</p>
+
+            <p class="stat-label">📊 Average Score</p>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- Malpractice Violations Alert -->
+
+    {% if recent_violations %}
+
+    <div class="violations-alert">
+
+        <div class="violations-alert-title">⚠️ Academic Integrity Violations Recorded</div>
+
+        {% for violation in recent_violations %}
+
+        <div class="violation-item">
+
+            <strong>{{ violation.get_violation_type_display }}</strong> - 
+
+            {{ violation.timestamp|date:"M d, Y H:i" }} 
+
+            ({{ violation.submission.exam.subject }})
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+    {% endif %}
+
+
+
+    <!-- Subjects Section -->
+
+    {% if subjects_data %}
+
+    <div class="section">
+
+        <h2 class="section-title">📚 My Subjects & Exams</h2>
+
+        
+
+        {% if subjects_data %}
+
+        <table class="subjects-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>Subject</th>
+
+                    <th>Teacher</th>
+
+                    <th>Exam Status</th>
+
+                    <th>Action</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for subject_info in subjects_data %}
+
+                <tr>
+
+                    <td>
+
+                        <div class="subject-name">{{ subject_info.subject.name }}</div>
+
+                    </td>
+
+                    <td>
+
+                        {% if subject_info.teacher %}
+
+                        <div class="teacher-name">
+
+                            {{ subject_info.teacher.user.get_full_name|default:subject_info.teacher.user.username }}
+
+                        </div>
+
+                        {% else %}
+
+                        <div class="teacher-name text-muted">Not assigned</div>
+
+                        {% endif %}
+
+                    </td>
+
+                    <td>
+
+                        {% if subject_info.exam %}
+
+                            {% if subject_info.exam_status == 'SUBMITTED' or subject_info.exam_status == 'AUTO_SUBMITTED' %}
+
+                            <span class="exam-status completed">✓ Completed</span>
+
+                            {% elif subject_info.exam_status == 'IN_PROGRESS' %}
+
+                            <span class="exam-status in-progress">⚡ In Progress</span>
+
+                            {% else %}
+
+                            <span class="exam-status available">◉ Ready to Take</span>
+
+                            {% endif %}
+
+                        {% else %}
+
+                        <span class="exam-status not-available">✗ Not Available</span>
+
+                        {% endif %}
+
+                    </td>
+
+                    <td>
+
+                        {% if subject_info.can_take_exam %}
+
+                        <a href="{% url 'examinations:exam_take' subject_info.exam.pk %}" class="take-exam-btn">
+
+                            Start Exam →
+
+                        </a>
+
+                        {% elif subject_info.exam and subject_info.exam_status %}
+
+                        <a href="{% url 'examinations:exam_result_student' subject_info.exam.pk %}" class="take-exam-btn" style="background-color: #999;">
+
+                            View Result →
+
+                        </a>
+
+                        {% else %}
+
+                        <button class="take-exam-btn disabled" disabled>Not Available</button>
+
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+        {% else %}
+
+        <div class="empty-state">
+
+            <div class="empty-state-icon">📚</div>
+
+            <p class="empty-state-text">No subjects assigned for this session.</p>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+    {% endif %}
+
+
+
+    <!-- Recent Results Section -->
+
+    {% if recent_results %}
+
+    <div class="section">
+
+        <h2 class="section-title">📊 Recent Results</h2>
+
+        
+
+        {% if recent_results %}
+
+        <div class="results-list">
+
+            {% for result in recent_results %}
+
+            <div class="result-card">
+
+                <div class="result-subject">{{ result.exam.subject.name }}</div>
+
+                <div class="result-score">{{ result.total_score|floatformat:0 }}/{{ result.exam.total_marks }}</div>
+
+                {% if result.grade %}
+
+                <span class="result-grade">Grade: {{ result.grade }}</span>
+
+                {% endif %}
+
+                <div class="result-meta">
+
+                    📅 {{ result.exam.term }}<br>
+
+                    Remark: {{ result.remark|default:"—" }}
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+        {% else %}
+
+        <div class="empty-state">
+
+            <div class="empty-state-icon">📊</div>
+
+            <p class="empty-state-text">No published results yet.</p>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+    {% endif %}
+
+
+
+    <!-- Upcoming Exams Section -->
+
+    {% if upcoming_exams %}
+
+    <div class="section">
+
+        <h2 class="section-title">🗓️ Upcoming Exams</h2>
+
+        
+
+        {% if upcoming_exams %}
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+
+            {% for exam in upcoming_exams %}
+
+            <div style="background: linear-gradient(135deg, rgba(133, 26, 16, 0.08) 0%, rgba(243, 156, 18, 0.08) 100%); border: 1px solid var(--light); border-radius: 8px; padding: 20px;">
+
+                <div style="font-weight: 600; color: var(--primary); margin-bottom: 10px;">{{ exam.subject.name }}</div>
+
+                <div style="font-size: 0.9rem; color: #666; margin: 8px 0;">
+
+                    <strong>Duration:</strong> {{ exam.duration_minutes }} minutes
+
+                </div>
+
+                <div style="font-size: 0.9rem; color: #666; margin: 8px 0;">
+
+                    <strong>Questions:</strong> {{ exam.objectives.count }} objective questions
+
+                </div>
+
+                <div style="margin-top: 15px;">
+
+                    <a href="{% url 'examinations:exam_take' exam.pk %}" class="take-exam-btn" style="width: 100%; text-align: center;">
+
+                        Take Exam
+
+                    </a>
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+        {% else %}
+
+        <div class="empty-state">
+
+            <div class="empty-state-icon">🗓️</div>
+
+            <p class="empty-state-text">No upcoming exams scheduled.</p>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+    {% endif %}
+
+
+
+    <!-- Empty State if no data -->
+
+    {% if not subjects_data and not recent_results and not upcoming_exams %}
+
+    <div class="section">
+
+        <div class="empty-state">
+
+            <div class="empty-state-icon">📚</div>
+
+            <p class="empty-state-text">
+
+                {% if not current_session or not current_term %}
+
+                No active session or term. Please contact your administrator.
+
+                {% else %}
+
+                No subjects or exams available at this time.
+
+                {% endif %}
+
+            </p>
+
+        </div>
+
+    </div>
+
+    {% endif %}
+
+</div>
+
+
+
+{% endblock %}
+

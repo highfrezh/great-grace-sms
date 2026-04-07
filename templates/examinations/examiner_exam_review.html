@@ -402,7 +402,7 @@
     </div>
   {% endif %}
   
-  {% if exam.status == 'AWAITING_APPROVAL' %}
+  {% if exam.status == 'AWAITING_APPROVAL' or exam.status == 'APPROVED' %}
     <div id="rejection-reason-group" class="form-group" style="display: none;">
       <label class="form-label">Reason for Rejection *</label>
       <textarea id="reason-textarea" name="reason" class="form-control" placeholder="Explain what needs to be changed or fixed..."></textarea>
@@ -410,9 +410,11 @@
     </div>
     
     <div class="button-group">
+      {% if exam.status == 'AWAITING_APPROVAL' %}
       <button type="submit" name="action" value="APPROVE" class="btn btn-approve">
         ✓ Approve Exam
       </button>
+      {% endif %}
       <button type="submit" name="action" value="REJECT" class="btn btn-reject">
         ✗ Request Modifications
       </button>

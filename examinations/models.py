@@ -85,6 +85,26 @@ class Exam(models.Model):
     )
     rejected_at = models.DateTimeField(null=True, blank=True)
 
+    # ── Exam Scheduling ───────────────────────────────
+    scheduled_start_datetime = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Date and time when students can start taking this exam"
+    )
+    scheduled_end_datetime = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Date and time when students can no longer submit exam"
+    )
+    scheduled_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='exams_scheduled'
+    )
+    scheduled_at = models.DateTimeField(null=True, blank=True)
+
     # ── Timestamps ────────────────────────────────────
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -136,11 +156,14 @@ class Exam(models.Model):
 
     def reject(self, user, reason):
         """Examiner rejects the exam with reason, reverts to DRAFT"""
-        if self.status == self.ExamStatus.AWAITING_APPROVAL:
+        if self.status in [self.ExamStatus.AWAITING_APPROVAL, self.ExamStatus.APPROVED]:
             self.status = self.ExamStatus.DRAFT
             self.rejected_by = user
             self.rejected_at = timezone.now()
             self.rejection_reason = reason
+            # Clear approval status if it was previously approved
+            self.approved_by = None
+            self.approved_at = None
             self.save()
             return True
         return False
@@ -262,6 +285,14 @@ class ExamSubmission(models.Model):
         null=True, blank=True,
         help_text="Saved server-side for connection recovery"
     )
+    last_autosave_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Last time answers were auto-saved"
+    )
+    last_activity_at = models.DateTimeField(
+        auto_now=True,
+        help_text="Last time student interacted with exam"
+    )
 
     # ── Scores ────────────────────────────────────────
     obj_score = models.DecimalField(
@@ -290,6 +321,40 @@ class ExamSubmission(models.Model):
             self.SubmissionStatus.SUBMITTED,
             self.SubmissionStatus.AUTO_SUBMITTED
         ]
+
+
+class MalpracticeViolation(models.Model):
+    """Log of malpractice violations during exam"""
+
+    class ViolationType(models.TextChoices):
+        TAB_SWITCH = 'TAB_SWITCH', 'Tab Switch'
+        FULLSCREEN_EXIT = 'FULLSCREEN_EXIT', 'Fullscreen Exit'
+        IDLE_TIMEOUT = 'IDLE_TIMEOUT', 'Idle Timeout'
+
+    submission = models.ForeignKey(
+        ExamSubmission,
+        on_delete=models.CASCADE,
+        related_name='violations'
+    )
+    violation_type = models.CharField(
+        max_length=20,
+        choices=ViolationType.choices
+    )
+    violation_count = models.PositiveIntegerField(
+        default=1,
+        help_text="Number of times this violation occurred"
+    )
+    timestamp = models.DateTimeField(auto_now_add=True)
+    details = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['timestamp']
+        indexes = [
+            models.Index(fields=['submission', 'timestamp']),
+        ]
+
+    def __str__(self):
+        return f"{self.submission.student} — {self.violation_type}"
 
 
 class StudentAnswer(models.Model):

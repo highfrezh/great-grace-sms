@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if is_edit %}Edit Schedule{% else %}Schedule Exam{% endif %} — Great Grace SMS{% endblock %}
+{% block page_title %}{% if is_edit %}Edit Schedule{% else %}Schedule Exam{% endif %}{% endblock %}
+
+{% block content %}
+<style>
+  .form-container {
+    max-width: 600px;
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid #F3F4F6;
+    padding: 2rem;
+  }
+
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-label {
+    display: block;
+    font-weight: 600;
+    color: #635E57;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #D1CCC7;
+    border-radius: 0.5rem;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: #851A10;
+    box-shadow: 0 0 0 3px rgba(133, 26, 16, 0.1);
+  }
+
+  .help-text {
+    font-size: 0.875rem;
+    color: #6B7280;
+    margin-top: 0.25rem;
+  }
+
+  .exam-info {
+    background: #F3F4F6;
+    border-left: 4px solid #851A10;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .exam-info-title {
+    font-weight: 700;
+    color: #635E57;
+    margin-bottom: 0.5rem;
+  }
+
+  .exam-info-detail {
+    font-size: 0.95rem;
+    color: #6B7280;
+    margin-bottom: 0.25rem;
+  }
+
+  .button-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: #851A10;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #6B1508;
+  }
+
+  .btn-secondary {
+    background: #E5E7EB;
+    color: #635E57;
+  }
+
+  .btn-secondary:hover {
+    background: #D1D5DB;
+  }
+
+  .alert {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .alert-error {
+    background: #FEE2E2;
+    border: 1px solid #FCA5A5;
+    color: #991B1B;
+  }
+
+  .time-info {
+    background: #f0fdf4;
+    border-left: 4px solid #10B981;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.875rem;
+    color: #166534;
+  }
+
+  .duration-info {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+    color: #92400e;
+  }
+</style>
+
+<!-- Back Link -->
+<a href="{% url 'examinations:exam_schedule_list' %}" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-6">
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+  </svg>
+  Back to Exam Schedule
+</a>
+
+<!-- Header -->
+<div class="mb-8">
+  <div class="flex items-center gap-3 mb-2">
+    <div class="w-1 h-10 rounded-full" style="background:#851A10;"></div>
+    <h1 class="text-2xl font-bold" style="color:#635E57;">
+      {% if is_edit %}Edit Exam Schedule{% else %}Schedule Exam{% endif %}
+    </h1>
+  </div>
+</div>
+
+<!-- Exam Details -->
+<div class="form-container">
+  <div class="exam-info">
+    <div class="exam-info-title">📚 {{ exam.subject.name }}</div>
+    <div class="exam-info-detail">
+      <strong>Classes:</strong> 
+      {% for class_arm in exam.class_arms.all %}
+        {{ class_arm }}{% if not forloop.last %}, {% endif %}
+      {% endfor %}
+    </div>
+    <div class="exam-info-detail">
+      <strong>Duration:</strong> {{ exam.duration_minutes }} minutes
+    </div>
+    <div class="exam-info-detail">
+      <strong>Questions:</strong> 
+      {% if exam.objectives.count %}
+        {{ exam.objectives.count }} objective{% if exam.objectives.count != 1 %}s{% endif %}
+      {% endif %}
+      {% if exam.theory_questions.count %}
+        {{ exam.theory_questions.count }} theory{% if exam.theory_questions.count != 1 %}s{% endif %}
+      {% endif %}
+    </div>
+    {% if exam.scheduled_start_datetime %}
+    <div class="exam-info-detail">
+      <strong>Current Schedule:</strong><br>
+      Start: {{ exam.scheduled_start_datetime|date:"M d, Y at H:i" }}<br>
+      End: {{ exam.scheduled_end_datetime|date:"M d, Y at H:i" }}
+    </div>
+    {% endif %}
+  </div>
+
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert {% if message.tags == 'error' %}alert-error{% endif %}">
+    {{ message }}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <div class="time-info">
+    ℹ️ Students will see this exam as available starting at the start time and can submit until the end time.
+  </div>
+
+  <!-- Form -->
+  <form method="post" class="mt-6">
+    {% csrf_token %}
+
+    <div class="form-group">
+      <label class="form-label" for="start_datetime">📅 Exam Start Date & Time</label>
+      <input 
+        type="datetime-local" 
+        id="start_datetime" 
+        name="start_datetime"
+        class="form-input"
+        {% if exam.scheduled_start_datetime %}
+          value="{{ exam.scheduled_start_datetime|date:'Y-m-dTH:i' }}"
+        {% endif %}
+        required>
+      <div class="help-text">Select when students can start taking this exam</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="end_datetime">⏱️ Exam End Date & Time</label>
+      <input 
+        type="datetime-local" 
+        id="end_datetime" 
+        name="end_datetime"
+        class="form-input"
+        {% if exam.scheduled_end_datetime %}
+          value="{{ exam.scheduled_end_datetime|date:'Y-m-dTH:i' }}"
+        {% endif %}
+        required>
+      <div class="help-text">Select when students can no longer submit (should be after start time)</div>
+    </div>
+
+    <div class="duration-info">
+      <strong>⏳ Duration Calculation:</strong> The difference between start and end time should be at least {{ exam.duration_minutes }} minutes (exam duration) plus buffer time if needed.
+    </div>
+
+    <div class="button-group">
+      <a href="{% url 'examinations:exam_schedule_list' %}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">
+        {% if is_edit %}Update Schedule{% else %}Schedule Exam{% endif %}
+      </button>
+    </div>
+  </form>
+
+</div>
+
+<style>
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+  }
+</style>
+
+{% endblock %}

@@ -39,7 +39,8 @@ def dashboard_view(request):
     primary = user.primary_role if not user.is_superuser else 'PRINCIPAL'
 
     if primary == 'STUDENT':
-        return render(request, 'accounts/dashboard_student.html')
+        # Redirect to comprehensive student dashboard
+        return redirect('students:student_dashboard')
     elif primary == 'PARENT':
         return render(request, 'accounts/dashboard_parent.html')
     else:

@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}All Exams Management — Great Grace SMS{% endblock %}
+{% block page_title %}All Exams Management{% endblock %}
+
+{% block content %}
+<style>
+  .stat-card {
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid #F3F4F6;
+    padding: 1.5rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+  }
+
+  .stat-label {
+    font-size: 0.875rem;
+    color: #6B7280;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .filter-section {
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid #F3F4F6;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .filter-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #D1CCC7;
+    border-radius: 0.5rem;
+    font-size: 0.95rem;
+  }
+
+  .filter-input:focus {
+    outline: none;
+    border-color: #851A10;
+    box-shadow: 0 0 0 3px rgba(133, 26, 16, 0.1);
+  }
+
+  .exam-row {
+    background: white;
+    border-radius: 0.75rem;
+    border: 1px solid #F3F4F6;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .exam-row:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  .exam-info {
+    flex: 1;
+  }
+
+  .exam-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #635E57;
+    margin-bottom: 0.25rem;
+  }
+
+  .exam-meta {
+    font-size: 0.875rem;
+    color: #6B7280;
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .status-draft {
+    background: #FEF3C7;
+    color: #92400E;
+  }
+
+  .status-awaiting {
+    background: #DBEAFE;
+    color: #1E40AF;
+  }
+
+  .status-approved {
+    background: #DCFCE7;
+    color: #166534;
+  }
+
+  .actions-cell {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .btn-small {
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.4rem;
+    font-size: 0.8rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+  }
+
+  .btn-approve {
+    background: #10B981;
+    color: white;
+  }
+
+  .btn-approve:hover {
+    background: #059669;
+  }
+
+  .btn-reject {
+    background: #EF4444;
+    color: white;
+  }
+
+  .btn-reject:hover {
+    background: #DC2626;
+  }
+
+  .btn-delete {
+    background: #F97316;
+    color: white;
+  }
+
+  .btn-delete:hover {
+    background: #EA580C;
+  }
+
+
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid #F3F4F6;
+  }
+
+  .empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #635E57;
+    margin-bottom: 1rem;
+    margin-top: 2rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #D9D0CA;
+  }
+
+  #delete-modal {
+    display: none !important;
+  }
+
+  #delete-modal.modal-active {
+    display: flex !important;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-content {
+    background: white;
+    border-radius: 1rem;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+  }
+
+</style>
+
+<!-- Header -->
+<div class="mb-8">
+  <div class="flex items-center gap-3 mb-2">
+    <div class="w-1 h-10 rounded-full" style="background:#851A10;"></div>
+    <h1 class="text-2xl font-bold" style="color:#635E57;">All Exams Management</h1>
+  </div>
+  <p class="text-sm text-gray-500 ml-4">View, filter, and manage all exams — approve, reject, schedule, or delete</p>
+</div>
+
+<!-- Statistics -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Total Exams</div>
+    <div class="stat-value" style="color:#851A10;">{{ total_exams }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Draft</div>
+    <div class="stat-value" style="color:#F59E0B;">{{ by_status.DRAFT }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Awaiting Approval</div>
+    <div class="stat-value" style="color:#3B82F6;">{{ by_status.AWAITING_APPROVAL }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Approved</div>
+    <div class="stat-value" style="color:#10B981;">{{ by_status.APPROVED }}</div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-section">
+  <form method="get" class="space-y-4">
+    <div class="filter-grid">
+      <select name="session" class="filter-input">
+        <option value="">All Sessions</option>
+        {% for session in available_sessions %}
+        <option value="{{ session.id }}" {% if session.id|stringformat:"s" == session_filter %}selected{% endif %}>
+          {{ session.name }}
+        </option>
+        {% endfor %}
+      </select>
+
+      <select name="term" class="filter-input">
+        <option value="">All Terms</option>
+        {% for term in available_terms %}
+        <option value="{{ term.id }}" {% if term.id|stringformat:"s" == term_filter %}selected{% endif %}>
+          {{ term.get_name_display }}
+        </option>
+        {% endfor %}
+      </select>
+
+      <select name="subject" class="filter-input">
+        <option value="">All Subjects</option>
+        {% for subject in available_subjects %}
+        <option value="{{ subject.id }}" {% if subject.id|stringformat:"s" == subject_filter %}selected{% endif %}>
+          {{ subject.name }}
+        </option>
+        {% endfor %}
+      </select>
+
+      <select name="class_arm" class="filter-input">
+        <option value="">All Classes</option>
+        {% for class_arm in available_class_arms %}
+        <option value="{{ class_arm.id }}" {% if class_arm.id|stringformat:"s" == class_arm_filter %}selected{% endif %}>
+          {{ class_arm }}
+        </option>
+        {% endfor %}
+      </select>
+
+      <select name="status" class="filter-input">
+        <option value="">All Statuses</option>
+        <option value="DRAFT" {% if status_filter == "DRAFT" %}selected{% endif %}>Draft</option>
+        <option value="AWAITING_APPROVAL" {% if status_filter == "AWAITING_APPROVAL" %}selected{% endif %}>Awaiting Approval</option>
+        <option value="APPROVED" {% if status_filter == "APPROVED" %}selected{% endif %}>Approved</option>
+      </select>
+    </div>
+
+    <div class="flex gap-2">
+      <button type="submit" style="background: #851A10; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; border: none; font-weight: 600; cursor: pointer; font-size: 0.95rem;" onmouseover="this.style.background='#6B1508'" onmouseout="this.style.background='#851A10'">
+        Apply Filters
+      </button>
+      <a href="{% url 'examinations:examiner_all_exams' %}" style="background: #E5E7EB; color: #374151; padding: 0.75rem 1.5rem; border-radius: 0.5rem; border: none; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-decoration: none; display: inline-block;" onmouseover="this.style.background='#D1D5DB'" onmouseout="this.style.background='#E5E7EB'">
+        Reset
+      </a>
+    </div>
+  </form>
+</div>
+
+<!-- Exams List -->
+{% if exams %}
+  <div class="section-title">📋 Exams</div>
+
+  {% for exam in exams %}
+  <div class="exam-row">
+
+      <div class="exam-info">
+        <div class="exam-title">{{ exam.title }} — {{ exam.subject.name }}</div>
+        <div class="exam-meta">
+          <span class="mr-3">📚 Classes: 
+            {% for class_arm in exam.class_arms.all %}
+              <span class="inline-block px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">{{ class_arm }}</span>
+            {% endfor %}
+          </span>
+          <span class="mr-3">👤 Teacher: {{ exam.teacher.user.get_full_name|default:"Unknown" }}</span>
+          <span>⏱️ Duration: {{ exam.duration_minutes }}min</span>
+        </div>
+      </div>
+
+      <div>
+        <span class="status-badge {% if exam.status == 'DRAFT' %}status-draft{% elif exam.status == 'AWAITING_APPROVAL' %}status-awaiting{% elif exam.status == 'APPROVED' %}status-approved{% endif %}">
+          {{ exam.get_status_display }}
+        </span>
+      </div>
+
+      <div class="actions-cell">
+        <!-- Review Button -->
+        <a href="{% url 'examinations:examiner_exam_review' exam.id %}" class="btn-small btn-approve">👁 Review</a>
+        
+        <!-- Delete Button -->
+        <button type="button" class="btn-small btn-delete" onclick="showDeleteModal({{ exam.id }}, '{{ exam.title }}');">🗑 Delete</button>
+      </div>
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">📭</div>
+    <h3 class="text-lg font-semibold text-gray-700 mb-2">No exams found</h3>
+    <p class="text-gray-500">Try adjusting your filters or creating a new exam</p>
+  </div>
+{% endif %}
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="modal-overlay">
+  <div class="modal-content">
+    <h3 class="text-lg font-bold mb-4" style="color:#851A10;">⚠️ Delete Exam</h3>
+    <p class="text-gray-600 mb-4">
+      <strong id="delete-exam-title"></strong> will be permanently deleted. This action cannot be undone.
+    </p>
+    <form method="post" id="delete-form" style="display: inline;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+      <input type="hidden" name="selected_exams" id="delete-exam-id" value="">
+      
+      <div class="flex gap-2">
+        <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold flex-1">
+          Delete Permanently
+        </button>
+        <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold flex-1">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Show delete confirmation modal
+  function showDeleteModal(examId, examTitle) {
+    document.getElementById('delete-exam-id').value = examId;
+    document.getElementById('delete-exam-title').textContent = examTitle;
+    const modal = document.getElementById('delete-modal');
+    modal.classList.add('modal-active');
+  }
+
+  // Close delete modal
+  function closeDeleteModal() {
+    const modal = document.getElementById('delete-modal');
+    modal.classList.remove('modal-active');
+  }
+
+  // Close modal when clicking outside
+  window.addEventListener('click', function(event) {
+    const modal = document.getElementById('delete-modal');
+    if (event.target === modal) {
+      closeDeleteModal();
+    }
+  });
+</script>
+
+{% endblock %}

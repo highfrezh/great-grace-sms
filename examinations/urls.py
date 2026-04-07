@@ -52,6 +52,8 @@ urlpatterns = [
     path('<int:pk>/take/', views.exam_take, name='exam_take'),
     path('<int:pk>/submit/', views.exam_submit, name='exam_submit'),
     path('<int:pk>/autosave/', views.exam_autosave, name='exam_autosave'),
+    path('<int:pk>/timer-status/', views.exam_timer_status, name='exam_timer_status'),
+    path('<int:pk>/auto-submit/', views.exam_auto_submit, name='exam_auto_submit'),
     path('<int:pk>/result/', views.exam_result_student, name='exam_result_student'),
 
     # ── Theory Score Entry (Teacher) ──────────────────
@@ -69,5 +71,13 @@ urlpatterns = [
     path('examiner/dashboard/', views.examiner_dashboard, name='examiner_dashboard'),
     path('examiner/subject/<int:subject_id>/exams/', views.examiner_subject_exams, name='examiner_subject_exams'),
     path('examiner/exam/<int:exam_id>/review/', views.examiner_exam_review, name='examiner_exam_review'),
+
+    # ── Exam Scheduling (Examiner/VP/Principal) ──────
+    path('schedule/', views.exam_schedule_list, name='exam_schedule_list'),
+    path('schedule/<int:exam_id>/create/', views.exam_schedule_create, name='exam_schedule_create'),
+    path('schedule/<int:exam_id>/edit/', views.exam_schedule_edit, name='exam_schedule_edit'),
+
+    # ── Examiner All Exams Management (Examiner/VP/Principal) ──
+    path('examiner/all-exams/', views.examiner_all_exams, name='examiner_all_exams'),
 
 ]

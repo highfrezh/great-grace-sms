@@ -142,7 +142,7 @@ class ClassArm(models.Model):
 
     @property
     def full_name(self):
-        return f"{self.level.name}{self.name}"
+        return f"{self.level.name} {self.name}"
 
     @property
     def student_count(self):

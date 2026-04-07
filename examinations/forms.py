@@ -113,18 +113,41 @@ class TeacherExamForm(forms.ModelForm):
         
         # Filter subject based on teacher's assignments
         if teacher:
-            # Get teacher's assignments
+            # Get teacher's assignments for the current session and term
             from academics.models import SubjectTeacherAssignment
             assignments = SubjectTeacherAssignment.objects.filter(
-                teacher=teacher
+                teacher=teacher,
+                session=current_session,
+                term=current_term
             ).select_related('subject')
             
             # Get unique subjects assigned to teacher
-            assigned_subjects = assignments.values_list('subject', flat=True).distinct()
-            self.fields['subject'].queryset = Subject.objects.filter(id__in=assigned_subjects)
+            assigned_subject_ids = assignments.values_list('subject', flat=True).distinct()
+            
+            # Identify subjects for which the teacher has already created an exam in this session/term
+            # Use teacher's staff profile for filtering since Exam.teacher is StaffProfile
+            try:
+                staff_profile = StaffProfile.objects.get(user=teacher)
+                existing_exam_subject_ids = Exam.objects.filter(
+                    teacher=staff_profile,
+                    session=current_session,
+                    term=current_term
+                ).values_list('subject_id', flat=True)
+            except StaffProfile.DoesNotExist:
+                existing_exam_subject_ids = []
+
+            # Filter subjects: assigned to teacher AND no exam exists for this session/term yet
+            # Only apply this exclusion for NEW exams (initial creation)
+            if not self.instance.pk:
+                self.fields['subject'].queryset = Subject.objects.filter(
+                    id__in=assigned_subject_ids
+                ).exclude(id__in=existing_exam_subject_ids)
+            else:
+                # For editing, include the current subject but still limit to assigned ones
+                self.fields['subject'].queryset = Subject.objects.filter(id__in=assigned_subject_ids)
         
         # Disable fields if exam is in a published state (not DRAFT)
-        if self.instance and self.instance.status != 'DRAFT':
+        if self.instance and self.instance.pk and self.instance.status != 'DRAFT':
             # Fields to disable when exam is not in draft
             fields_to_disable = ['title', 'subject', 'session', 'term', 'duration_minutes']
             for field_name in fields_to_disable:
@@ -138,22 +161,28 @@ class TeacherExamForm(forms.ModelForm):
         session = cleaned_data.get('session')
         term = cleaned_data.get('term')
         
-        if subject and session and term:
-            # Check if exam already exists for this subject-session-term combination
-            existing_exam = Exam.objects.filter(
-                subject=subject,
-                session=session,
-                term=term
-            ).exclude(pk=self.instance.pk if self.instance.pk else None).first()
-            
-            if existing_exam:
-                existing_classes = ', '.join(
-                    str(ca) for ca in existing_exam.class_arms.all()
-                )
-                raise forms.ValidationError(
-                    f'An exam already exists for {subject} in {term}. '
-                    f'Classes: {existing_classes}'
-                )
+        if subject and session and term and self.teacher:
+            # Check if exam already exists for this subject-session-term-teacher combination
+            # Note: unique_together is ['subject', 'teacher', 'session', 'term']
+            try:
+                staff_profile = StaffProfile.objects.get(user=self.teacher)
+                existing_exam = Exam.objects.filter(
+                    subject=subject,
+                    teacher=staff_profile,
+                    session=session,
+                    term=term
+                ).exclude(pk=self.instance.pk if self.instance.pk else None).first()
+                
+                if existing_exam:
+                    existing_classes = ', '.join(
+                        str(ca) for ca in existing_exam.class_arms.all()
+                    )
+                    raise forms.ValidationError(
+                        f'An exam already exists for {subject} in {term} — {session}. '
+                        f'Classes: {existing_classes}'
+                    )
+            except StaffProfile.DoesNotExist:
+                pass
         
         return cleaned_data
         return exam

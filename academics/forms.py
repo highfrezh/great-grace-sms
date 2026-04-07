@@ -124,17 +124,17 @@ class ClassArmForm(forms.ModelForm):
 
 
 class SubjectForm(forms.ModelForm):
-    class_arm = forms.ModelChoiceField(
+    class_arms = forms.ModelMultipleChoiceField(
         queryset=ClassArm.objects.all().select_related('level').order_by('level__order', 'name'),
-        widget=forms.Select(attrs={'class': 'form-input'}),
+        widget=forms.SelectMultiple(attrs={'class': 'form-input', 'size': 8}),
         required=True,
-        label="Class",
-        help_text="Select the class this subject belongs to"
+        label="Classes",
+        help_text="Hold Ctrl/Cmd to select multiple classes"
     )
 
     class Meta:
         model = Subject
-        fields = ['class_arm', 'name', 'description', 'is_active']
+        fields = ['name', 'description', 'is_active']
         widgets = {
             'name': forms.TextInput(attrs={
                 'placeholder': 'e.g. Mathematics',
@@ -149,26 +149,26 @@ class SubjectForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Pre-populate class_arm field when editing
+        # Pre-populate class_arms field when editing
         if self.instance and self.instance.pk:
-            # Get the first ClassArmSubject entry for this subject
-            class_arm_subject = ClassArmSubject.objects.filter(
+            # Get all ClassArmSubject entries for this subject
+            class_arms = ClassArmSubject.objects.filter(
                 subject=self.instance
-            ).first()
-            if class_arm_subject:
-                self.fields['class_arm'].initial = class_arm_subject.class_arm.pk
+            ).values_list('class_arm_id', flat=True)
+            self.fields['class_arms'].initial = list(class_arms)
 
     def save(self, commit=True):
         instance = super().save(commit=commit)
         
         if commit:
-            # Get selected class arm
-            class_arm = self.cleaned_data.get('class_arm')
-            if class_arm:
-                # Clear existing ClassArmSubject entries for this subject
-                ClassArmSubject.objects.filter(subject=instance).delete()
-                
-                # Create ClassArmSubject entry for the selected class arm
+            # Get selected class arms
+            class_arms = self.cleaned_data.get('class_arms', [])
+            
+            # Clear existing ClassArmSubject entries for this subject
+            ClassArmSubject.objects.filter(subject=instance).delete()
+            
+            # Create ClassArmSubject entries for all selected class arms
+            for class_arm in class_arms:
                 ClassArmSubject.objects.create(
                     subject=instance,
                     class_arm=class_arm,

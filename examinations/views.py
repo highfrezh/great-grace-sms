@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
@@ -15,7 +16,7 @@ from staff.models import StaffProfile
 from .models import (
     Exam, ObjectiveQuestion, TheoryQuestion, ExamSubmission,
     StudentAnswer, TheoryScore, ExamResult, ExamDeadlinePenalty,
-    ExamConfiguration
+    ExamConfiguration, MalpracticeViolation
 )
 from .forms import (
     ExamForm, TeacherExamForm, QuestionForm, TheoryQuestionForm,
@@ -559,7 +560,7 @@ def theory_question_delete(request, exam_pk, pk):
 
 @login_required
 def exam_take(request, pk):
-    exam = get_object_or_404(Exam, pk=pk, status=Exam.Status.ACTIVE)
+    exam = get_object_or_404(Exam, pk=pk, status=Exam.ExamStatus.APPROVED)
 
     # Get student profile
     try:
@@ -598,9 +599,19 @@ def exam_take(request, pk):
     if submission.is_complete:
         return redirect('examinations:exam_result_student', pk=pk)
 
+    # Calculate remaining time on resume (account for elapsed time)
+    if not created:
+        elapsed_seconds = (timezone.now() - submission.started_at).total_seconds()
+        time_remaining = max(0, (exam.duration_minutes * 60) - int(elapsed_seconds))
+        # But use saved remaining_time if it's less (connection recovery)
+        if submission.time_remaining_seconds and submission.time_remaining_seconds < time_remaining:
+            time_remaining = submission.time_remaining_seconds
+        submission.time_remaining_seconds = time_remaining
+        submission.save()
+
     # Get questions
-    questions = list(exam.questions.all())
-    if exam.randomize_questions:
+    questions = list(exam.objectives.all())
+    if hasattr(exam, 'randomize_questions') and exam.randomize_questions:
         # Use student id as seed for consistent order per student
         rng = random.Random(submission.id)
         rng.shuffle(questions)
@@ -611,34 +622,45 @@ def exam_take(request, pk):
         for a in submission.answers.all()
     }
 
+    # Get malpractice violation history
+    violations = submission.violations.values_list('violation_type', flat=True)
+    malpractice_count = {
+        'tab_switches': submission.tab_switch_count,
+        'fullscreen_exits': submission.fullscreen_exit_count,
+    }
+
     return render(request, 'examinations/exam_take.html', {
         'exam': exam,
         'submission': submission,
         'questions': questions,
         'existing_answers': existing_answers,
         'time_remaining': submission.time_remaining_seconds,
+        'exam_duration_minutes': exam.duration_minutes,
+        'malpractice_count': malpractice_count,
         'page_title': exam.title
     })
 
 
 @login_required
 @require_POST
+@transaction.atomic
 def exam_autosave(request, pk):
     """Auto-save student answers every 30 seconds via AJAX"""
     exam = get_object_or_404(Exam, pk=pk)
     try:
         student = request.user.student_profile
     except Exception:
-        return JsonResponse({'status': 'error'}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'Student profile not found'}, status=400)
 
     submission = get_object_or_404(
         ExamSubmission, exam=exam, student=student
     )
 
     if submission.is_complete:
-        return JsonResponse({'status': 'already_submitted'})
+        return JsonResponse({'status': 'already_submitted', 'message': 'Exam already submitted'})
 
     # Save answers
+    answer_count = 0
     for key, value in request.POST.items():
         if key.startswith('answer_'):
             question_id = int(key.replace('answer_', ''))
@@ -647,14 +669,41 @@ def exam_autosave(request, pk):
                 question_id=question_id,
                 defaults={'selected_option': value}
             )
+            answer_count += 1
 
     # Save remaining time
     time_remaining = request.POST.get('time_remaining')
     if time_remaining:
-        submission.time_remaining_seconds = int(time_remaining)
+        submission.time_remaining_seconds = max(0, int(time_remaining))
+    
+    # Update last autosave time
+    submission.last_autosave_at = timezone.now()
+    submission.save()
+
+    # Log malpractice violations if provided
+    violation_type = request.POST.get('violation_type')
+    if violation_type:
+        violation_count = int(request.POST.get('violation_count', 1))
+        MalpracticeViolation.objects.create(
+            submission=submission,
+            violation_type=violation_type,
+            violation_count=violation_count,
+            details=request.POST.get('violation_details', '')
+        )
+        # Update submission counts
+        if violation_type == 'TAB_SWITCH':
+            submission.tab_switch_count += violation_count
+        elif violation_type == 'FULLSCREEN_EXIT':
+            submission.fullscreen_exit_count += violation_count
         submission.save()
 
-    return JsonResponse({'status': 'saved'})
+    return JsonResponse({
+        'status': 'saved',
+        'message': f'Saved {answer_count} answers',
+        'answers_saved': answer_count,
+        'time_remaining': submission.time_remaining_seconds,
+        'last_autosave': submission.last_autosave_at.isoformat()
+    })
 
 
 @login_required
@@ -723,9 +772,116 @@ def exam_submit(request, pk):
 
     messages.success(
         request,
-        f'Exam submitted! Your OBJ score: {obj_score}/{exam.obj_marks}'
+        f'Exam submitted! Your OBJ score: {obj_score}/{exam.exams.total_marks}'
     )
     return redirect('examinations:exam_result_student', pk=pk)
+
+
+@login_required
+def exam_timer_status(request, pk):
+    """Get current timer status for the exam (AJAX endpoint)"""
+    exam = get_object_or_404(Exam, pk=pk)
+    try:
+        student = request.user.student_profile
+    except Exception:
+        return JsonResponse({'status': 'error', 'message': 'Student profile not found'}, status=400)
+
+    submission = get_object_or_404(
+        ExamSubmission, exam=exam, student=student
+    )
+
+    if submission.is_complete:
+        return JsonResponse({
+            'status': 'already_submitted',
+            'is_complete': True,
+            'time_remaining': 0,
+            'message': 'Exam already submitted'
+        })
+
+    # Calculate actual remaining time
+    elapsed_seconds = (timezone.now() - submission.started_at).total_seconds()
+    total_seconds = exam.duration_minutes * 60
+    calculated_remaining = max(0, total_seconds - int(elapsed_seconds))
+    
+    # Use saved remaining time if less (for connection recovery)
+    if submission.time_remaining_seconds is not None:
+        calculated_remaining = min(calculated_remaining, submission.time_remaining_seconds)
+
+    return JsonResponse({
+        'status': 'ok',
+        'is_complete': False,
+        'time_remaining': calculated_remaining,
+        'exam_duration': exam.duration_minutes * 60,
+        'started_at': submission.started_at.isoformat(),
+        'last_autosave_at': submission.last_autosave_at.isoformat() if submission.last_autosave_at else None,
+        'tab_switch_count': submission.tab_switch_count,
+        'fullscreen_exit_count': submission.fullscreen_exit_count
+    })
+
+
+@login_required
+@require_POST
+@transaction.atomic
+def exam_auto_submit(request, pk):
+    """Auto-submit exam when timer hits zero"""
+    exam = get_object_or_404(Exam, pk=pk)
+    try:
+        student = request.user.student_profile
+    except Exception:
+        return JsonResponse({'status': 'error'}, status=400)
+
+    submission = get_object_or_404(
+        ExamSubmission, exam=exam, student=student
+    )
+
+    if submission.is_complete:
+        return JsonResponse({'status': 'already_submitted'})
+
+    # Save any final answers
+    for key, value in request.POST.items():
+        if key.startswith('answer_'):
+            question_id = int(key.replace('answer_', ''))
+            StudentAnswer.objects.update_or_create(
+                submission=submission,
+                question_id=question_id,
+                defaults={'selected_option': value}
+            )
+
+    # Log final malpractice data
+    tab_switches = int(request.POST.get('tab_switches', 0))
+    fullscreen_exits = int(request.POST.get('fullscreen_exits', 0))
+    
+    submission.tab_switch_count = max(submission.tab_switch_count, tab_switches)
+    submission.fullscreen_exit_count = max(submission.fullscreen_exit_count, fullscreen_exits)
+    submission.auto_submitted_reason = 'TIME_UP'
+
+    # Calculate OBJ score
+    answers = submission.answers.select_related('question')
+    obj_score = sum(
+        1 for a in answers if a.is_correct
+    ) * (exam.total_marks / exam.objectives.count() if exam.objectives.count() > 0 else 0)
+    
+    submission.obj_score = obj_score
+    submission.status = ExamSubmission.SubmissionStatus.AUTO_SUBMITTED
+    submission.submitted_at = timezone.now()
+    submission.save()
+
+    # Create exam result
+    result, _ = ExamResult.objects.get_or_create(
+        exam=exam,
+        student=student,
+        defaults={'submission': submission}
+    )
+    result.obj_score = obj_score
+    result.submission = submission
+    result.save()
+
+    return JsonResponse({
+        'status': 'auto_submitted',
+        'message': 'Exam auto-submitted due to timeout',
+        'score': float(obj_score),
+        'redirect_url': reverse('examinations:exam_result_student', args=[pk])
+    })
 
 
 @login_required
@@ -1623,9 +1779,9 @@ def examiner_exam_review(request, exam_id):
     theory_questions = exam.theory_questions.all().order_by('order', 'id')
     
     if request.method == 'POST':
-        # Only allow approval/rejection actions for awaiting approval exams
-        if exam.status != Exam.ExamStatus.AWAITING_APPROVAL:
-            messages.error(request, 'You can only approve or reject exams that are awaiting approval.')
+        # Allow approval/rejection for awaiting approval, and rejection for approved exams
+        if exam.status not in [Exam.ExamStatus.AWAITING_APPROVAL, Exam.ExamStatus.APPROVED]:
+            messages.error(request, 'You can only review exams that are awaiting approval or already approved.')
             return redirect('examinations:examiner_dashboard')
         
         action = request.POST.get('action', '').upper()
@@ -1676,3 +1832,249 @@ def examiner_exam_review(request, exam_id):
         'teacher_name': exam.teacher.user.get_full_name() if exam.teacher else 'Unknown',
     }
     return render(request, 'examinations/examiner_exam_review.html', context)
+
+
+# ── EXAM SCHEDULING (Examiner/VP/Principal) ───────────────
+
+@login_required
+@examiner_required
+def exam_schedule_list(request):
+    """List all approved exams available for scheduling"""
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
+    
+    # Get all approved exams that can be scheduled
+    exams = Exam.objects.filter(
+        session=current_session,
+        term=current_term,
+        status=Exam.ExamStatus.APPROVED
+    ).select_related('subject').prefetch_related('class_arms').order_by('subject__name')
+    
+    # Separate scheduled and unscheduled
+    scheduled_exams = [e for e in exams if e.scheduled_start_datetime]
+    unscheduled_exams = [e for e in exams if not e.scheduled_start_datetime]
+    
+    return render(request, 'examinations/exam_schedule_list.html', {
+        'page_title': 'Schedule Exams',
+        'current_session': current_session,
+        'current_term': current_term,
+        'scheduled_exams': scheduled_exams,
+        'unscheduled_exams': unscheduled_exams,
+    })
+
+
+@login_required
+@examiner_required
+def exam_schedule_create(request, exam_id):
+    """Schedule an approved exam with date and time"""
+    exam = get_object_or_404(Exam, pk=exam_id, status=Exam.ExamStatus.APPROVED)
+    
+    if request.method == 'POST':
+        start_datetime_str = request.POST.get('start_datetime')
+        end_datetime_str = request.POST.get('end_datetime')
+        
+        if not start_datetime_str or not end_datetime_str:
+            messages.error(request, 'Both start and end date/time are required.')
+            return render(request, 'examinations/exam_schedule_form.html', {
+                'exam': exam,
+                'page_title': f'Schedule Exam — {exam.title}'
+            })
+        
+        try:
+            # Parse datetime strings (expects format: YYYY-MM-DDTHH:MM)
+            from datetime import datetime
+            start_datetime = datetime.fromisoformat(start_datetime_str)
+            end_datetime = datetime.fromisoformat(end_datetime_str)
+            
+            # Make them timezone-aware
+            start_datetime = timezone.make_aware(start_datetime)
+            end_datetime = timezone.make_aware(end_datetime)
+            
+            if start_datetime >= end_datetime:
+                messages.error(request, 'Start time must be before end time.')
+                return render(request, 'examinations/exam_schedule_form.html', {
+                    'exam': exam,
+                    'page_title': f'Schedule Exam — {exam.title}'
+                })
+            
+            # Update exam schedule
+            exam.scheduled_start_datetime = start_datetime
+            exam.scheduled_end_datetime = end_datetime
+            exam.scheduled_by = request.user
+            exam.scheduled_at = timezone.now()
+            exam.save()
+            
+            messages.success(
+                request,
+                f'Exam "{exam.title}" has been scheduled for '
+                f'{start_datetime.strftime("%b %d, %Y at %I:%M %p")} '
+                f'to {end_datetime.strftime("%I:%M %p")}.'
+            )
+            return redirect('examinations:exam_schedule_list')
+        
+        except ValueError as e:
+            messages.error(request, f'Invalid date/time format. Please use the date/time picker.')
+            return render(request, 'examinations/exam_schedule_form.html', {
+                'exam': exam,
+                'page_title': f'Schedule Exam — {exam.title}'
+            })
+    
+    return render(request, 'examinations/exam_schedule_form.html', {
+        'exam': exam,
+        'page_title': f'Schedule Exam — {exam.title}'
+    })
+
+
+@login_required
+@examiner_required
+def exam_schedule_edit(request, exam_id):
+    """Edit an exam's schedule"""
+    exam = get_object_or_404(Exam, pk=exam_id, status=Exam.ExamStatus.APPROVED)
+    
+    if request.method == 'POST':
+        start_datetime_str = request.POST.get('start_datetime')
+        end_datetime_str = request.POST.get('end_datetime')
+        
+        if not start_datetime_str or not end_datetime_str:
+            messages.error(request, 'Both start and end date/time are required.')
+            return render(request, 'examinations/exam_schedule_form.html', {
+                'exam': exam,
+                'page_title': f'Edit Schedule — {exam.title}',
+                'is_edit': True
+            })
+        
+        try:
+            from datetime import datetime
+            start_datetime = datetime.fromisoformat(start_datetime_str)
+            end_datetime = datetime.fromisoformat(end_datetime_str)
+            
+            start_datetime = timezone.make_aware(start_datetime)
+            end_datetime = timezone.make_aware(end_datetime)
+            
+            if start_datetime >= end_datetime:
+                messages.error(request, 'Start time must be before end time.')
+                return render(request, 'examinations/exam_schedule_form.html', {
+                    'exam': exam,
+                    'page_title': f'Edit Schedule — {exam.title}',
+                    'is_edit': True
+                })
+            
+            exam.scheduled_start_datetime = start_datetime
+            exam.scheduled_end_datetime = end_datetime
+            exam.scheduled_by = request.user
+            exam.scheduled_at = timezone.now()
+            exam.save()
+            
+            messages.success(request, f'Exam schedule updated successfully.')
+            return redirect('examinations:exam_schedule_list')
+        
+        except ValueError as e:
+            messages.error(request, f'Invalid date/time format.')
+            return render(request, 'examinations/exam_schedule_form.html', {
+                'exam': exam,
+                'page_title': f'Edit Schedule — {exam.title}',
+                'is_edit': True
+            })
+    
+    return render(request, 'examinations/exam_schedule_form.html', {
+        'exam': exam,
+        'page_title': f'Edit Schedule — {exam.title}',
+        'is_edit': True
+    })
+
+
+# ── EXAMINER ALL EXAMS MANAGEMENT ──────────────────────────
+
+@login_required
+@examiner_required
+def examiner_all_exams(request):
+    """Show all exams with filters for session, term, subject, class arm, status"""
+    # Get filter parameters
+    session_filter = request.GET.get('session')
+    term_filter = request.GET.get('term')
+    subject_filter = request.GET.get('subject')
+    class_arm_filter = request.GET.get('class_arm')
+    status_filter = request.GET.get('status')
+    
+    # Get current session/term as default
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
+    
+    # Start with all exams
+    exams_query = Exam.objects.select_related('subject', 'teacher', 'approved_by', 'rejected_by').prefetch_related('class_arms')
+    
+    # Apply session filter
+    if session_filter:
+        exams_query = exams_query.filter(session_id=session_filter)
+    elif current_session:
+        exams_query = exams_query.filter(session=current_session)
+    
+    # Apply term filter
+    if term_filter:
+        exams_query = exams_query.filter(term_id=term_filter)
+    elif current_term:
+        exams_query = exams_query.filter(term=current_term)
+    
+    # Apply subject filter
+    if subject_filter:
+        exams_query = exams_query.filter(subject_id=subject_filter)
+    
+    # Apply class arm filter
+    if class_arm_filter:
+        exams_query = exams_query.filter(class_arms__id=class_arm_filter).distinct()
+    
+    # Apply status filter
+    if status_filter:
+        exams_query = exams_query.filter(status=status_filter)
+    
+    # Order by created date descending
+    exams = exams_query.order_by('-created_at')
+    
+    # Get filter options
+    available_sessions = AcademicSession.objects.all().order_by('-start_date')
+    available_terms = Term.objects.all().order_by('session', 'name')
+    available_subjects = Subject.objects.all().order_by('name')
+    available_class_arms = ClassArm.objects.select_related('level').order_by('level__order', 'name')
+    
+    # Calculate statistics
+    total_exams = exams.count()
+    by_status = {
+        'DRAFT': exams.filter(status=Exam.ExamStatus.DRAFT).count(),
+        'AWAITING_APPROVAL': exams.filter(status=Exam.ExamStatus.AWAITING_APPROVAL).count(),
+        'APPROVED': exams.filter(status=Exam.ExamStatus.APPROVED).count(),
+    }
+    
+    # Handle delete action only
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        selected_exams = [x for x in request.POST.getlist('selected_exams') if x]
+        
+        if action == 'delete' and selected_exams:
+            selected_exams_obj = Exam.objects.filter(id__in=selected_exams)
+            count = selected_exams_obj.count()
+            if count > 0:
+                selected_exams_obj.delete()
+                messages.success(request, f'{count} exam(s) deleted successfully.')
+            
+            # Redirect to refresh the page
+            return redirect('examinations:examiner_all_exams')
+    
+    context = {
+        'page_title': 'All Exams Management',
+        'exams': exams,
+        'total_exams': total_exams,
+        'by_status': by_status,
+        'available_sessions': available_sessions,
+        'available_terms': available_terms,
+        'available_subjects': available_subjects,
+        'available_class_arms': available_class_arms,
+        'session_filter': session_filter,
+        'term_filter': term_filter,
+        'subject_filter': subject_filter,
+        'class_arm_filter': class_arm_filter,
+        'status_filter': status_filter,
+        'current_session': current_session,
+        'current_term': current_term,
+    }
+    
+    return render(request, 'examinations/examiner_all_exams.html', context)
