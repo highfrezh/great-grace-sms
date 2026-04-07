@@ -9,10 +9,18 @@ User = get_user_model()
 
 class ExamForm(forms.ModelForm):
     """Form for creating/editing exams"""
+    class_arms = forms.ModelMultipleChoiceField(
+        queryset=ClassArm.objects.all(),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-checkbox'}),
+        required=True,
+        label='Classes',
+        help_text='Select all classes that will take this exam'
+    )
+    
     class Meta:
         model = Exam
         fields = [
-            'title', 'subject', 'class_arm', 'teacher', 'session', 'term',
+            'title', 'subject', 'teacher', 'session', 'term',
             'duration_minutes', 'theory_attachment'
         ]
         widgets = {
@@ -21,7 +29,6 @@ class ExamForm(forms.ModelForm):
                 'class': 'form-input'
             }),
             'subject': forms.Select(attrs={'class': 'form-input'}),
-            'class_arm': forms.Select(attrs={'class': 'form-input'}),
             'teacher': forms.Select(attrs={'class': 'form-input'}),
             'session': forms.Select(attrs={'class': 'form-input'}),
             'term': forms.Select(attrs={'class': 'form-input'}),
@@ -47,14 +54,25 @@ class ExamForm(forms.ModelForm):
         self.fields['teacher'].queryset = StaffProfile.objects.filter(
             user__roles__name__in=['SUBJECT_TEACHER', 'CLASS_TEACHER', 'VICE_PRINCIPAL', 'PRINCIPAL']
         ).distinct()
+        
+        # Set class_arms initial value if editing
+        if self.instance.pk:
+            self.fields['class_arms'].initial = self.instance.class_arms.all()
+    
+    def save(self, commit=True):
+        exam = super().save(commit=commit)
+        if commit:
+            exam.class_arms.set(self.cleaned_data.get('class_arms', []))
+        return exam
 
 
 class TeacherExamForm(forms.ModelForm):
     """Form for subject teachers creating exams (without teacher selection)"""
+    
     class Meta:
         model = Exam
         fields = [
-            'title', 'subject', 'class_arm', 'session', 'term',
+            'title', 'subject', 'session', 'term',
             'duration_minutes', 'theory_attachment'
         ]
         widgets = {
@@ -63,7 +81,6 @@ class TeacherExamForm(forms.ModelForm):
                 'class': 'form-control'
             }),
             'subject': forms.Select(attrs={'class': 'form-control'}),
-            'class_arm': forms.Select(attrs={'class': 'form-control'}),
             'session': forms.Select(attrs={'class': 'form-control'}),
             'term': forms.Select(attrs={'class': 'form-control'}),
             'duration_minutes': forms.NumberInput(attrs={
@@ -78,6 +95,7 @@ class TeacherExamForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         # Extract teacher from kwargs if provided
         teacher = kwargs.pop('teacher', None)
+        self.teacher = teacher  # Store for later use
         super().__init__(*args, **kwargs)
         current_session = AcademicSession.get_current()
         current_term = Term.get_current()
@@ -88,61 +106,57 @@ class TeacherExamForm(forms.ModelForm):
         
         # Apply form-control class to all fields
         for field_name, field in self.fields.items():
-            if field.widget.input_type != 'checkbox':
-                field.widget.attrs.update({'class': 'form-control'})
+            field.widget.attrs.update({'class': 'form-control'})
         
         # Add data attributes for dynamic filtering
         self.fields['subject'].widget.attrs['id'] = 'id_subject'
-        self.fields['class_arm'].widget.attrs['id'] = 'id_class_arm'
         
-        # Filter subject and class_arm based on teacher's assignments
+        # Filter subject based on teacher's assignments
         if teacher:
             # Get teacher's assignments
             from academics.models import SubjectTeacherAssignment
             assignments = SubjectTeacherAssignment.objects.filter(
                 teacher=teacher
-            ).select_related('subject', 'class_arm')
+            ).select_related('subject')
             
             # Get unique subjects assigned to teacher
             assigned_subjects = assignments.values_list('subject', flat=True).distinct()
             self.fields['subject'].queryset = Subject.objects.filter(id__in=assigned_subjects)
-            
-            # Get unique class_arms assigned to teacher
-            assigned_class_arms = assignments.values_list('class_arm', flat=True).distinct()
-            self.fields['class_arm'].queryset = ClassArm.objects.filter(id__in=assigned_class_arms)
         
         # Disable fields if exam is in a published state (not DRAFT)
         if self.instance and self.instance.status != 'DRAFT':
             # Fields to disable when exam is not in draft
-            fields_to_disable = ['title', 'subject', 'class_arm', 'session', 'term', 'duration_minutes']
+            fields_to_disable = ['title', 'subject', 'session', 'term', 'duration_minutes']
             for field_name in fields_to_disable:
                 if field_name in self.fields:
                     self.fields[field_name].disabled = True
     
     def clean(self):
-        """Validate that this subject/class/session/term combination doesn't already have an exam"""
+        """Validate that this subject/session/term combination doesn't already have an exam"""
         cleaned_data = super().clean()
         subject = cleaned_data.get('subject')
-        class_arm = cleaned_data.get('class_arm')
         session = cleaned_data.get('session')
         term = cleaned_data.get('term')
         
-        if subject and class_arm and session and term:
-            # Check if exam already exists for this combination
+        if subject and session and term:
+            # Check if exam already exists for this subject-session-term combination
             existing_exam = Exam.objects.filter(
                 subject=subject,
-                class_arm=class_arm,
                 session=session,
                 term=term
             ).exclude(pk=self.instance.pk if self.instance.pk else None).first()
             
             if existing_exam:
+                existing_classes = ', '.join(
+                    str(ca) for ca in existing_exam.class_arms.all()
+                )
                 raise forms.ValidationError(
-                    'An exam already exists for this subject-class-session-term combination. '
-                    'You can only create one exam per combination.'
+                    f'An exam already exists for {subject} in {term}. '
+                    f'Classes: {existing_classes}'
                 )
         
         return cleaned_data
+        return exam
 
 
 class QuestionForm(forms.ModelForm):

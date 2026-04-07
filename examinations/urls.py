@@ -67,7 +67,7 @@ urlpatterns = [
 
     # ── Examiner Dashboard (Examiner/VP/Principal) ────
     path('examiner/dashboard/', views.examiner_dashboard, name='examiner_dashboard'),
-    path('examiner/class/<int:class_arm_id>/subjects/', views.examiner_class_subjects, name='examiner_class_subjects'),
+    path('examiner/subject/<int:subject_id>/exams/', views.examiner_subject_exams, name='examiner_subject_exams'),
     path('examiner/exam/<int:exam_id>/review/', views.examiner_exam_review, name='examiner_exam_review'),
 
 ]

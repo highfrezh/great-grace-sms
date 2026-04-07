@@ -242,7 +242,11 @@
         <div class="flex items-center gap-2 text-sm text-gray-500">
           <span class="font-medium">{{ exam.subject.name }}</span>
           <span class="text-gray-300">•</span>
-          <span>{{ exam.class_arm.level.name }}  {{ exam.class_arm.name }}</span>
+          <span>
+            {% for class_arm in exam.class_arms.all %}
+              {{ class_arm.level.name }} {{ class_arm.name }}{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+          </span>
         </div>
       </div>
       <div class="flex gap-2">

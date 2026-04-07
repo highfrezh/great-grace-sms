@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} — Great Grace SMS{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<style>
+  .class-card {
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid #F3F4F6;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  
+  .class-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .class-header {
+    background: linear-gradient(135deg, #FFF5F3 0%, #FFFFFF 100%);
+    padding: 1.5rem;
+    border-bottom: 1px solid #F3F4F6;
+  }
+  
+  .class-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #635E57;
+    margin-bottom: 0.5rem;
+  }
+  
+  .class-content {
+    padding: 1.5rem;
+  }
+  
+  .section-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.75rem;
+  }
+  
+  .exam-list {
+    display: grid;
+    gap: 0.75rem;
+  }
+  
+  .exam-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1rem;
+    background: #F9FAFB;
+    border-radius: 0.5rem;
+    border-left: 3px solid #E5E7EB;
+    transition: all 0.2s ease;
+  }
+  
+  .exam-item:hover {
+    background: #F3F4F6;
+    border-left-color: #851A10;
+  }
+  
+  .exam-info {
+    flex: 1;
+  }
+  
+  .exam-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.25rem;
+  }
+  
+  .exam-meta {
+    font-size: 0.75rem;
+    color: #9CA3AF;
+    display: flex;
+    gap: 1rem;
+  }
+  
+  .exam-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .status-pending {
+    background: #FEF3C7;
+    color: #92400E;
+  }
+  
+  .status-approved {
+    background: #DCFCE7;
+    color: #166534;
+  }
+  
+  .status-rejected {
+    background: #FEE2E2;
+    color: #991B1B;
+  }
+  
+  .btn-review {
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #851A10 0%, #A52318 100%);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .btn-review:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 6px -1px rgba(133, 26, 16, 0.3);
+  }
+</style>
+
+<!-- Header -->
+<div class="mb-8 flex items-center justify-between">
+  <div>
+    <div class="flex items-center gap-3 mb-2">
+      <a href="{% url 'examinations:examiner_dashboard' %}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+        ← Back to Dashboard
+      </a>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="w-1 h-10 rounded-full" style="background:#851A10;"></div>
+      <div>
+        <h1 class="text-2xl font-bold" style="color:#635E57;">{{ subject.name }}</h1>
+        <p class="text-sm text-gray-500">Exam questions for review across {{ class_arms.count }} class{{ class_arms.count|pluralize }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Academic Period -->
+{% if current_session and current_term %}
+<div style="background: linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%); border-radius: 1rem; padding: 1rem; border: 1px solid #DBEAFE; margin-bottom: 2rem;">
+  <p class="text-xs text-gray-500 mb-1">Current Period</p>
+  <p class="text-sm font-semibold" style="color:#635E57;">{{ current_session.name }} • {{ current_term.get_name_display }}</p>
+</div>
+{% endif %}
+
+<!-- Exams List -->
+<div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+  <div class="px-6 py-4 bg-gradient-to-r from-amber-50 to-white border-b border-gray-100">
+    <h2 class="font-semibold text-gray-700">Exams Awaiting Approval</h2>
+    <p class="text-sm text-gray-500">Total: {{ exams.count }} exam{{ exams.count|pluralize }}</p>
+  </div>
+  
+  {% if exams %}
+    <div class="divide-y divide-gray-100">
+      {% for exam in exams %}
+        <div class="px-6 py-4 hover:bg-gray-50 transition">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex-1">
+              <h3 class="font-semibold text-gray-800">{{ exam.title }}</h3>
+              <p class="text-sm text-gray-500 mt-1">
+                Created by: <strong>{{ exam.teacher.user.get_full_name }}</strong>
+              </p>
+            </div>
+            <span class="exam-status status-pending">
+              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 11-2 0 1 1 0 012 0z"/>
+              </svg>
+              ⏳ Awaiting Approval
+            </span>
+          </div>
+          
+          <div class="grid grid-cols-4 gap-4 mb-4 text-sm">
+            <div>
+              <span class="text-gray-500">Questions</span>
+              <p class="font-semibold text-gray-700">{{ exam.objectives.count }}</p>
+            </div>
+            <div>
+              <span class="text-gray-500">Duration</span>
+              <p class="font-semibold text-gray-700">{{ exam.duration_minutes }} min</p>
+            </div>
+            <div>
+              <span class="text-gray-500">Theory File</span>
+              <p class="font-semibold text-gray-700">{% if exam.theory_attachment %}✓ Yes{% else %}✗ No{% endif %}</p>
+            </div>
+            <div>
+              <span class="text-gray-500">Classes</span>
+              <p class="font-semibold text-gray-700">{{ exam.class_arms.count }}</p>
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <p class="text-xs font-semibold text-gray-600 mb-2">Applies to:</p>
+            <div class="flex flex-wrap gap-2">
+              {% for ca in exam.class_arms.all %}
+                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {{ ca.level.name }} {{ ca.name }}
+                </span>
+              {% empty %}
+                <span class="text-xs text-gray-400">No classes assigned</span>
+              {% endfor %}
+            </div>
+          </div>
+          
+          <div class="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
+            <a href="{% url 'examinations:examiner_exam_review' exam.pk %}" class="btn-review">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+              Review Exam
+            </a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="px-6 py-12 text-center">
+      <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <h3 class="text-lg font-bold text-gray-700 mb-1">No Exams Awaiting Approval</h3>
+      <p class="text-sm text-gray-500">All exams for this subject have been reviewed</p>
+    </div>
+  {% endif %}
+</div>
+
+{% endblock %}

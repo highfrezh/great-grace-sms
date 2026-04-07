@@ -203,6 +203,43 @@
   .step-line.completed {
     background: #059669;
   }
+
+  .multiselect-checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    background: #F9FAFB;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 0.75rem;
+  }
+
+  .multiselect-checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+  }
+
+  .multiselect-checkbox-group label:hover {
+    background: #F3F4F6;
+  }
+
+  .multiselect-checkbox-group input[type="checkbox"] {
+    width: 1.1rem;
+    height: 1.1rem;
+    cursor: pointer;
+    accent-color: #851A10;
+  }
+
+  .multiselect-checkbox-group label span {
+    font-size: 0.875rem;
+    color: #374151;
+    font-weight: 500;
+  }
 </style>
 
 <!-- Header -->
@@ -243,15 +280,15 @@
   {% endfor %}
 {% endif %}
 
-<!-- Duplicate Exam Warning -->
+<!-- Auto-Selection Info -->
 <div class="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
   <div class="flex items-start gap-3">
     <svg class="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
     </svg>
     <div>
-      <p class="font-semibold text-blue-800">ℹ️ Important</p>
-      <p class="text-blue-700 text-sm mt-1">You can only create ONE exam per subject-class-session-term combination. If an exam already exists for these parameters, it will show an error.</p>
+      <p class="font-semibold text-blue-800">ℹ️ How it works</p>
+      <p class="text-blue-700 text-sm mt-1">Select a subject and all classes you teach that subject will automatically be included in the exam. One exam per subject-session-term combination.</p>
     </div>
   </div>
 </div>
@@ -262,25 +299,14 @@
     <form method="post" enctype="multipart/form-data" id="examForm">
       {% csrf_token %}
 
-      <!-- Subject & Class Selection -->
+      <!-- Subject Selection -->
       <div class="section-header">
-        <div class="section-title">Subject & Class</div>
+        <div class="section-title">Subject</div>
       </div>
       <div class="section-content">
-        <div class="grid grid-cols-2 gap-5">  
+        <div class="grid grid-cols-1 gap-5">  
           
           <div class="form-group">
-            <label class="form-label">
-              Class <span class="required">*</span>
-            </label>
-            {{ form.class_arm }}
-            {% if form.class_arm.errors %}
-              <p class="form-error">{{ form.class_arm.errors.0 }}</p>
-            {% endif %}
-            <p class="form-hint">Select the target class</p>
-          </div>
-
-           <div class="form-group">
             <label class="form-label">
               Subject <span class="required">*</span>
             </label>
@@ -288,7 +314,14 @@
             {% if form.subject.errors %}
               <p class="form-error">{{ form.subject.errors.0 }}</p>
             {% endif %}
-            <p class="form-hint">Select the subject for this exam</p>
+            <p class="form-hint">Select the subject • Exam will automatically be created for all classes you teach this subject</p>
+            
+            <!-- Auto-selection notice -->
+            <div style="margin-top: 1rem; padding: 0.75rem; background-color: #F0FDF4; border: 1px solid #D1FAE5; border-radius: 0.5rem;">
+              <p style="font-size: 0.8125rem; color: #047857; margin: 0;">
+                ✓ Classes are automatically selected based on your subject-class assignments
+              </p>
+            </div>
           </div>
 
         </div>
@@ -547,81 +580,11 @@ document.addEventListener('DOMContentLoaded', function() {
 document.getElementById('examForm')?.addEventListener('submit', function(e) {
   const title = document.querySelector('#id_title')?.value;
   const subject = document.querySelector('#id_subject')?.value;
-  const classArm = document.querySelector('#id_class_arm')?.value;
   const duration = document.querySelector('#id_duration_minutes')?.value;
   
-  if (!title || !subject || !classArm || !duration) {
+  if (!title || !subject || !duration) {
     e.preventDefault();
-    alert('Please fill in all required fields');
-  }
-});
-
-// Dynamic subject filtering based on selected class
-document.addEventListener('DOMContentLoaded', function() {
-  const classArmSelect = document.querySelector('#id_class_arm');
-  const subjectSelect = document.querySelector('#id_subject');
-  
-  if (classArmSelect && subjectSelect) {
-    // Store original subjects
-    const originalOptions = Array.from(subjectSelect.options).map(opt => ({
-      value: opt.value,
-      text: opt.text
-    }));
-    
-    classArmSelect.addEventListener('change', function() {
-      const classId = this.value;
-      
-      if (!classId) {
-        // Reset to all subjects if no class selected
-        subjectSelect.innerHTML = '<option value="">Select a subject</option>';
-        originalOptions.forEach(opt => {
-          if (opt.value) {
-            const option = document.createElement('option');
-            option.value = opt.value;
-            option.text = opt.text;
-            subjectSelect.appendChild(option);
-          }
-        });
-        return;
-      }
-      
-      // Fetch available subjects for this class
-      fetch(`/examinations/api/available-subjects/?class_id=${classId}`)
-        .then(response => response.json())
-        .then(data => {
-          // Clear current options except placeholder
-          subjectSelect.innerHTML = '<option value="">Select a subject</option>';
-          
-          // Add available subjects
-          if (data.subjects.length === 0) {
-            const option = document.createElement('option');
-            option.value = '';
-            option.text = 'No subjects available (all have exams)';
-            option.disabled = true;
-            subjectSelect.appendChild(option);
-          } else {
-            data.subjects.forEach(subject => {
-              const option = document.createElement('option');
-              option.value = subject.id;
-              option.text = subject.name;
-              subjectSelect.appendChild(option);
-            });
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching subjects:', error);
-          // Reset to showing all subjects on error
-          subjectSelect.innerHTML = '<option value="">Select a subject</option>';
-          originalOptions.forEach(opt => {
-            if (opt.value) {
-              const option = document.createElement('option');
-              option.value = opt.value;
-              option.text = opt.text;
-              subjectSelect.appendChild(option);
-            }
-          });
-        });
-    });
+    alert('Please fill in all required fields (title, subject, duration)');
   }
 });
 </script>

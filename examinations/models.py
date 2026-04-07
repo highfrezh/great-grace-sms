@@ -15,7 +15,11 @@ class Exam(models.Model):
 
     # ── Core Relationships ────────────────────────────
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='exams')
-    class_arm = models.ForeignKey(ClassArm, on_delete=models.CASCADE, related_name='exams')
+    class_arms = models.ManyToManyField(
+        ClassArm, 
+        related_name='exams',
+        help_text="Select all classes that will take this exam"
+    )
     teacher = models.ForeignKey(
         StaffProfile,
         on_delete=models.SET_NULL,
@@ -87,10 +91,11 @@ class Exam(models.Model):
 
     class Meta:
         ordering = ['-created_at']
-        unique_together = ['subject', 'class_arm', 'teacher', 'session', 'term']
+        unique_together = ['subject', 'teacher', 'session', 'term']
 
     def __str__(self):
-        return f"{self.subject} - {self.class_arm} ({self.term})"
+        class_list = ', '.join(str(ca) for ca in self.class_arms.all())
+        return f"{self.subject} - {class_list} ({self.term})"
 
     @property
     def objective_count(self):

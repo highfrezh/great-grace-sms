@@ -168,6 +168,11 @@
     <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Total Exams</div>
     <div class="stat-value" style="color:#3B82F6;">{{ total_exams }}</div>
   </div>
+  
+  <div class="stat-card">
+    <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Total Subjects</div>
+    <div class="stat-value" style="color:#8B5CF6;">{{ total_subjects }}</div>
+  </div>
 </div>
 
 <!-- Academic Period -->
@@ -191,20 +196,24 @@
 <div class="bg-white rounded-xl border border-gray-100 p-6 mb-6 shadow-sm">
   <div class="flex items-center gap-3 mb-4">
     <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C6.228 6.228 2 10.456 2 15.5c0 5.046 4.228 9.254 10 9.254s10-4.208 10-9.254C22 10.456 17.772 6.228 12 6.253z"/>
     </svg>
-    <h3 class="font-semibold text-gray-700">Filter by Class</h3>
+    <h3 class="font-semibold text-gray-700">Filter by Subject</h3>
   </div>
   
   <form method="GET" class="flex flex-col gap-3">
     <div class="flex flex-row gap-3">
       <div class="flex-1 w-full">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Select Class</label>
-        <select name="class_filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#851A10]/10 focus:border-[#851A10]">
-          <option value="">All Classes</option>
-          {% for class_arm in all_class_arms %}
-            <option value="{{ class_arm.pk }}" {% if selected_class_id|stringformat:"s" == class_arm.pk|stringformat:"s" %}selected{% endif %}>
-              {{ class_arm.level.name }}  {{ class_arm.name }}
+        <label class="block text-sm font-medium text-gray-700 mb-2">Select Subject</label>
+        <select name="subject_filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#851A10]/10 focus:border-[#851A10]">
+          <option value="">All Subjects</option>
+          {% for subject in all_subjects %}
+            <option value="{{ subject.pk }}" {% if selected_subject_id|stringformat:"s" == subject.pk|stringformat:"s" %}selected{% endif %}>
+              {% if subject.class_arms %}
+                {{ subject.name }} ({% for ca in subject.class_arms %}{{ ca.level.name }} {{ ca.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
+              {% else %}
+                {{ subject.name }}
+              {% endif %}
             </option>
           {% endfor %}
         </select>
@@ -225,7 +234,7 @@
       <button type="submit" class="px-4 py-2 bg-[#851A10] text-white rounded-lg text-xs font-medium hover:opacity-90 transition">
         Apply Filter
       </button>
-      {% if selected_class_id or selected_status %}
+      {% if selected_subject_id or selected_status %}
         <a href="{% url 'examinations:examiner_dashboard' %}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition text-center">
           Clear All
         </a>
@@ -235,19 +244,19 @@
 </div>
 
 <!-- Active Filter Indicator -->
-{% if selected_class_id or selected_status %}
+{% if selected_subject_id or selected_status %}
 <div class="filter-active mb-6">
   <div class="flex items-center gap-2">
     <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C6.228 6.228 2 10.456 2 15.5c0 5.046 4.228 9.254 10 9.254s10-4.208 10-9.254C22 10.456 17.772 6.228 12 6.253z"/>
     </svg>
     <p class="text-sm text-blue-800">
       <strong>Active Filters:</strong>
-      {% if selected_class_id %}
-        Class: <strong>{{ selected_class_arm.level.name }} {{ selected_class_arm.name }}</strong>
+      {% if selected_subject_id %}
+        Subject: <strong>{{ selected_subject.name }}</strong>
       {% endif %}
       {% if selected_status %}
-        {% if selected_class_id and selected_status %} • {% endif %}
+        {% if selected_subject_id and selected_status %} • {% endif %}
         Status: <strong>
           {% if selected_status == 'AWAITING_APPROVAL' %}
             ⏳ Awaiting Approval
@@ -266,13 +275,13 @@
 </div>
 {% endif %}
 
-<!-- Filtered Class Exams List -->
-{% if selected_class_id or selected_status %}
+<!-- Filtered Subject Exams List -->
+{% if selected_subject_id or selected_status %}
 <div class="bg-white rounded-xl border border-gray-100 mb-6 overflow-hidden">
   <div class="px-6 py-4 bg-gradient-to-r from-blue-50 to-white border-b border-gray-100">
     <h3 class="font-semibold text-gray-700">
-      {% if selected_class_id %}
-        Exams for {{ selected_class_arm.level.name }} {{ selected_class_arm.name }}
+      {% if selected_subject_id %}
+        Exams for {{ selected_subject.name }}
       {% else %}
         All Exams
       {% endif %}
@@ -327,25 +336,9 @@
           </div>
           
           <div class="flex gap-2 ml-4">
-            {% if exam.status == 'AWAITING_APPROVAL' %}
-              <a href="{% url 'examinations:examiner_exam_review' exam.pk %}" class="px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-                Review
-              </a>
-            {% elif exam.status == 'APPROVED' %}
-              <a href="{% url 'examinations:examiner_exam_review' exam.pk %}" class="px-3 py-2 bg-green-50 text-green-700 text-sm font-medium rounded-lg border border-green-200 hover:bg-green-100">
-                View Details
-              </a>
-            {% elif exam.status == 'DRAFT' %}
-              {% if exam.rejection_reason %}
-                <a href="{% url 'examinations:examiner_exam_review' exam.pk %}" class="px-3 py-2 bg-red-50 text-red-700 text-sm font-medium rounded-lg border border-red-200 hover:bg-red-100">
-                  View Rejection
-                </a>
-              {% else %}
-                <span class="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg">
-                  Not Submitted Yet
-                </span>
-              {% endif %}
-            {% endif %}
+            <a href="{% url 'examinations:examiner_exam_review' exam.pk %}" class="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 shadow-md transition transform hover:scale-105" style="background-color: #851A10;">
+              ✎ Review
+            </a>
           </div>
         </div>
       {% endfor %}
@@ -362,48 +355,51 @@
 </div>
 {% else %}
 
-<!-- Classes Grid -->
+<!-- Subjects Grid -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-  {% for class_arm in class_arms %}
-    <a href="{% url 'examinations:examiner_class_subjects' class_arm.pk %}{% if selected_class_id %}?class_filter={{ selected_class_id }}{% endif %}" class="class-card">
+  {% for subject in subjects %}
+    <div class="class-card">
       <div class="class-header">
-        <div class="class-name">{{ class_arm.level_name }}  {{ class_arm.class_name }}</div>
-        <span class="badge badge-info">{{ class_arm.exam_count }} Exam{{ class_arm.exam_count|pluralize }}</span>
+        <div class="class-name">{{ subject.name }}{% if subject.code %} ({{ subject.code }}){% endif %}</div>
+        <span class="badge badge-info">{{ subject.exam_count }} Exam{{ subject.exam_count|pluralize }}</span>
       </div>
       
       <p class="text-xs text-gray-500 mb-3">
-        {% if class_arm.exam_count %}
-          {{ class_arm.exam_count }} exam{{ class_arm.exam_count|pluralize }} awaiting your approval
+        {% if subject.exam_count %}
+          <strong>Classes:</strong> 
+          {% for ca in subject.class_arms %}
+            {{ ca.level.name }} {{ ca.name }}{% if not forloop.last %}, {% endif %}
+          {% endfor %}
         {% else %}
-          No exams awaiting approval for this class
+          No exams awaiting approval for this subject
         {% endif %}
       </p>
       
-      {% if class_arm.exam_count %}
+      {% if subject.exam_count %}
       <div class="class-stats">
         <div class="stat-small">
           <div class="stat-small-value" style="color:#F59E0B;">
-            {{ class_arm.exam_count }}
+            {{ subject.exam_count }}
           </div>
           <div class="stat-small-label">Exams</div>
         </div>
         
         <div class="stat-small">
           <div class="stat-small-value" style="color:#3B82F6;">
-            {{ class_arm.total_questions|default:"0" }}
+            {{ subject.total_questions|default:"0" }}
           </div>
           <div class="stat-small-label">Questions</div>
         </div>
         
         <div class="stat-small">
-          <div class="stat-small-value" style="color:#06B6D4;">
+          <a href="{% url 'examinations:examiner_subject_exams' subject.id %}" style="text-decoration: none; color: #06B6D4; font-weight: 700; cursor: pointer; display: block;">
             → Review
-          </div>
+          </a>
           <div class="stat-small-label">Action</div>
         </div>
       </div>
       {% endif %}
-    </a>
+    </div>
   {% empty %}
     <div class="col-span-full text-center py-12 bg-white rounded-xl border border-gray-100">
       <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -411,13 +407,13 @@
       </svg>
       <h3 class="text-lg font-bold text-gray-700 mb-1">No Exams Awaiting Approval</h3>
       <p class="text-sm text-gray-500">
-        {% if selected_class_id %}
-          No exams awaiting approval for the selected class.
+        {% if selected_subject_id %}
+          No exams awaiting approval for the selected subject.
         {% else %}
           All exams have been reviewed or no exams have been submitted yet.
         {% endif %}
       </p>
-      {% if selected_class_id %}
+      {% if selected_subject_id %}
         <a href="{% url 'examinations:examiner_dashboard' %}" class="inline-block mt-4 px-4 py-2 bg-[#851A10] text-white rounded-lg text-sm font-medium hover:opacity-90">
           Clear Filter
         </a>

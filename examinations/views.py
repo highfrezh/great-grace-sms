@@ -142,8 +142,8 @@ def exam_list(request):
             session=current_session,
             term=current_term
         ).select_related(
-            'subject', 'class_arm', 'created_by'
-        )
+            'subject', 'created_by'
+        ).prefetch_related('class_arms')
     elif user.is_examiner and not user.is_subject_teacher:
         # Examiner sees exams pending vetting
         exams = Exam.objects.filter(
@@ -153,14 +153,14 @@ def exam_list(request):
                 Exam.Status.PENDING_VETTING,
                 Exam.Status.VETTED
             ]
-        ).select_related('subject', 'class_arm', 'created_by')
+        ).select_related('subject', 'created_by').prefetch_related('class_arms')
     else:
         # Subject teacher sees their own exams
         exams = Exam.objects.filter(
             session=current_session,
             term=current_term,
             created_by=user
-        ).select_related('subject', 'class_arm')
+        ).select_related('subject').prefetch_related('class_arms')
 
     # Status filter
     status_filter = request.GET.get('status', '')
@@ -205,7 +205,7 @@ def exam_create(request):
 def exam_detail(request, pk):
     exam = get_object_or_404(
         Exam.objects.select_related(
-            'subject', 'class_arm', 'session', 'term',
+        'subject', 'session', 'term',
             'created_by', 'vetted_by', 'approved_by'
         ).prefetch_related('questions', 'theory_questions'),
         pk=pk
@@ -568,12 +568,12 @@ def exam_take(request, pk):
         messages.error(request, 'Student profile not found.')
         return redirect('accounts:dashboard')
 
-    # Check enrollment
+    # Check enrollment - student must be in one of the exam's class arms
     current_session = AcademicSession.get_current()
     current_term = Term.get_current()
     enrolled = StudentEnrollment.objects.filter(
         student=student,
-        class_arm=exam.class_arm,
+        class_arm__in=exam.class_arms.all(),
         session=current_session,
         is_active=True
     ).exists()
@@ -796,8 +796,8 @@ def teacher_exam_list(request):
     exams = Exam.objects.filter(
         teacher=staff_profile
     ).select_related(
-        'subject', 'class_arm', 'session', 'term'
-    ).order_by('-created_at')
+        'subject', 'session', 'term'
+    ).prefetch_related('class_arms').order_by('-created_at')
     
     current_session = AcademicSession.get_current()
     current_term = Term.get_current()
@@ -852,24 +852,69 @@ def teacher_exam_create(request):
     # Get teacher's assigned subjects/classes
     assignments = SubjectTeacherAssignment.objects.filter(
         teacher=request.user
-    ).select_related('subject', 'class_arm').distinct('subject', 'class_arm')
+    ).select_related('subject', 'class_arm')
     
     form = TeacherExamForm(request.POST or None, teacher=request.user)
     
     if form.is_valid():
         try:
-            exam = form.save(commit=False)
-            exam.teacher = staff_profile
-            exam.save()
-            messages.success(request, f'Exam "{exam.title}" created successfully.')
-            return redirect('examinations:teacher_exam_detail', pk=exam.pk)
-        except IntegrityError:
+            with transaction.atomic():
+                # Extract form data
+                title = form.cleaned_data['title']
+                subject = form.cleaned_data['subject']
+                session = form.cleaned_data['session']
+                term = form.cleaned_data['term']
+                duration_minutes = form.cleaned_data['duration_minutes']
+                theory_attachment = form.cleaned_data.get('theory_attachment')
+                
+                # Get all class_arms for this subject from teacher's assignments
+                assignments = SubjectTeacherAssignment.objects.filter(
+                    teacher=request.user,
+                    subject=subject
+                ).values_list('class_arm', flat=True).distinct()
+                
+                class_arms = ClassArm.objects.filter(id__in=assignments)
+                
+                if not class_arms.exists():
+                    messages.error(request, f'No classes found for {subject}. Check your subject-class assignments.')
+                    form = TeacherExamForm(teacher=request.user)
+                    return render(request, 'examinations/teacher_exam_create.html', {
+                        'form': form,
+                        'assignments': assignments,
+                        'page_title': 'Create New Exam',
+                        'current_session': current_session,
+                        'current_term': current_term,
+                    })
+                
+                # Create ONE exam with all class_arms
+                exam = Exam(
+                    title=title,
+                    subject=subject,
+                    teacher=staff_profile,
+                    session=session,
+                    term=term,
+                    duration_minutes=duration_minutes,
+                    theory_attachment=theory_attachment
+                )
+                exam.save()
+                
+                # Add all class_arms to the exam
+                exam.class_arms.set(class_arms)
+                
+                # Show success message with class count
+                class_count = class_arms.count()
+                class_names = ', '.join(str(ca) for ca in class_arms)
+                messages.success(
+                    request, 
+                    f'Exam "{title}" created successfully for {class_count} class{"es" if class_count > 1 else ""}: {class_names}'
+                )
+                return redirect('examinations:teacher_exam_detail', pk=exam.pk)
+        except IntegrityError as e:
             messages.error(
                 request, 
-                'An exam already exists for this subject, class, session, and term. '
-                'You can only create one exam per subject-class-session-term combination.'
+                'An error occurred while creating the exam. The exam may already exist for this subject-session-term combination.'
             )
-            form = TeacherExamForm(request.POST)
+            form = TeacherExamForm(request.POST, teacher=request.user)
     
     current_session = AcademicSession.get_current()
     current_term = Term.get_current()
@@ -939,7 +984,7 @@ def teacher_exam_detail(request, pk):
         return redirect('accounts:dashboard')
     
     exam = get_object_or_404(
-        Exam.objects.select_related('class_arm', 'class_arm__level', 'subject', 'session', 'term'),
+        Exam.objects.select_related('subject', 'session', 'term').prefetch_related('class_arms'),
         pk=pk, teacher=staff_profile
     )
     objective_questions = exam.objectives.all()
@@ -1258,7 +1303,7 @@ def ca_score_entry(request, pk):
 
     students = Student.objects.filter(
         is_active=True,
-        enrollments__class_arm=exam.class_arm,
+        enrollments__class_arm__in=exam.class_arms.all(),
         enrollments__session=current_session,
         enrollments__is_active=True
     ).order_by('last_name', 'first_name').distinct()
@@ -1350,12 +1395,12 @@ def exam_committee_required(view_func):
 @login_required
 @examiner_required
 def examiner_dashboard(request):
-    """Show examiner dashboard with exams awaiting approval"""
+    """Show examiner dashboard with exams awaiting approval grouped by subject"""
     current_session = AcademicSession.get_current()
     current_term = Term.get_current()
     
     # Get filter parameters
-    selected_class_id = request.GET.get('class_filter')
+    selected_subject_id = request.GET.get('subject_filter')
     selected_status = request.GET.get('status_filter')
     
     # Base queryset - exams AWAITING_APPROVAL (for main display and stats)
@@ -1363,7 +1408,7 @@ def examiner_dashboard(request):
         session=current_session,
         term=current_term,
         status=Exam.ExamStatus.AWAITING_APPROVAL
-    ).select_related('subject', 'class_arm', 'teacher')
+    ).select_related('subject', 'teacher').prefetch_related('class_arms')
     
     # Get all exams regardless of status for overall stats
     all_exams_queryset = Exam.objects.filter(
@@ -1386,60 +1431,77 @@ def examiner_dashboard(request):
         exam__in=awaiting_exams
     ).count()
     
-    # Get all class arms that have exams awaiting approval
-    class_arms = ClassArm.objects.filter(
+    # Get all subjects that have exams awaiting approval
+    subjects = Subject.objects.filter(
         exams__in=awaiting_exams
-    ).distinct().order_by('level__name', 'name')
+    ).distinct().order_by('name')
     
-    # Get classe arms with stats
-    class_arms_with_stats = []
-    for class_arm in class_arms:
-        class_exams = awaiting_exams.filter(class_arm=class_arm)
+    # Get subjects with stats (grouped by subject instead of class_arm)
+    subjects_with_stats = []
+    for subject in subjects:
+        subject_exams = awaiting_exams.filter(subject=subject)
         
-        exam_count = class_exams.count()
+        # Get all class_arms for this subject's exams
+        class_arms = ClassArm.objects.filter(
+            exams__in=subject_exams
+        ).distinct().order_by('level__name', 'name')
+        
+        exam_count = subject_exams.count()
         total_questions = ObjectiveQuestion.objects.filter(
-            exam__in=class_exams
+            exam__in=subject_exams
         ).count()
         
-        class_arms_with_stats.append({
-            'id': class_arm.id,
-            'pk': class_arm.pk,
-            'level': class_arm.level,
-            'name': class_arm.name,
-            'level_name': class_arm.level.name if class_arm.level else '',
-            'class_name': class_arm.name,  
+        subjects_with_stats.append({
+            'id': subject.id,
+            'pk': subject.pk,
+            'name': subject.name,
+            'code': subject.code,
+            'class_arms': class_arms,  # All classes for this subject
             'exam_count': exam_count,
             'total_questions': total_questions,
-            'exams': list(class_exams)
+            'exams': list(subject_exams)
         })
     
-    # Get all class arms for filter dropdown
-    all_class_arms = ClassArm.objects.all().order_by('level__name', 'name')
+    # Get all subjects for filter dropdown with their class arms
+    all_subjects_queryset = Subject.objects.all().order_by('name')
+    all_subjects = []
+    for subject in all_subjects_queryset:
+        # Get all class arms that have exams in this session/term for this subject
+        subject_class_arms = list(ClassArm.objects.filter(
+            exams__subject=subject,
+            exams__session=current_session,
+            exams__term=current_term
+        ).distinct().order_by('level__name', 'name'))
+        
+        all_subjects.append({
+            'id': subject.id,
+            'pk': subject.pk,
+            'name': subject.name,
+            'code': subject.code,
+            'class_arms': subject_class_arms
+        })
     
-    # Get selected class for display
-    selected_class_arm = None
-    if selected_class_id:
+    # Get selected subject for display
+    selected_subject = None
+    if selected_subject_id:
         try:
-            selected_class_arm = ClassArm.objects.get(pk=selected_class_id)
-        except ClassArm.DoesNotExist:
+            selected_subject = Subject.objects.get(pk=selected_subject_id)
+        except Subject.DoesNotExist:
             pass
     
     # Prepare list of exams to display
-    # If a status filter is selected, use all exams; otherwise filter by status
     if selected_status:
-        # When status filter is used, show all exams for filtering
         base_queryset = all_exams_queryset
     else:
-        # When no status filter, show only exams awaiting approval
         base_queryset = awaiting_exams
     
-    # Apply class filter if selected
-    if selected_class_id:
+    # Apply subject filter if selected
+    if selected_subject_id:
         exams_list = list(base_queryset.filter(
-            class_arm_id=selected_class_id
-        ).select_related('subject', 'class_arm', 'teacher').order_by('-created_at'))
+            subject_id=selected_subject_id
+        ).select_related('subject', 'teacher').prefetch_related('class_arms').order_by('-created_at').distinct())
     else:
-        exams_list = list(base_queryset.select_related('subject', 'class_arm', 'teacher').order_by('-created_at'))
+        exams_list = list(base_queryset.select_related('subject', 'teacher').prefetch_related('class_arms').order_by('-created_at').distinct())
     
     # Apply status filter if selected
     if selected_status:
@@ -1454,8 +1516,9 @@ def examiner_dashboard(request):
         'page_title': 'Exam Approval Dashboard',
         'current_session': current_session,
         'current_term': current_term,
-        'class_arms': class_arms_with_stats,
-        'all_class_arms': all_class_arms,
+        'subjects': subjects_with_stats,
+        'all_subjects': all_subjects,
+        'total_subjects': Subject.objects.count(),
         'total_exams': total_exams,
         'awaiting_approval': awaiting_approval,
         'approved_exams': approved_exams,
@@ -1463,11 +1526,43 @@ def examiner_dashboard(request):
         'rejected_exams': rejected_exams,
         'total_awaiting_questions': total_awaiting_questions,
         'exams_list': exams_list,
-        'selected_class_id': selected_class_id,
-        'selected_class_arm': selected_class_arm,
+        'selected_subject_id': selected_subject_id,
+        'selected_subject': selected_subject,
         'selected_status': selected_status,
     }
     return render(request, 'examinations/examiner_dashboard.html', context)
+
+@login_required
+@examiner_required
+def examiner_subject_exams(request, subject_id):
+    """Show all exams for a subject awaiting approval"""
+    subject = get_object_or_404(Subject, pk=subject_id)
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
+    
+    # Get exams awaiting approval for this subject
+    exams = Exam.objects.filter(
+        subject=subject,
+        session=current_session,
+        term=current_term,
+        status=Exam.ExamStatus.AWAITING_APPROVAL
+    ).select_related('subject', 'teacher').prefetch_related('class_arms').order_by('-created_at')
+    
+    # Get all class arms involved in these exams
+    class_arms = ClassArm.objects.filter(
+        exams__in=exams
+    ).distinct().order_by('level__name', 'name')
+    
+    context = {
+        'page_title': f'Exams Awaiting Approval — {subject.name}',
+        'subject': subject,
+        'current_session': current_session,
+        'current_term': current_term,
+        'class_arms': class_arms,
+        'exams': exams,
+    }
+    return render(request, 'examinations/examiner_subject_exams.html', context)
+
 
 @login_required
 @examiner_required
@@ -1479,11 +1574,11 @@ def examiner_class_subjects(request, class_arm_id):
     
     # Get exams awaiting approval for this class
     exams = Exam.objects.filter(
-        class_arm=class_arm,
+        class_arms=class_arm,
         session=current_session,
         term=current_term,
         status=Exam.ExamStatus.AWAITING_APPROVAL
-    ).select_related('subject', 'teacher').order_by('-created_at')
+    ).select_related('subject', 'teacher').prefetch_related('class_arms').order_by('-created_at')
     
     # Get all unique subjects taught in this class
     from academics.models import Subject
