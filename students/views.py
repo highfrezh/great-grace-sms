@@ -532,12 +532,51 @@ def attendance_mark(request, pk=None):
     ).values('date', 'marked_by__first_name',
              'marked_by__last_name').distinct().order_by('-date')
 
+    attendance_history = []
+    for entry in history_dates:
+        day_records = Attendance.objects.filter(
+            class_arm=class_arm,
+            session=current_session,
+            term=current_term,
+            date=entry['date']
+        )
+        attendance_history.append({
+            'date': entry['date'],
+            'marked_by': f"{entry['marked_by__first_name']} "
+                         f"{entry['marked_by__last_name']}",
+            'present': day_records.filter(status='PRESENT').count(),
+            'absent': day_records.filter(status='ABSENT').count(),
+            'late': day_records.filter(status='LATE').count(),
+        })
+
+    # Status choices for template
+    attendance_statuses = [
+        ('PRESENT', 'Present',
+         'bg-green-100 text-green-700 hover:bg-green-200'),
+        ('ABSENT', 'Absent',
+         'bg-red-100 text-red-700 hover:bg-red-200'),
+        ('LATE', 'Late',
+         'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'),
+        ('EXCUSED', 'Excused',
+         'bg-blue-100 text-blue-700 hover:bg-blue-200'),
+    ]
+
     return render(request, 'students/attendance_mark.html', {
         'class_arm': class_arm,
+        'students': students,
+        'today': today,
+        'selected_date': selected_date,
+        'existing_attendance': existing_attendance,
+        'attendance_marked': attendance_marked,
         'current_session': current_session,
         'current_term': current_term,
+        'present_today': present_today,
+        'absent_today': absent_today,
+        'days_marked': days_marked,
         'student_stats': student_stats,
-        'history_dates': history_dates,
+        'attendance_history': attendance_history,
+        'attendance_statuses': attendance_statuses,
+        'page_title': f'Attendance — {class_arm.full_name}',
     })
 
 
@@ -647,20 +686,26 @@ def student_dashboard(request):
         is_published=True
     ).aggregate(Avg('total_score'))['total_score__avg'] or 0
     
-    # Get upcoming exams
-    from examinations.models import Exam
+    # Get upcoming scheduled exams
     upcoming_exams = Exam.objects.filter(
         class_arms=class_arm,
         term=current_term,
         session=current_session,
-        status=Exam.ExamStatus.APPROVED
-    ).select_related('subject').order_by('created_at')[:5]
+        status=Exam.ExamStatus.APPROVED,
+        scheduled_start_datetime__isnull=False
+    ).select_related('subject').order_by('scheduled_start_datetime')[:5]
     
-    # Get malpractice violations if any
-    from examinations.models import MalpracticeViolation, ExamSubmission
-    recent_violations = MalpracticeViolation.objects.filter(
-        submission__student=student
-    ).select_related('submission__exam__subject').order_by('-timestamp')[:3]
+    # Check for submissions for these exams
+    from examinations.models import ExamSubmission
+    submissions = ExamSubmission.objects.filter(
+        student=student,
+        exam__in=upcoming_exams,
+        status__in=['SUBMITTED', 'AUTO_SUBMITTED']
+    ).values_list('exam_id', flat=True)
+    
+    # Attach submission status to each exam
+    for exam in upcoming_exams:
+        exam.has_submitted = exam.id in submissions
     
     context = {
         'student': student,
@@ -671,7 +716,6 @@ def student_dashboard(request):
         'subjects_data': subjects_data,
         'recent_results': recent_results,
         'upcoming_exams': upcoming_exams,
-        'recent_violations': recent_violations,
         # Stats
         'total_subjects': total_subjects,
         'total_exams_available': total_exams_available,
@@ -683,49 +727,3 @@ def student_dashboard(request):
     
     return render(request, 'students/student_dashboard.html', context)
 
-    attendance_history = []
-    for entry in history_dates:
-        day_records = Attendance.objects.filter(
-            class_arm=class_arm,
-            session=current_session,
-            term=current_term,
-            date=entry['date']
-        )
-        attendance_history.append({
-            'date': entry['date'],
-            'marked_by': f"{entry['marked_by__first_name']} "
-                         f"{entry['marked_by__last_name']}",
-            'present': day_records.filter(status='PRESENT').count(),
-            'absent': day_records.filter(status='ABSENT').count(),
-            'late': day_records.filter(status='LATE').count(),
-        })
-
-    # Status choices for template
-    attendance_statuses = [
-        ('PRESENT', 'Present',
-         'bg-green-100 text-green-700 hover:bg-green-200'),
-        ('ABSENT', 'Absent',
-         'bg-red-100 text-red-700 hover:bg-red-200'),
-        ('LATE', 'Late',
-         'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'),
-        ('EXCUSED', 'Excused',
-         'bg-blue-100 text-blue-700 hover:bg-blue-200'),
-    ]
-
-    return render(request, 'students/attendance_mark.html', {
-        'class_arm': class_arm,
-        'students': students,
-        'today': today,
-        'selected_date': selected_date,
-        'existing_attendance': existing_attendance,
-        'attendance_marked': attendance_marked,
-        'current_session': current_session,
-        'current_term': current_term,
-        'present_today': present_today,
-        'absent_today': absent_today,
-        'days_marked': days_marked,
-        'student_stats': student_stats,
-        'attendance_history': attendance_history,
-        'attendance_statuses': attendance_statuses,
-        'page_title': f'Attendance — {class_arm.full_name}',
-    })

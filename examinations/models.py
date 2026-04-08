@@ -127,6 +127,36 @@ class Exam(models.Model):
         """Check if theory file has been uploaded"""
         return bool(self.theory_attachment)
 
+    @property
+    def total_marks(self):
+        """Get total marks from ExamConfiguration for this session and term"""
+        from .models import ExamConfiguration
+        config = ExamConfiguration.objects.filter(
+            session=self.session, 
+            term=self.term
+        ).first()
+        return config.total_marks if config else 100
+
+    @property
+    def obj_marks(self):
+        """Get total marks allocated for objective questions from configuration"""
+        from .models import ExamConfiguration
+        config = ExamConfiguration.objects.filter(
+            session=self.session, 
+            term=self.term
+        ).first()
+        if config:
+            return (config.obj_marks_percentage / 100) * config.total_marks
+        return 30.0 # Default if no config
+
+    @property
+    def marks_per_objective(self):
+        """Calculate marks for a single objective question"""
+        count = self.objective_count
+        if count > 0:
+            return float(self.obj_marks) / count
+        return 0.0
+
     # ── Workflow Methods ──────────────────────────────
     def can_edit(self):
         """Teacher can only edit if exam is in DRAFT status"""

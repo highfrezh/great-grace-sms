@@ -3,131 +3,250 @@
 {% block title %}Dashboard — Great Grace SMS{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto">
+<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
   <!-- Welcome Header -->
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-    <div class="flex items-center gap-4">
-      <div class="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold shrink-0"
-           style="background:#851A10;">
-        <span class="text-2xl">{{ request.user.get_full_name|first|upper }}</span>
+  <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 overflow-hidden relative">
+    <div class="flex items-center gap-6 relative z-10">
+      <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold" style="background:#851A10;">
+        {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
       </div>
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">
+        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">
           Welcome back, {{ request.user.get_full_name }}!
         </h1>
-        <p class="text-gray-500">
-          {% if request.user.is_superuser %}Superuser{% else %}{{ request.user.primary_role|title }}{% endif %}
-        </p>
+        <div class="flex flex-wrap items-center gap-2 mt-2">
+          <span class="inline-block w-2 h-2 rounded-full bg-green-500 mr-1"></span>
+          {% if request.user.is_superuser %}
+            <span class="px-3 py-1 bg-gray-900 text-white text-xs font-bold rounded-lg shadow-sm tracking-tight uppercase">Superuser</span>
+          {% endif %}
+          {% for role in request.user.roles.all %}
+            <span class="px-3 py-1 bg-red-50 text-red-700 text-xs font-bold rounded-lg border border-red-100 shadow-sm tracking-tight uppercase">
+              {{ role.get_name_display }}
+            </span>
+          {% endfor %}
+        </div>
       </div>
     </div>
+    
+    <div class="flex items-center gap-3 relative z-10">
+      <div class="text-right hidden sm:block">
+        <p class="text-sm font-semibold text-gray-900">{{ current_session.name }}</p>
+        <p class="text-xs text-gray-500">{{ current_term.get_name_display }}</p>
+      </div>
+      <div class="h-10 w-px bg-gray-200 mx-2 hidden sm:block"></div>
+      <div class="bg-gray-50 px-4 py-2 rounded-xl border border-gray-100">
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Today</p>
+        <p class="text-sm font-bold text-gray-700">{% now "l, d M" %}</p>
+      </div>
+    </div>
+    
+    <!-- Abstract background shape -->
+    <div class="absolute -right-8 -top-8 w-48 h-48 bg-gray-50 rounded-full opacity-50 blur-3xl"></div>
   </div>
 
-  <!-- Quick Actions -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {% if request.user.is_class_teacher %}
-    <!-- Class Teacher Actions -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
-      <div class="space-y-3">
-        <a href="{% url 'students:attendance_mark_default' %}"
-           class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition">
-          <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:#851A10;">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2z"/>
-            </svg>
-          </div>
-          <div>
-            <h4 class="font-semibold text-gray-800">Mark Attendance</h4>
-            <p class="text-sm text-gray-500">Take attendance for your class</p>
-          </div>
-        </a>
-        
-        <a href="{% url 'students:student_list' %}"
-           class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition">
-          <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-blue-500">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 4.35a8 8 0 100-8 8 8 0 008 8zm0 8v8a8 8 0 100-8 8z"/>
-            </svg>
-          </div>
-          <div>
-            <h4 class="font-semibold text-gray-800">View Students</h4>
-            <p class="text-sm text-gray-500">Browse all students</p>
-          </div>
-        </a>
-      </div>
-    </div>
-    {% endif %}
-
-    {% if request.user.is_admin_staff %}
-    <!-- Admin Actions -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
-      <div class="space-y-3">
-        <a href="{% url 'students:student_create' %}"
-           class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition">
-          <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-green-500">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M18 9v3m0 0v-18m0 0h-18m9 9h18m-9-9l-9 9m9-9v18"/>
-            </svg>
-          </div>
-          <div>
-            <h4 class="font-semibold text-gray-800">Admit Student</h4>
-            <p class="text-sm text-gray-500">Register new student</p>
-          </div>
-        </a>
-        
-        <a href="{% url 'students:student_bulk_import' %}"
-           class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition">
-          <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-purple-500">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M7 16a4 4 0 01-4 4m0 4v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h-4"/>
-            </svg>
-          </div>
-          <div>
-            <h4 class="font-semibold text-gray-800">Bulk Import</h4>
-            <p class="text-sm text-gray-500">Import multiple students</p>
-          </div>
-        </a>
-        
-        <a href="{% url 'staff:staff_list' %}"
-           class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition">
-          <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-orange-500">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656.126-1.283
-                 -.356-1.857M7 20v-2c0-.656.126-1.283
-                 .356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-          </div>
-          <div>
-            <h4 class="font-semibold text-gray-800">Manage Staff</h4>
-            <p class="text-sm text-gray-500">View and edit staff</p>
-          </div>
-        </a>
-      </div>
-    </div>
-    {% endif %}
-
-    {% if request.user.is_student %}
-    <!-- Student Dashboard -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4">My Information</h3>
-      <div class="space-y-4">
-        <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-          <span class="text-gray-600">Admission Number:</span>
-          <span class="font-semibold">{{ request.user.student_profile.admission_number }}</span>
+  {% if assigned_subjects_count or assigned_classes_count %}
+  <!-- Stats Grid -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+    <!-- Students -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group text-center lg:text-left">
+      <div class="flex items-center justify-between mb-4">
+        <div class="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         </div>
-        <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-          <span class="text-gray-600">Current Class:</span>
-          <span class="font-semibold">{{ request.user.student_profile.get_current_enrollment.class_arm.full_name }}</span>
+        <span class="text-xs font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-lg">Active</span>
+      </div>
+      <h3 class="text-2xl font-black text-gray-900 leading-none">{{ total_students_count }}</h3>
+      <p class="text-sm font-semibold text-gray-500 mt-2 lowercase tracking-tight">Total Students</p>
+      {% if managed_class_names %}
+      <p class="text-[10px] font-black text-red-700 mt-1 uppercase tracking-tighter">{{ managed_class_names }}</p>
+      {% endif %}
+    </div>
+
+    <!-- Subjects -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
+      <div class="flex items-center justify-between mb-4">
+        <div class="p-3 bg-purple-50 text-purple-600 rounded-xl group-hover:bg-purple-600 group-hover:text-white transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+        </div>
+        <span class="text-xs font-bold text-purple-500 bg-purple-50 px-2 py-1 rounded-lg">Teaching</span>
+      </div>
+      <h3 class="text-2xl font-black text-gray-900 leading-none">{{ assigned_subjects_count }}</h3>
+      <p class="text-sm font-semibold text-gray-500 mt-2 lowercase tracking-tight">Assigned Subjects</p>
+    </div>
+
+    <!-- Exams -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
+      <div class="flex items-center justify-between mb-4">
+        <div class="p-3 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-600 group-hover:text-white transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2z"/></svg>
+        </div>
+        <span class="text-xs font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded-lg">{{ exam_stats.awaiting }} Pending</span>
+      </div>
+      <h3 class="text-2xl font-black text-gray-900 leading-none">{{ exam_stats.total }}</h3>
+      <p class="text-sm font-semibold text-gray-500 mt-2 lowercase tracking-tight">CBT Exams</p>
+    </div>
+   
+
+    <!-- Attendance -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
+      <div class="flex items-center justify-between mb-4">
+        {% if attendance_marked_today %}
+          <div class="p-3 bg-green-50 text-green-600 rounded-xl group-hover:bg-green-600 group-hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <span class="text-xs font-bold text-green-500 bg-green-50 px-2 py-1 rounded-lg">Completed</span>
+        {% else %}
+          <div class="p-3 bg-red-50 text-red-600 rounded-xl group-hover:bg-red-600 group-hover:text-white transition-colors animate-pulse">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <span class="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-lg">Missing</span>
+        {% endif %}
+      </div>
+      <h3 class="text-2xl font-black text-gray-900 leading-none">Attendance</h3>
+      <p class="text-sm font-semibold text-gray-500 mt-2 lowercase tracking-tight">Today's Status</p>
+    </div>
+  </div>
+  {% endif %}
+
+   <br>  
+   <br>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Left Column: Assignments & Status -->
+    <div class="lg:col-span-2 space-y-8">
+      
+      <!-- My Class Assignments -->
+      {% if my_assignments %}
+      <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-6 border-b border-gray-50 flex items-center justify-between">
+          <h2 class="text-xl font-bold text-gray-800">My Classes & Subjects</h2>
+          <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">{{ current_term.name }}</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Subject</th>
+                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Class</th>
+                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Students</th>
+                <th class="px-6 py-4 text-right"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+              {% for assignment in my_assignments %}
+              <tr class="hover:bg-gray-50/50 transition-colors">
+                <td class="px-6 py-4 font-bold text-gray-900">{{ assignment.subject.name }}</td>
+                <td class="px-6 py-4">
+                  <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-bold uppercase tracking-tight">
+                    {{ assignment.class_arm.full_name }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600 font-medium">{{ assignment.class_arm.student_count }} students</td>
+                <td class="px-6 py-4 text-right">
+                  <a href="{% url 'examinations:teacher_exam_list' %}" class="text-xs font-extrabold text-blue-600 hover:text-blue-800 transition-colors">Manage Exams →</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Exam Workflow tracker -->
+      <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center relative overflow-hidden group">
+        <div class="relative z-10">
+          <div class="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+          </div>
+          <h3 class="text-xl font-black text-gray-900 mb-2 lowercase tracking-tight">Teacher Console</h3>
+          <p class="text-sm text-gray-500 max-w-sm mx-auto mb-6">Create, edit, and publish your examination questions for the current term.</p>
+          <div class="flex flex-wrap justify-center gap-3">
+            <a href="{% url 'examinations:teacher_exam_create' %}" 
+               class="px-6 py-3 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-100 hover:opacity-90 transition-all transform active:scale-95"
+               style="background-color: #851A10;">
+              + New Exam
+            </a>
+            <a href="{% url 'examinations:teacher_exam_list' %}" class="px-6 py-3 bg-white text-gray-700 border border-gray-200 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all shadow-sm">
+              My Exams
+            </a>
+          </div>
         </div>
       </div>
     </div>
-    {% endif %}
+
+    <!-- Right Column: Quick Actions & Role specific -->
+    <div class="space-y-8">
+      
+      <!-- Primary Actions -->
+      <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+        <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Quick Actions</h3>
+        <div class="grid grid-cols-1 gap-3">
+          {% if request.user.is_class_teacher %}
+          <a href="{% url 'students:attendance_mark_default' %}" class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-red-50 hover:text-red-700 transition-all group">
+            <div class="flex items-center gap-3 font-extrabold text-sm">
+              <span class="p-2 bg-white rounded-lg shadow-sm">📝</span>
+              Mark Attendance
+            </div>
+            <span class="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+          </a>
+          <a href="{% url 'students:student_list' %}" class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-blue-50 hover:text-blue-700 transition-all group">
+            <div class="flex items-center gap-3 font-extrabold text-sm">
+              <span class="p-2 bg-white rounded-lg shadow-sm">👥</span>
+              My Students
+            </div>
+            <span class="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+          </a>
+          {% endif %}
+          
+          {% if request.user.is_admin_staff %}
+          <a href="{% url 'students:student_create' %}" class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-green-50 hover:text-green-700 transition-all group">
+            <div class="flex items-center gap-3 font-extrabold text-sm">
+              <span class="p-2 bg-white rounded-lg shadow-sm">✨</span>
+              Admit Student
+            </div>
+            <span class="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+          </a>
+          {% endif %}
+          
+          {% if request.user.roles.all %}
+          <a href="{% url 'examinations:teacher_exam_list' %}" class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-green-50 hover:text-green-700 transition-all group">
+            <div class="flex items-center gap-3 font-extrabold text-sm">
+              <span class="p-2 bg-white rounded-lg shadow-sm">📊</span>
+              Exam Performance
+            </div>
+            <span class="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Current Class Highlights (If Class Teacher) -->
+      {% if request.user.is_class_teacher %}
+      <div class="rounded-3xl p-8 text-white relative overflow-hidden shadow-xl shadow-blue-100"
+           style="background: linear-gradient(135deg, rgb(99, 94, 87) 0%, rgb(99, 94, 87) 100%);">
+        <h3 class="text-blue-100 text-xs font-black uppercase tracking-widest mb-2">Class Teacher Overview</h3>
+        <p class="text-xl font-black mb-6">Manage Your Class</p>
+        <div class="space-y-4">
+          <div class="flex justify-between items-center py-3 border-b border-blue-600/50">
+            <span class="text-sm text-blue-200">Registered Students</span>
+            <span class="font-black text-lg">{{ total_students_count }}</span>
+          </div>
+          <div class="flex justify-between items-center py-3 border-b border-blue-600/50 text-sm">
+            <span class="text-blue-200">Today's Attendance</span>
+            {% if attendance_marked_today %}
+              <span class="font-bold text-green-300 flex items-center gap-1">✓ Done</span>
+            {% else %}
+              <span class="font-bold text-red-300 animate-pulse flex items-center gap-1">⚠ Required</span>
+            {% endif %}
+          </div>
+        </div>
+        <a href="{% url 'students:student_list' %}" class="inline-block mt-6 px-5 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold transition-all">
+          View Class List
+        </a>
+      </div>
+      {% endif %}
+    </div>
   </div>
 </div>
 {% endblock %}

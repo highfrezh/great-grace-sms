@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction, IntegrityError
 from accounts.decorators import (
     admin_staff_required, teaching_staff_required, examiner_required,
@@ -585,6 +586,27 @@ def exam_take(request, pk):
         )
         return redirect('accounts:dashboard')
 
+    # Check schedule
+    now = timezone.now()
+    if exam.scheduled_start_datetime and now < exam.scheduled_start_datetime:
+        messages.error(
+            request, 
+            f'This exam is scheduled to start on {exam.scheduled_start_datetime.strftime("%b %d, %Y at %I:%M %p")}.'
+        )
+        return redirect('students:student_dashboard')
+    
+    if exam.scheduled_end_datetime and now > exam.scheduled_end_datetime:
+        # Check if they already have an in-progress submission they can resume
+        has_active_submission = ExamSubmission.objects.filter(
+            exam=exam,
+            student=student,
+            status=ExamSubmission.SubmissionStatus.IN_PROGRESS
+        ).exists()
+
+        if not has_active_submission:
+            messages.error(request, 'This exam has ended and is no longer available.')
+            return redirect('students:student_dashboard')
+
     # Get or create submission
     submission, created = ExamSubmission.objects.get_or_create(
         exam=exam,
@@ -622,13 +644,6 @@ def exam_take(request, pk):
         for a in submission.answers.all()
     }
 
-    # Get malpractice violation history
-    violations = submission.violations.values_list('violation_type', flat=True)
-    malpractice_count = {
-        'tab_switches': submission.tab_switch_count,
-        'fullscreen_exits': submission.fullscreen_exit_count,
-    }
-
     return render(request, 'examinations/exam_take.html', {
         'exam': exam,
         'submission': submission,
@@ -636,13 +651,13 @@ def exam_take(request, pk):
         'existing_answers': existing_answers,
         'time_remaining': submission.time_remaining_seconds,
         'exam_duration_minutes': exam.duration_minutes,
-        'malpractice_count': malpractice_count,
         'page_title': exam.title
     })
 
 
 @login_required
 @require_POST
+@csrf_exempt
 @transaction.atomic
 def exam_autosave(request, pk):
     """Auto-save student answers every 30 seconds via AJAX"""
@@ -679,23 +694,6 @@ def exam_autosave(request, pk):
     # Update last autosave time
     submission.last_autosave_at = timezone.now()
     submission.save()
-
-    # Log malpractice violations if provided
-    violation_type = request.POST.get('violation_type')
-    if violation_type:
-        violation_count = int(request.POST.get('violation_count', 1))
-        MalpracticeViolation.objects.create(
-            submission=submission,
-            violation_type=violation_type,
-            violation_count=violation_count,
-            details=request.POST.get('violation_details', '')
-        )
-        # Update submission counts
-        if violation_type == 'TAB_SWITCH':
-            submission.tab_switch_count += violation_count
-        elif violation_type == 'FULLSCREEN_EXIT':
-            submission.fullscreen_exit_count += violation_count
-        submission.save()
 
     return JsonResponse({
         'status': 'saved',
@@ -745,10 +743,8 @@ def exam_submit(request, pk):
     submission.auto_submitted_reason = auto_submit_reason
 
     # Calculate OBJ score
-    answers = submission.answers.select_related('question')
-    obj_score = sum(
-        q.question.marks for q in answers if q.is_correct
-    )
+    correct_count = submission.answers.filter(is_correct=True).count()
+    obj_score = correct_count * float(exam.marks_per_objective)
     submission.obj_score = obj_score
 
     # Mark as submitted
@@ -772,9 +768,9 @@ def exam_submit(request, pk):
 
     messages.success(
         request,
-        f'Exam submitted! Your OBJ score: {obj_score}/{exam.exams.total_marks}'
+        f'Exam submitted successfully! View your detailed report below.'
     )
-    return redirect('examinations:exam_result_student', pk=pk)
+    return redirect('examinations:exam_submission_report', pk=pk)
 
 
 @login_required
@@ -821,6 +817,7 @@ def exam_timer_status(request, pk):
 
 @login_required
 @require_POST
+@csrf_exempt
 @transaction.atomic
 def exam_auto_submit(request, pk):
     """Auto-submit exam when timer hits zero"""
@@ -856,10 +853,8 @@ def exam_auto_submit(request, pk):
     submission.auto_submitted_reason = 'TIME_UP'
 
     # Calculate OBJ score
-    answers = submission.answers.select_related('question')
-    obj_score = sum(
-        1 for a in answers if a.is_correct
-    ) * (exam.total_marks / exam.objectives.count() if exam.objectives.count() > 0 else 0)
+    correct_count = submission.answers.filter(is_correct=True).count()
+    obj_score = correct_count * float(exam.marks_per_objective)
     
     submission.obj_score = obj_score
     submission.status = ExamSubmission.SubmissionStatus.AUTO_SUBMITTED
@@ -880,12 +875,18 @@ def exam_auto_submit(request, pk):
         'status': 'auto_submitted',
         'message': 'Exam auto-submitted due to timeout',
         'score': float(obj_score),
-        'redirect_url': reverse('examinations:exam_result_student', args=[pk])
+        'redirect_url': reverse('examinations:exam_submission_report', args=[pk])
     })
 
 
 @login_required
 def exam_result_student(request, pk):
+    return redirect('examinations:exam_submission_report', pk=pk)
+
+
+@login_required
+def exam_submission_report(request, pk):
+    """Detailed report for student immediately after submission"""
     exam = get_object_or_404(Exam, pk=pk)
     try:
         student = request.user.student_profile
@@ -895,20 +896,51 @@ def exam_result_student(request, pk):
     submission = get_object_or_404(
         ExamSubmission, exam=exam, student=student
     )
-    answers = submission.answers.select_related(
-        'question'
-    ).order_by('question__order')
 
-    result = ExamResult.objects.filter(
-        exam=exam, student=student
+    if not submission.is_complete:
+        messages.warning(request, "You must complete the exam to see the report.")
+        return redirect('examinations:exam_take', pk=pk)
+
+    # Calculate statistics
+    total_questions = exam.objectives.count()
+    answers = submission.answers.select_related('question')
+    answered_count = answers.count()
+    
+    # Calculate correct/wrong
+    correct_count = 0
+    for answer in answers:
+        if answer.selected_option == answer.question.correct_option:
+            correct_count += 1
+    
+    wrong_count = answered_count - correct_count
+    unanswered_count = total_questions - answered_count
+
+    # Get Exam Configuration for scaling
+    from .models import ExamConfiguration
+    config = ExamConfiguration.objects.filter(
+        session=exam.session, 
+        term=exam.term
     ).first()
+    
+    max_obj_marks = config.obj_marks if config else 100
+    
+    # If obj_score is already saved, use it, otherwise calculate it
+    if submission.obj_score is not None:
+        final_score = submission.obj_score
+    else:
+        final_score = (correct_count / total_questions * max_obj_marks) if total_questions > 0 else 0
 
-    return render(request, 'examinations/exam_result_student.html', {
+    return render(request, 'examinations/exam_report.html', {
         'exam': exam,
         'submission': submission,
-        'answers': answers,
-        'result': result,
-        'page_title': f'Result — {exam.title}'
+        'total_questions': total_questions,
+        'answered_count': answered_count,
+        'correct_count': correct_count,
+        'wrong_count': wrong_count,
+        'unanswered_count': unanswered_count,
+        'final_score': round(final_score, 2),
+        'max_obj_marks': max_obj_marks,
+        'page_title': f'Exam Report — {exam.subject.name}'
     })
 
 
@@ -1507,21 +1539,83 @@ def ca_score_entry(request, pk):
 @login_required
 @teaching_staff_required
 def exam_results(request, pk):
+    """Detailed performance report for teachers showing all assigned students"""
     exam = get_object_or_404(Exam, pk=pk)
-    results = ExamResult.objects.filter(
-        exam=exam
-    ).select_related('student', 'submission').order_by('-total_score')
+    
+    # Get all students assigned to this exam via class arms
+    enrollments = StudentEnrollment.objects.filter(
+        class_arm__in=exam.class_arms.all(),
+        session=exam.session,
+        is_active=True
+    ).select_related('student__user', 'class_arm').order_by('class_arm', 'student__user__last_name')
+    
+    # Map submissions and results for quick lookup
+    submissions = {s.student_id: s for s in ExamSubmission.objects.filter(exam=exam)}
+    results = {r.student_id: r for r in ExamResult.objects.filter(exam=exam)}
+    
+    # Compile performance data
+    performance_data = []
+    for enroll in enrollments:
+        student = enroll.student
+        submission = submissions.get(student.id)
+        result = results.get(student.id)
+        
+        status = 'NOT_STARTED'
+        if submission:
+            if submission.status in ['SUBMITTED', 'AUTO_SUBMITTED']:
+                status = 'SUBMITTED'
+            else:
+                status = 'IN_PROGRESS'
+        
+        performance_data.append({
+            'student': student,
+            'class_arm': enroll.class_arm,
+            'status': status,
+            'submission': submission,
+            'result': result
+        })
+    
+    # Stats for summary row
+    total_count = enrollments.count()
+    submitted_count = sum(1 for d in performance_data if d['status'] == 'SUBMITTED')
+    in_progress_count = sum(1 for d in performance_data if d['status'] == 'IN_PROGRESS')
+    not_started_count = total_count - (submitted_count + in_progress_count)
 
     return render(request, 'examinations/exam_results.html', {
         'exam': exam,
-        'results': results,
+        'performance_data': performance_data,
+        'stats': {
+            'total': total_count,
+            'submitted': submitted_count,
+            'in_progress': in_progress_count,
+            'not_started': not_started_count,
+        },
         'page_title': f'Results — {exam.title}'
     })
 
 
 @login_required
-@admin_staff_required
+@teaching_staff_required
 @require_POST
+def exam_reset_submission(request, exam_pk, student_pk):
+    """Allows teacher to reset a student's exam attempt"""
+    exam = get_object_or_404(Exam, pk=exam_pk)
+    student = get_object_or_404(Student, pk=student_pk)
+    
+    # Permission check: Teacher of the exam, examiner, or superuser
+    if not (request.user.is_superuser or request.user.is_examiner or exam.teacher.user == request.user):
+        messages.error(request, "You are not authorized to reset this exam.")
+        return redirect('examinations:exam_results', pk=exam_pk)
+    
+    # Delete submission and results
+    # Deleting submission will cascade to answers and theory scores in most schemas
+    # But we explicitly handle both for safety
+    ExamSubmission.objects.filter(exam=exam, student=student).delete()
+    ExamResult.objects.filter(exam=exam, student=student).delete()
+    
+    messages.success(request, f"Exam session for {student.user.get_full_name()} has been successfully reset.")
+        
+    return redirect('examinations:exam_results', pk=exam_pk)
 def exam_publish_results(request, pk):
     exam = get_object_or_404(Exam, pk=pk)
     ExamResult.objects.filter(exam=exam).update(

@@ -55,6 +55,7 @@ urlpatterns = [
     path('<int:pk>/timer-status/', views.exam_timer_status, name='exam_timer_status'),
     path('<int:pk>/auto-submit/', views.exam_auto_submit, name='exam_auto_submit'),
     path('<int:pk>/result/', views.exam_result_student, name='exam_result_student'),
+    path('<int:pk>/report/', views.exam_submission_report, name='exam_submission_report'),
 
     # ── Theory Score Entry (Teacher) ──────────────────
     path('<int:pk>/theory-scores/', views.theory_score_entry, name='theory_score_entry'),
@@ -65,6 +66,7 @@ urlpatterns = [
 
     # ── Results ───────────────────────────────────────
     path('<int:pk>/results/', views.exam_results, name='exam_results'),
+    path('<int:exam_pk>/results/reset/<int:student_pk>/', views.exam_reset_submission, name='exam_reset_submission'),
     path('<int:pk>/results/publish/', views.exam_publish_results, name='exam_publish_results'),
 
     # ── Examiner Dashboard (Examiner/VP/Principal) ────

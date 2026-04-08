@@ -6,247 +6,419 @@
 
 {% block content %}
 <style>
-  .form-container {
-    max-width: 600px;
+  .schedule-card {
     background: white;
-    border-radius: 1rem;
+    border-radius: 1.5rem;
     border: 1px solid #F3F4F6;
-    padding: 2rem;
+    position: relative;
+    overflow: hidden;
   }
-
-  .form-group {
-    margin-bottom: 1.5rem;
+  
+  .schedule-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #851A10 0%, #A52318 100%);
   }
-
-  .form-label {
-    display: block;
-    font-weight: 600;
-    color: #635E57;
-    margin-bottom: 0.5rem;
-    font-size: 0.95rem;
+  
+  .info-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #FEF2F2;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #851A10;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
-
-  .form-input {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #D1CCC7;
+  
+  .exam-detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #F3F4F6;
+  }
+  
+  .exam-detail-item:last-child {
+    border-bottom: none;
+  }
+  
+  .duration-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    background: #FEF2F2;
     border-radius: 0.5rem;
-    font-size: 0.95rem;
-    font-family: inherit;
-    transition: all 0.2s;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #851A10;
   }
-
-  .form-input:focus {
+  
+  .class-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    background: white;
+    border: 1px solid #E5E7EB;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #374151;
+    transition: all 0.2s ease;
+  }
+  
+  .class-tag:hover {
+    border-color: #851A10;
+    background: #FFF5F3;
+  }
+  
+  .datetime-input {
+    width: 100%;
+    padding: 0.875rem 1rem 0.875rem 2.75rem;
+    background: #F9FAFB;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    transition: all 0.2s ease;
     outline: none;
+  }
+  
+  .datetime-input:focus {
+    background: white;
     border-color: #851A10;
     box-shadow: 0 0 0 3px rgba(133, 26, 16, 0.1);
   }
-
-  .help-text {
-    font-size: 0.875rem;
-    color: #6B7280;
-    margin-top: 0.25rem;
+  
+  .datetime-input-wrapper {
+    position: relative;
   }
-
-  .exam-info {
-    background: #F3F4F6;
-    border-left: 4px solid #851A10;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    margin-bottom: 2rem;
+  
+  .datetime-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.125rem;
+    pointer-events: none;
   }
-
-  .exam-info-title {
-    font-weight: 700;
-    color: #635E57;
-    margin-bottom: 0.5rem;
-  }
-
-  .exam-info-detail {
-    font-size: 0.95rem;
-    color: #6B7280;
-    margin-bottom: 0.25rem;
-  }
-
-  .button-group {
-    display: flex;
-    gap: 1rem;
-    margin-top: 2rem;
-  }
-
-  .btn {
+  
+  .btn-cancel {
     flex: 1;
-    padding: 0.75rem;
-    border: none;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: all 0.2s;
+    padding: 1rem;
+    background: #F3F4F6;
+    color: #6B7280;
+    font-weight: 700;
+    font-size: 0.875rem;
+    border-radius: 1rem;
+    transition: all 0.2s ease;
+    text-align: center;
   }
-
-  .btn-primary {
-    background: #851A10;
-    color: white;
-  }
-
-  .btn-primary:hover {
-    background: #6B1508;
-  }
-
-  .btn-secondary {
+  
+  .btn-cancel:hover {
     background: #E5E7EB;
-    color: #635E57;
+    transform: scale(0.98);
   }
-
-  .btn-secondary:hover {
-    background: #D1D5DB;
-  }
-
-  .alert {
+  
+  .btn-submit {
+    flex: 2;
     padding: 1rem;
-    border-radius: 0.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .alert-error {
-    background: #FEE2E2;
-    border: 1px solid #FCA5A5;
-    color: #991B1B;
-  }
-
-  .time-info {
-    background: #f0fdf4;
-    border-left: 4px solid #10B981;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, #851A10 0%, #A52318 100%);
+    color: white;
+    font-weight: 700;
     font-size: 0.875rem;
-    color: #166534;
+    border-radius: 1rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px -1px rgba(133, 26, 16, 0.2);
   }
-
-  .duration-info {
-    background: #fef3c7;
-    border-left: 4px solid #f59e0b;
+  
+  .btn-submit:hover {
+    transform: scale(0.98);
+    box-shadow: 0 10px 15px -3px rgba(133, 26, 16, 0.3);
+  }
+  
+  .warning-box {
+    background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+    border-radius: 1rem;
     padding: 1rem;
-    border-radius: 0.5rem;
-    margin-top: 1rem;
-    font-size: 0.875rem;
-    color: #92400e;
+    border: 1px solid #FDE68A;
+  }
+  
+  .info-box {
+    background: linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%);
+    border-radius: 1rem;
+    padding: 1rem;
+    border: 1px solid #DBEAFE;
+  }
+  
+  @media (max-width: 768px) {
+    .schedule-card {
+      margin: 0 1rem;
+    }
   }
 </style>
 
-<!-- Back Link -->
-<a href="{% url 'examinations:exam_schedule_list' %}" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-6">
-  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-  </svg>
-  Back to Exam Schedule
-</a>
+<div class="max-w-3xl mx-auto py-8 px-4">
+  <!-- Back Link -->
+  <a href="{% url 'examinations:exam_schedule_list' %}" 
+     class="inline-flex items-center gap-2 text-gray-500 hover:text-[#851A10] mb-6 transition-colors group">
+    <div class="p-2 bg-white rounded-xl border border-gray-100 shadow-sm group-hover:border-[#851A10]/20 group-hover:bg-red-50 transition-all">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </div>
+    <span class="text-sm font-semibold">Back to Schedule</span>
+  </a>
 
-<!-- Header -->
-<div class="mb-8">
-  <div class="flex items-center gap-3 mb-2">
-    <div class="w-1 h-10 rounded-full" style="background:#851A10;"></div>
-    <h1 class="text-2xl font-bold" style="color:#635E57;">
-      {% if is_edit %}Edit Exam Schedule{% else %}Schedule Exam{% endif %}
+  <!-- Header -->
+  <div class="text-center mb-8">
+    <div class="info-badge mx-auto w-fit mb-4">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      Examination Timing
+    </div>
+    <h1 class="text-3xl font-bold tracking-tight" style="color:#635E57;">
+      {% if is_edit %}Edit Schedule{% else %}Schedule Exam{% endif %}
     </h1>
+    <p class="text-sm text-gray-500 mt-2">Set the window when students can access and take this exam</p>
+  </div>
+
+  <!-- Main Card -->
+  <div class="schedule-card">
+    <div class="p-6 md:p-8">
+      <!-- Exam Status Info -->
+      <div class="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 mb-6 border border-gray-100">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
+            <svg class="w-4 h-4" style="color:#851A10;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+          </div>
+          <h3 class="font-bold text-gray-800">Exam Details</h3>
+        </div>
+        
+        <div class="space-y-2">
+          <div class="exam-detail-item">
+            <span class="text-sm text-gray-500">Exam Title</span>
+            <span class="text-sm font-semibold text-gray-900">{{ exam.title }}</span>
+          </div>
+          <div class="exam-detail-item">
+            <span class="text-sm text-gray-500">Subject</span>
+            <span class="text-sm font-semibold text-gray-900">{{ exam.subject.name }}</span>
+          </div>
+          <div class="exam-detail-item">
+            <span class="text-sm text-gray-500">Duration</span>
+            <span class="duration-badge">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              {{ exam.duration_minutes }} Minutes
+            </span>
+          </div>
+          <div class="pt-2">
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Target Classes</span>
+            <div class="flex flex-wrap gap-2 mt-2">
+              {% for class_arm in exam.class_arms.all %}
+                <span class="class-tag">
+                  <svg class="w-3 h-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                  </svg>
+                  {{ class_arm }}
+                </span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      {% if messages %}
+        <div class="space-y-3 mb-6">
+          {% for message in messages %}
+            <div class="p-4 rounded-xl flex items-start gap-3 {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-100{% else %}bg-green-50 text-green-700 border border-green-100{% endif %}">
+              <span class="text-lg">{% if message.tags == 'error' %}⚠️{% else %}✓{% endif %}</span>
+              <p class="text-sm font-medium">{{ message }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <!-- Form -->
+      <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Start Date & Time -->
+          <div class="space-y-2">
+            <label class="text-xs font-bold text-gray-400 uppercase tracking-wider block">
+              Start Date & Time <span class="text-[#851A10]">*</span>
+            </label>
+            <div class="datetime-input-wrapper">
+              <div class="datetime-icon">📅</div>
+              <input 
+                type="datetime-local" 
+                id="start_datetime" 
+                name="start_datetime"
+                class="datetime-input"
+                value="{{ exam.scheduled_start_datetime|date:'Y-m-d\TH:i'|default:'' }}"
+                required>
+            </div>
+            <p class="text-xs text-gray-400 px-1">When the exam becomes available to students</p>
+          </div>
+
+          <!-- End Date & Time -->
+          <div class="space-y-2">
+            <label class="text-xs font-bold text-gray-400 uppercase tracking-wider block">
+              End Date & Time <span class="text-[#851A10]">*</span>
+            </label>
+            <div class="datetime-input-wrapper">
+              <div class="datetime-icon">⏱️</div>
+              <input 
+                type="datetime-local" 
+                id="end_datetime" 
+                name="end_datetime"
+                class="datetime-input"
+                value="{{ exam.scheduled_end_datetime|date:'Y-m-d\TH:i'|default:'' }}"
+                required>
+            </div>
+            <p class="text-xs text-gray-400 px-1">Deadline for exam submission</p>
+          </div>
+        </div>
+
+        <!-- Duration Warning -->
+        <div class="warning-box">
+          <div class="flex gap-3">
+            <div class="text-xl">⏳</div>
+            <div>
+              <p class="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1">Duration Buffer Required</p>
+              <p class="text-xs text-amber-700">
+                Ensure the total window is at least <strong class="font-bold">{{ exam.duration_minutes }} minutes</strong>. 
+                We recommend adding an extra 15-30 minutes buffer for technical delays.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-4 pt-4">
+          <a href="{% url 'examinations:exam_schedule_list' %}" class="btn-cancel">
+            Cancel
+          </a>
+          <button type="submit" class="btn-submit">
+            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            {% if is_edit %}Update Schedule{% else %}Schedule Exam{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Info Banner -->
+  <div class="info-box mt-6">
+    <div class="flex items-start gap-3">
+      <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <div>
+        <p class="text-xs font-semibold text-blue-800">Important Note</p>
+        <p class="text-xs text-blue-700 mt-1">
+          Once scheduled, students in the assigned classes will see this exam in their "Upcoming" list. 
+          They will only be able to start the exam after the Start Time and must submit before the End Time.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview Card (Optional) -->
+  <div class="mt-6 bg-white rounded-xl p-4 border border-gray-100">
+    <div class="flex items-center gap-2 mb-3">
+      <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+      </svg>
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Preview for Students</p>
+    </div>
+    <div class="bg-gray-50 rounded-lg p-3">
+      <p class="text-xs text-gray-600 font-mono">
+        <span id="previewText">Select dates to see student view</span>
+      </p>
+    </div>
   </div>
 </div>
 
-<!-- Exam Details -->
-<div class="form-container">
-  <div class="exam-info">
-    <div class="exam-info-title">📚 {{ exam.subject.name }}</div>
-    <div class="exam-info-detail">
-      <strong>Classes:</strong> 
-      {% for class_arm in exam.class_arms.all %}
-        {{ class_arm }}{% if not forloop.last %}, {% endif %}
-      {% endfor %}
-    </div>
-    <div class="exam-info-detail">
-      <strong>Duration:</strong> {{ exam.duration_minutes }} minutes
-    </div>
-    <div class="exam-info-detail">
-      <strong>Questions:</strong> 
-      {% if exam.objectives.count %}
-        {{ exam.objectives.count }} objective{% if exam.objectives.count != 1 %}s{% endif %}
-      {% endif %}
-      {% if exam.theory_questions.count %}
-        {{ exam.theory_questions.count }} theory{% if exam.theory_questions.count != 1 %}s{% endif %}
-      {% endif %}
-    </div>
-    {% if exam.scheduled_start_datetime %}
-    <div class="exam-info-detail">
-      <strong>Current Schedule:</strong><br>
-      Start: {{ exam.scheduled_start_datetime|date:"M d, Y at H:i" }}<br>
-      End: {{ exam.scheduled_end_datetime|date:"M d, Y at H:i" }}
-    </div>
-    {% endif %}
-  </div>
-
-  {% if messages %}
-  {% for message in messages %}
-  <div class="alert {% if message.tags == 'error' %}alert-error{% endif %}">
-    {{ message }}
-  </div>
-  {% endfor %}
-  {% endif %}
-
-  <div class="time-info">
-    ℹ️ Students will see this exam as available starting at the start time and can submit until the end time.
-  </div>
-
-  <!-- Form -->
-  <form method="post" class="mt-6">
-    {% csrf_token %}
-
-    <div class="form-group">
-      <label class="form-label" for="start_datetime">📅 Exam Start Date & Time</label>
-      <input 
-        type="datetime-local" 
-        id="start_datetime" 
-        name="start_datetime"
-        class="form-input"
-        {% if exam.scheduled_start_datetime %}
-          value="{{ exam.scheduled_start_datetime|date:'Y-m-dTH:i' }}"
-        {% endif %}
-        required>
-      <div class="help-text">Select when students can start taking this exam</div>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label" for="end_datetime">⏱️ Exam End Date & Time</label>
-      <input 
-        type="datetime-local" 
-        id="end_datetime" 
-        name="end_datetime"
-        class="form-input"
-        {% if exam.scheduled_end_datetime %}
-          value="{{ exam.scheduled_end_datetime|date:'Y-m-dTH:i' }}"
-        {% endif %}
-        required>
-      <div class="help-text">Select when students can no longer submit (should be after start time)</div>
-    </div>
-
-    <div class="duration-info">
-      <strong>⏳ Duration Calculation:</strong> The difference between start and end time should be at least {{ exam.duration_minutes }} minutes (exam duration) plus buffer time if needed.
-    </div>
-
-    <div class="button-group">
-      <a href="{% url 'examinations:exam_schedule_list' %}" class="btn btn-secondary">Cancel</a>
-      <button type="submit" class="btn btn-primary">
-        {% if is_edit %}Update Schedule{% else %}Schedule Exam{% endif %}
-      </button>
-    </div>
-  </form>
-
-</div>
+<script>
+  // Real-time preview update
+  const startInput = document.getElementById('start_datetime');
+  const endInput = document.getElementById('end_datetime');
+  const previewText = document.getElementById('previewText');
+  
+  function updatePreview() {
+    const start = startInput.value;
+    const end = endInput.value;
+    
+    if (start && end) {
+      const startDate = new Date(start);
+      const endDate = new Date(end);
+      
+      const formatDate = (date) => {
+        return date.toLocaleString('en-US', { 
+          weekday: 'short', 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      };
+      
+      previewText.innerHTML = `Available from <strong class="text-[#851A10]">${formatDate(startDate)}</strong> until <strong class="text-[#851A10]">${formatDate(endDate)}</strong>`;
+    } else {
+      previewText.innerHTML = 'Select dates to see student view';
+    }
+  }
+  
+  if (startInput && endInput) {
+    startInput.addEventListener('change', updatePreview);
+    endInput.addEventListener('change', updatePreview);
+    updatePreview();
+  }
+  
+  // Validate that end time is after start time
+  const form = document.querySelector('form');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      const start = new Date(startInput.value);
+      const end = new Date(endInput.value);
+      
+      if (start >= end) {
+        e.preventDefault();
+        alert('End date and time must be after the start date and time.');
+      }
+    });
+  }
+</script>
 
 <style>
   input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
+    filter: invert(15%) sepia(95%) saturate(3932%) hue-rotate(352deg) brightness(85%) contrast(97%);
+    padding: 0.25rem;
+  }
+  
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+    filter: invert(20%) sepia(100%) saturate(5000%) hue-rotate(352deg) brightness(90%) contrast(100%);
   }
 </style>
-
 {% endblock %}

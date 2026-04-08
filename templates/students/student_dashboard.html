@@ -918,31 +918,6 @@
 
 
 
-    <!-- Malpractice Violations Alert -->
-
-    {% if recent_violations %}
-
-    <div class="violations-alert">
-
-        <div class="violations-alert-title">⚠️ Academic Integrity Violations Recorded</div>
-
-        {% for violation in recent_violations %}
-
-        <div class="violation-item">
-
-            <strong>{{ violation.get_violation_type_display }}</strong> - 
-
-            {{ violation.timestamp|date:"M d, Y H:i" }} 
-
-            ({{ violation.submission.exam.subject }})
-
-        </div>
-
-        {% endfor %}
-
-    </div>
-
-    {% endif %}
 
 
 
@@ -952,7 +927,7 @@
 
     <div class="section">
 
-        <h2 class="section-title">📚 My Subjects & Exams</h2>
+        <h2 class="section-title">📚 My Subjects</h2>
 
         
 
@@ -963,15 +938,8 @@
             <thead>
 
                 <tr>
-
                     <th>Subject</th>
-
                     <th>Teacher</th>
-
-                    <th>Exam Status</th>
-
-                    <th>Action</th>
-
                 </tr>
 
             </thead>
@@ -981,83 +949,18 @@
                 {% for subject_info in subjects_data %}
 
                 <tr>
-
                     <td>
-
                         <div class="subject-name">{{ subject_info.subject.name }}</div>
-
                     </td>
-
                     <td>
-
                         {% if subject_info.teacher %}
-
                         <div class="teacher-name">
-
-                            {{ subject_info.teacher.user.get_full_name|default:subject_info.teacher.user.username }}
-
+                            {{ subject_info.teacher.get_full_name|default:subject_info.teacher.username }}
                         </div>
-
                         {% else %}
-
                         <div class="teacher-name text-muted">Not assigned</div>
-
                         {% endif %}
-
                     </td>
-
-                    <td>
-
-                        {% if subject_info.exam %}
-
-                            {% if subject_info.exam_status == 'SUBMITTED' or subject_info.exam_status == 'AUTO_SUBMITTED' %}
-
-                            <span class="exam-status completed">✓ Completed</span>
-
-                            {% elif subject_info.exam_status == 'IN_PROGRESS' %}
-
-                            <span class="exam-status in-progress">⚡ In Progress</span>
-
-                            {% else %}
-
-                            <span class="exam-status available">◉ Ready to Take</span>
-
-                            {% endif %}
-
-                        {% else %}
-
-                        <span class="exam-status not-available">✗ Not Available</span>
-
-                        {% endif %}
-
-                    </td>
-
-                    <td>
-
-                        {% if subject_info.can_take_exam %}
-
-                        <a href="{% url 'examinations:exam_take' subject_info.exam.pk %}" class="take-exam-btn">
-
-                            Start Exam →
-
-                        </a>
-
-                        {% elif subject_info.exam and subject_info.exam_status %}
-
-                        <a href="{% url 'examinations:exam_result_student' subject_info.exam.pk %}" class="take-exam-btn" style="background-color: #999;">
-
-                            View Result →
-
-                        </a>
-
-                        {% else %}
-
-                        <button class="take-exam-btn disabled" disabled>Not Available</button>
-
-                        {% endif %}
-
-                    </td>
-
                 </tr>
 
                 {% endfor %}
@@ -1159,35 +1062,40 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
 
             {% for exam in upcoming_exams %}
-
             <div style="background: linear-gradient(135deg, rgba(133, 26, 16, 0.08) 0%, rgba(243, 156, 18, 0.08) 100%); border: 1px solid var(--light); border-radius: 8px; padding: 20px;">
-
                 <div style="font-weight: 600; color: var(--primary); margin-bottom: 10px;">{{ exam.subject.name }}</div>
+                
+                <div style="font-size: 0.85rem; color: #555; margin-bottom: 12px; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 6px;">
+                    <div style="margin-bottom: 4px;"><strong>📅 Scheduled:</strong></div>
+                    <div>{{ exam.scheduled_start_datetime|date:"M d, Y" }}</div>
+                    <div>{{ exam.scheduled_start_datetime|date:"h:i A" }} - {{ exam.scheduled_end_datetime|date:"h:i A" }}</div>
+                </div>
 
                 <div style="font-size: 0.9rem; color: #666; margin: 8px 0;">
-
                     <strong>Duration:</strong> {{ exam.duration_minutes }} minutes
-
                 </div>
-
-                <div style="font-size: 0.9rem; color: #666; margin: 8px 0;">
-
-                    <strong>Questions:</strong> {{ exam.objectives.count }} objective questions
-
-                </div>
-
+                
                 <div style="margin-top: 15px;">
-
-                    <a href="{% url 'examinations:exam_take' exam.pk %}" class="take-exam-btn" style="width: 100%; text-align: center;">
-
-                        Take Exam
-
-                    </a>
-
+                    {% now "Y-m-d H:i" as current_time %}
+                    {% if exam.has_submitted %}
+                        <a href="{% url 'examinations:exam_submission_report' exam.pk %}" class="take-exam-btn" style="width: 100%; text-align: center; background-color: var(--success);">
+                            Check Report →
+                        </a>
+                    {% elif exam.scheduled_start_datetime|date:"Y-m-d H:i" > current_time %}
+                        <button class="take-exam-btn" style="width: 100%; text-align: center; background-color: #999;" disabled>
+                            Not Started
+                        </button>
+                    {% elif exam.scheduled_end_datetime|date:"Y-m-d H:i" < current_time %}
+                        <button class="take-exam-btn" style="width: 100%; text-align: center; background-color: #666;" disabled>
+                            Ended
+                        </button>
+                    {% else %}
+                        <a href="{% url 'examinations:exam_take' exam.pk %}" class="take-exam-btn" style="width: 100%; text-align: center;">
+                            Start Exam →
+                        </a>
+                    {% endif %}
                 </div>
-
             </div>
-
             {% endfor %}
 
         </div>

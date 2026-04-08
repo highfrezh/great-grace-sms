@@ -18,9 +18,9 @@ class ExamTimer {
         this.lastWindowFocus = true;
 
         // Timers
-        this.timerInterval = null;
-        this.autoSaveInterval = null;
-        this.statusCheckInterval = null;
+        this.timerIntervalId = null;
+        this.autoSaveIntervalId = null;
+        this.statusCheckIntervalId = null;
 
         // DOM elements
         this.timerDisplay = document.getElementById('timerDisplay');
@@ -33,6 +33,7 @@ class ExamTimer {
         this.fullscreenExitsInput = document.getElementById('fullscreenExits');
         this.violationModal = document.getElementById('violationModal');
         this.examForm = document.getElementById('examForm');
+        this.csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
         this.init();
     }
@@ -57,7 +58,7 @@ class ExamTimer {
     // ────────────────────────────────────────────────────────
 
     startTimer() {
-        this.timerInterval = setInterval(() => {
+        this.timerIntervalId = setInterval(() => {
             this.timeRemaining--;
             this.updateUI();
 
@@ -127,9 +128,10 @@ class ExamTimer {
     setupAutoSave() {
         this.autoSave();  // Save immediately
         
-        this.autoSaveInterval = setInterval(() => {
+        const duration = this.autoSaveInterval * 1000;
+        this.autoSaveIntervalId = setInterval(() => {
             this.autoSave();
-        }, this.autoSaveInterval * 1000);
+        }, duration);
     }
 
     autoSave() {
@@ -137,6 +139,7 @@ class ExamTimer {
         formData.append('time_remaining', this.timeRemaining);
         formData.append('tab_switches', this.tabSwitches);
         formData.append('fullscreen_exits', this.fullscreenExits);
+        formData.append('csrfmiddlewaretoken', this.csrfToken);
 
         // Show saving indicator
         this.showSavingIndicator();
@@ -145,10 +148,14 @@ class ExamTimer {
             method: 'POST',
             body: formData,
             headers: {
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': this.csrfToken
             }
         })
-        .then(response => response.json())
+        .then(async response => {
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return response.json();
+        })
         .then(data => {
             if (data.status === 'saved') {
                 this.showSavedIndicator();
@@ -246,18 +253,18 @@ class ExamTimer {
         this.fullscreenExits++;
         this.fullscreenExitsInput.value = this.fullscreenExits;
 
-        // Log violation
-        this.logViolation('FULLSCREEN_EXIT', this.fullscreenExits);
+        // Log violation removed
 
-        if (this.fullscreenExits === 1) {
-            // First exit: warning
+        if (this.fullscreenExits <= 2) {
+            // First and second exits: warnings
+            const warningTitle = this.fullscreenExits === 2 ? 'FINAL WARNING - Fullscreen Violation' : 'Warning - Fullscreen Violation';
             this.showViolationModal(
-                'Fullscreen Warning',
-                '⚠️ You have exited fullscreen mode.\n\nThis has been recorded.',
-                `Fullscreen exits: ${this.fullscreenExits}/2 (Auto-submit on 2nd)`
+                warningTitle,
+                '⚠️ You have exited fullscreen mode. This is strictly prohibited during the examination.',
+                `Violation Count: ${this.fullscreenExits}/3 (Exam will be submitted on Attempt #3)`
             );
-        } else if (this.fullscreenExits >= 2) {
-            // Second exit: auto-submit
+        } else if (this.fullscreenExits >= 3) {
+            // Third exit: auto-submit
             this.handleAutoSubmit('FULLSCREEN_VIOLATION');
         }
 
@@ -294,18 +301,18 @@ class ExamTimer {
         this.tabSwitches++;
         this.tabSwitchesInput.value = this.tabSwitches;
 
-        // Log violation
-        this.logViolation('TAB_SWITCH', this.tabSwitches);
+        // Log violation removed
 
-        if (this.tabSwitches === 1) {
-            // First switch: warning
+        if (this.tabSwitches <= 2) {
+            // First and second switches: warnings
+            const warningTitle = this.tabSwitches === 2 ? 'FINAL WARNING - Tab Switch' : 'Warning - Tab Switch';
             this.showViolationModal(
-                'Tab Switch Warning',
-                '⚠️ You have switched to another tab or window.\n\nThis has been recorded.',
-                `Tab switches: ${this.tabSwitches}/2 (Auto-submit on 2nd)`
+                warningTitle,
+                '⚠️ You have switched to another tab or window. This is prohibited during the examination.',
+                `Violation Count: ${this.tabSwitches}/3 (Exam will be submitted on Attempt #3)`
             );
-        } else if (this.tabSwitches >= 2) {
-            // Second switch: auto-submit
+        } else if (this.tabSwitches >= 3) {
+            // Third switch: auto-submit
             this.handleAutoSubmit('TAB_SWITCH_VIOLATION');
         }
     }
@@ -383,9 +390,9 @@ class ExamTimer {
     // ────────────────────────────────────────────────────────
 
     handleAutoSubmit(reason) {
-        clearInterval(this.timerInterval);
-        clearInterval(this.autoSaveInterval);
-        clearInterval(this.statusCheckInterval);
+        clearInterval(this.timerIntervalId);
+        clearInterval(this.autoSaveIntervalId);
+        clearInterval(this.statusCheckIntervalId);
 
         document.getElementById('autoSubmitReason').value = reason;
 
@@ -395,6 +402,7 @@ class ExamTimer {
         formData.append('tab_switches', this.tabSwitches);
         formData.append('fullscreen_exits', this.fullscreenExits);
         formData.append('auto_submit_reason', reason);
+        formData.append('csrfmiddlewaretoken', this.csrfToken);
 
         // Show auto-submit message
         const message = reason === 'TIME_UP' 
@@ -408,10 +416,14 @@ class ExamTimer {
             method: 'POST',
             body: formData,
             headers: {
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': this.csrfToken
             }
         })
-        .then(response => response.json())
+        .then(async response => {
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return response.json();
+        })
         .then(data => {
             if (data.status === 'auto_submitted') {
                 // Redirect to results
@@ -428,9 +440,9 @@ class ExamTimer {
     }
 
     handleAlreadySubmitted() {
-        clearInterval(this.timerInterval);
-        clearInterval(this.autoSaveInterval);
-        clearInterval(this.statusCheckInterval);
+        clearInterval(this.timerIntervalId);
+        clearInterval(this.autoSaveIntervalId);
+        clearInterval(this.statusCheckIntervalId);
 
         this.showWarning('Exam already submitted! Redirecting...');
         setTimeout(() => {
@@ -444,7 +456,7 @@ class ExamTimer {
 
     setupStatusCheck() {
         // Check server status every 30 seconds for connection recovery
-        this.statusCheckInterval = setInterval(() => {
+        this.statusCheckIntervalId = setInterval(() => {
             this.checkExamStatus();
         }, 30000);
     }

@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary: #851A10;
+        --success: #27ae60;
+        --danger: #e74c3c;
+        --warning: #f39c12;
+        --info: #3498db;
+        --dark: #2c3e50;
+        --light: #f8f9fa;
+    }
+
+    .report-container {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+
+    .report-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        overflow: hidden;
+        border: 1px solid #eee;
+    }
+
+    .report-header {
+        background: linear-gradient(135deg, var(--primary) 0%, #a02212 100%);
+        color: white;
+        padding: 40px;
+        text-align: center;
+    }
+
+    .report-header h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+    }
+
+    .report-header p {
+        margin: 10px 0 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        padding: 40px;
+        background: #fff;
+    }
+
+    @media (min-width: 768px) {
+        .stats-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 20px;
+        border-radius: 12px;
+        background: var(--light);
+        transition: transform 0.3s ease;
+    }
+
+    .stat-item:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-value {
+        display: block;
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 5px;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .stat-total { color: var(--dark); }
+    .stat-correct { color: var(--success); }
+    .stat-wrong { color: var(--danger); }
+    .stat-unanswered { color: var(--warning); }
+
+    .score-section {
+        text-align: center;
+        padding: 40px;
+        border-top: 1px solid #eee;
+        background: #fafafa;
+    }
+
+    .score-circle {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        border: 8px solid var(--primary);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        background: white;
+        box-shadow: 0 5px 15px rgba(133, 26, 16, 0.2);
+    }
+
+    .score-number {
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: var(--primary);
+        line-height: 1;
+    }
+
+    .score-max {
+        font-size: 1rem;
+        color: #7f8c8d;
+        font-weight: 600;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--dark);
+        margin: 40px 0 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .violations-card {
+        background: #fff5f5;
+        border: 1px solid #feb2b2;
+        border-radius: 12px;
+        padding: 25px;
+        margin-top: 30px;
+    }
+
+    .violation-title {
+        color: #c53030;
+        font-weight: 800;
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .violation-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .violation-item {
+        padding: 12px 15px;
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        border-left: 4px solid #f56565;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.95rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .violation-type {
+        font-weight: 700;
+        color: #2d3748;
+    }
+
+    .violation-time {
+        color: #718096;
+        font-size: 0.85rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 40px;
+        margin-bottom: 60px;
+    }
+
+    .btn-primary-custom {
+        background-color: var(--primary);
+        color: white;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-primary-custom:hover {
+        background-color: #6d160b;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(133, 26, 16, 0.3);
+        color: white;
+    }
+
+    .btn-outline-custom {
+        background-color: transparent;
+        color: var(--primary);
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border: 2px solid var(--primary);
+    }
+
+    .btn-outline-custom:hover {
+        background-color: var(--primary);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="report-container">
+    <div class="report-card">
+        <div class="report-header">
+            <h1>Exam Submission Report</h1>
+            <p>{{ exam.subject.name }} · {{ exam.title }}</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-item">
+                <span class="stat-value stat-total">{{ total_questions }}</span>
+                <span class="stat-label">Total</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value stat-total">{{ answered_count }}</span>
+                <span class="stat-label">Attempted</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value stat-success">{{ correct_count }}</span>
+                <span class="stat-label">Correct</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value stat-danger">{{ wrong_count }}</span>
+                <span class="stat-label">Wrong</span>
+            </div>
+        </div>
+
+        <div class="score-section">
+            <div class="score-circle">
+                <span class="score-number">{{ final_score }}</span>
+                <span class="score-max">/ {{ max_obj_marks }}</span>
+            </div>
+            <h3 style="margin: 0; font-weight: 700; color: var(--dark);">Objective Score</h3>
+            <p style="color: #666; font-size: 0.9rem; margin-top: 5px;">Your performance has been recorded successfully.</p>
+        </div>
+    </div>
+
+
+    <div class="action-buttons">
+        <a href="{% url 'students:student_dashboard' %}" class="btn-primary-custom">
+            Return to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
