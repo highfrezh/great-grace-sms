@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Academic Results — Great Grace SMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .results-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+
+    .filter-bar {
+        background: white;
+        border-radius: 1rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid #F3F4F6;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .filter-select {
+        background: #F9FAFB;
+        border: 1px solid #E5E7EB;
+        border-radius: 0.625rem;
+        padding: 0.5rem 2rem 0.5rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #374151;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.5rem center;
+        background-size: 1rem;
+        cursor: pointer;
+    }
+
+    .filter-select:focus {
+        outline: none;
+        border-color: #851A10;
+    }
+
+    .term-card {
+        background: white;
+        border-radius: 1rem;
+        padding: 1.25rem 1.5rem;
+        border: 1px solid #F3F4F6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.25s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .term-card::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        width: 4px;
+        background: linear-gradient(180deg, #851A10 0%, #A52318 100%);
+        transition: width 0.25s ease;
+    }
+
+    .term-card:hover {
+        border-color: #FECACA;
+        box-shadow: 0 4px 12px rgba(133, 26, 16, 0.08);
+        transform: translateX(4px);
+    }
+
+    .icon-box {
+        width: 3rem;
+        height: 3rem;
+        border-radius: 0.75rem;
+        background: #FEF2F2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #851A10;
+        flex-shrink: 0;
+    }
+
+    .view-btn {
+        padding: 0.625rem 1.25rem;
+        border-radius: 0.75rem;
+        background: linear-gradient(135deg, #851A10 0%, #A52318 100%);
+        color: white;
+        font-weight: 700;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        box-shadow: 0 2px 6px rgba(133, 26, 16, 0.2);
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .view-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(133, 26, 16, 0.3);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 1rem;
+        border: 2px dashed #E5E7EB;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="results-container">
+
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+        <div>
+            <div class="flex items-center gap-3 mb-1">
+                <div class="w-1 h-8 rounded-full" style="background:#851A10;"></div>
+                <h1 class="text-2xl font-bold" style="color:#635E57;">My Academic Results</h1>
+            </div>
+            <p class="text-sm text-gray-500 ml-4">{{ student.full_name }}</p>
+        </div>
+
+        <!-- Filter Bar -->
+        {% if available_sessions or available_terms %}
+        <div class="filter-bar">
+            <form method="GET" class="flex flex-wrap items-center gap-2">
+                <select name="session" onchange="this.form.submit()" class="filter-select">
+                    <option value="">All Sessions</option>
+                    {% for s in available_sessions %}
+                    <option value="{{ s.id }}" {% if s.id == selected_session_id %}selected{% endif %}>{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+
+                <select name="term" onchange="this.form.submit()" class="filter-select">
+                    <option value="">All Terms</option>
+                    {% for t in available_terms %}
+                    <option value="{{ t.id }}" {% if t.id == selected_term_id %}selected{% endif %}>{{ t.get_name_display }}</option>
+                    {% endfor %}
+                </select>
+
+                {% if selected_session_id or selected_term_id %}
+                <a href="{% url 'results:student_report_card_list' %}" class="text-xs font-semibold text-gray-400 hover:text-red-500 transition-colors px-2">
+                    Clear
+                </a>
+                {% endif %}
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Results List -->
+    <div class="space-y-3">
+        {% for rc in published_cards %}
+        <div class="term-card">
+            <div class="flex items-center gap-4">
+                <div class="icon-box">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-800 text-sm">{{ rc.term.get_name_display }} Report Card</h3>
+                    <p class="text-xs text-gray-400 mt-0.5 font-semibold uppercase tracking-wide">
+                        {{ rc.session.name }} &middot; {{ rc.class_arm.full_name }}
+                    </p>
+                </div>
+            </div>
+
+            <a href="{% url 'results:view_report_card' rc.pk %}" class="view-btn">
+                View
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                </svg>
+            </a>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+            <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+            </div>
+            <h3 class="text-base font-bold text-gray-700 mb-1">
+                {% if selected_session_id or selected_term_id %}No results for selected filter{% else %}No Published Results Yet{% endif %}
+            </h3>
+            <p class="text-sm text-gray-400 max-w-xs mx-auto">
+                {% if selected_session_id or selected_term_id %}
+                    Try clearing the filter to see all your results.
+                {% else %}
+                    Your report cards will appear here once they have been officially released by the school administration.
+                {% endif %}
+            </p>
+            {% if selected_session_id or selected_term_id %}
+            <a href="{% url 'results:student_report_card_list' %}" class="inline-block mt-4 text-xs font-bold text-red-600 hover:underline">Clear filter</a>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

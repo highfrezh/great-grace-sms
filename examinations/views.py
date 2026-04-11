@@ -989,10 +989,23 @@ def theory_score_entry(request, pk):
     )
     theory_questions = exam.theory_questions.all()
 
+    # Check if results are already published for these students
+    # We check if at least one report card is published for this class/session/term
+    is_locked = ReportCard.objects.filter(
+        class_arm__in=exam.class_arms.all(),
+        session=exam.session,
+        term=exam.term,
+        is_published=True
+    ).exists()
+
+    if is_locked:
+        messages.warning(request, "Some or all results for this class are already published and locked. You will not be able to save new scores.")
+
     return render(request, 'examinations/theory_score_entry.html', {
         'exam': exam,
         'submissions': submissions,
         'theory_questions': theory_questions,
+        'is_locked': is_locked,
         'page_title': f'Theory Scores — {exam.title}'
     })
 
@@ -1478,6 +1491,17 @@ def theory_score_bulk(request, pk):
     submissions = ExamSubmission.objects.filter(exam=exam)
 
     for submission in submissions:
+        # Check if student's report card is already published
+        report_card = ReportCard.objects.filter(
+            student=submission.student,
+            session=exam.session,
+            term=exam.term
+        ).first()
+
+        if report_card and report_card.is_published:
+            # Skip this student if locked
+            continue
+
         total_theory = 0
         for tq in theory_questions:
             score_key = f'score_{submission.id}_{tq.id}'
@@ -1530,6 +1554,18 @@ def ca_score_entry(request, pk):
         student_id = request.POST.get('student_id')
         if student_id:
             student = get_object_or_404(Student, pk=student_id)
+            
+            # Check if student's report card is already published
+            report_card = ReportCard.objects.filter(
+                student=student,
+                session=exam.session,
+                term=exam.term
+            ).first()
+            
+            if report_card and report_card.is_published:
+                messages.error(request, f"Scores for {student.full_name} are locked because their report card is published.")
+                return redirect('examinations:ca_score_entry', pk=pk)
+
             ca1 = request.POST.get('ca1', 0) or 0
             ca2 = request.POST.get('ca2', 0) or 0
             theory = request.POST.get('theory', 0) or 0
