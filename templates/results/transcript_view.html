@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Academic Transcript — {{ student.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .transcript-container {
+        max-width: 1000px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+    .transcript-paper {
+        background: white;
+        padding: 60px;
+        border-radius: 4px;
+        box-shadow: 0 0 50px rgba(0,0,0,0.05);
+        border: 1px solid #eee;
+        position: relative;
+    }
+    .transcript-header {
+        text-align: center;
+        border-bottom: 4px solid #1a202c;
+        padding-bottom: 30px;
+        margin-bottom: 40px;
+    }
+    .term-block {
+        margin-bottom: 50px;
+        page-break-inside: avoid;
+    }
+    .term-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 20px;
+        background: #1a202c;
+        color: white;
+        font-weight: 900;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        border-radius: 8px 8px 0 0;
+    }
+    .transcript-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 2px solid #1a202c;
+    }
+    .transcript-table th {
+        background: #f8fafc;
+        padding: 10px;
+        font-size: 0.65rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        border: 1px solid #1a202c;
+        text-align: center;
+    }
+    .transcript-table td {
+        padding: 8px 10px;
+        border: 1px solid #1a202c;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-align: center;
+    }
+    .transcript-table td:first-child {
+        text-align: left;
+        padding-left: 15px;
+    }
+    .summary-row {
+        background: #f8fafc;
+        font-weight: 900 !important;
+    }
+    @media print {
+        body { background: white !important; }
+        .transcript-paper { box-shadow: none; border: none; padding: 0; }
+        nav, .nav-container, .btn-print { display: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="transcript-container">
+    <div class="flex justify-between items-center mb-8 btn-print">
+        <h1 class="text-2xl font-black text-gray-900">Transcript Preview</h1>
+        <button onclick="window.print()" class="px-6 py-2.5 bg-gray-900 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-black transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+            Print Transcript
+        </button>
+    </div>
+
+    <div class="transcript-paper">
+        <div class="transcript-header">
+            <h2 class="text-3xl font-black text-gray-900 uppercase">Official Academic Transcript</h2>
+            <p class="text-gray-500 font-bold mt-1">Great Grace International School · Lagos, Nigeria</p>
+            
+            <div class="grid grid-cols-2 gap-8 text-left mt-10 p-6 bg-gray-50 border border-gray-200 rounded-2xl">
+                <div>
+                    <span class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Student Name</span>
+                    <span class="text-lg font-black text-gray-900">{{ student.full_name }}</span>
+                </div>
+                <div class="text-right">
+                    <span class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Admission Number</span>
+                    <span class="text-lg font-black text-gray-900">{{ student.admission_number }}</span>
+                </div>
+            </div>
+        </div>
+
+        {% for rc in report_cards %}
+        <div class="term-block">
+            <div class="term-title">
+                <span>{{ rc.session.name }} — {{ rc.term.get_name_display }}</span>
+                <span>{{ rc.class_arm.full_name }}</span>
+            </div>
+            <table class="transcript-table">
+                <thead>
+                    <tr>
+                        <th style="width: 300px;">Subject</th>
+                        <th>CA 1 ({{ rc.term.exam_config.ca1_marks|default:"20"|floatformat:0 }})</th>
+                        <th>CA 2 ({{ rc.term.exam_config.ca2_marks|default:"20"|floatformat:0 }})</th>
+                        <th>Exam ({{ rc.term.exam_config.theory_marks|add:rc.term.exam_config.obj_marks|default:"60"|floatformat:0 }})</th>
+                        <th>Total (100)</th>
+                        <th>Grade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for res in rc.get_subject_results %}
+                    <tr>
+                        <td>{{ res.exam.subject.name }}</td>
+                        <td>{{ res.ca1_score|floatformat:0 }}</td>
+                        <td>{{ res.ca2_score|floatformat:0 }}</td>
+                        <td>{{ res.theory_score|add:res.obj_score|floatformat:0 }}</td>
+                        <td style="background: #f8fafc;">{{ res.total_score|floatformat:0 }}</td>
+                        <td>{{ res.grade }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="summary-row">
+                        <td colspan="4" style="text-align: right; padding-right: 20px;">Termly Total & Average</td>
+                        <td>{{ rc.total_score|floatformat:0 }}</td>
+                        <td>{{ rc.average|floatformat:1 }}%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        {% empty %}
+        <div class="py-20 text-center text-gray-400 font-bold">
+            No published results found for this student.
+        </div>
+        {% endfor %}
+
+        <div class="mt-20 pt-10 border-t-2 border-dashed border-gray-200 flex justify-between items-center text-xs font-black text-gray-400 uppercase tracking-widest">
+            <span>Date Issued: {% now "Y-m-d H:i" %}</span>
+            <span>Official School Transcript Copy</span>
+            <span>Registrar's Signature & Stamp</span>
+        </div>
+    </div>
+</div>
+{% endblock %}

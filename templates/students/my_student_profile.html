@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ student.full_name }} | Performance Profile{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <a href="{% url 'students:my_students_list' %}" class="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-gray-900 bg-white px-4 py-2.5 border border-gray-200 rounded-xl transition-colors shadow-sm self-start">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            Back to Roster
+        </a>
+        
+        <form action="{% url 'students:my_students_list' %}" method="GET" class="relative max-w-sm w-full">
+            <input type="text" name="q" placeholder="Search another student..." class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:outline-none focus:border-[#851A10] focus:ring-1 focus:ring-[#851A10] transition-colors shadow-sm">
+            <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </form>
+    </div>
+
+    <!-- Header Card -->
+    <div class="bg-white rounded-3xl border border-gray-100 p-8 shadow-md shadow-gray-100/50 mb-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
+        <!-- Abstract Decoration -->
+        <div class="absolute right-0 top-0 w-64 h-64 bg-gradient-to-br from-blue-50 to-purple-50 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/3"></div>
+
+        <div class="w-32 h-32 rounded-full bg-gray-50 flex-shrink-0 border-[6px] border-white shadow-lg overflow-hidden relative z-10">
+            {% if student.user and student.user.profile_picture %}
+                <img src="{{ student.user.profile_picture.url }}" class="w-full h-full object-cover">
+            {% else %}
+                <div class="w-full h-full flex items-center justify-center text-4xl font-black text-gray-300">
+                    {{ student.first_name|first }}
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="flex-grow text-center md:text-left relative z-10">
+            <div class="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-2">
+                <h1 class="text-4xl font-black text-gray-900">{{ student.full_name }}</h1>
+                <span class="px-4 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold rounded-full shadow-sm">
+                    {{ enrollment.class_arm.name }}
+                </span>
+            </div>
+            <p class="text-gray-500 font-bold mb-5 tracking-wide">{{ student.admission_number }} <span class="mx-2 text-gray-300">•</span> {{ student.get_gender_display }} <span class="mx-2 text-gray-300">•</span> Age {% if student.age %}{{ student.age }}{% else %}N/A{% endif %}</p>
+            
+            <div class="flex flex-wrap items-center justify-center md:justify-start gap-6 text-sm">
+                <div class="px-5 py-2.5 bg-gray-50 rounded-2xl border border-gray-100 shadow-inner">
+                    <span class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Academic Session</span>
+                    <span class="font-extrabold text-gray-900">{{ enrollment.session.name }}</span>
+                </div>
+                <div class="px-5 py-2.5 bg-gray-50 rounded-2xl border border-gray-100 shadow-inner">
+                    <span class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Active Term</span>
+                    <span class="font-extrabold text-gray-900">{{ current_term.get_name_display }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Main Performance Table -->
+        <div class="lg:col-span-2">
+            <h2 class="text-2xl font-black text-gray-900 mb-6 flex items-center gap-3">
+                <div class="w-2 h-8 bg-[#851A10] rounded-full shadow-sm"></div>
+                Term Performance
+            </h2>
+            
+            <div class="bg-white border border-gray-100 rounded-[2rem] overflow-hidden shadow-sm">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50/80 border-b border-gray-100">
+                            <tr>
+                                <th class="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest">Subject</th>
+                                <th class="px-4 py-5 text-xs font-black text-gray-500 uppercase tracking-widest text-center">CA Tot.</th>
+                                <th class="px-4 py-5 text-xs font-black text-gray-500 uppercase tracking-widest text-center">Exam Tot.</th>
+                                <th class="px-4 py-5 text-xs font-black text-gray-500 uppercase tracking-widest text-center">Final Score</th>
+                                <th class="px-4 py-5 text-xs font-black text-gray-500 uppercase tracking-widest text-center">Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50">
+                            {% for result in exam_results %}
+                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                <td class="px-6 py-5 font-bold text-gray-900">
+                                    {{ result.exam.subject.name }}
+                                </td>
+                                <td class="px-4 py-5 text-center font-bold text-gray-500">
+                                    {{ result.ca1_score|add:result.ca2_score|floatformat:0 }}
+                                </td>
+                                <td class="px-4 py-5 text-center font-bold text-gray-500">
+                                    {{ result.theory_score|add:result.obj_score|floatformat:0 }}
+                                </td>
+                                <td class="px-4 py-5 text-center">
+                                    <span class="inline-flex items-center justify-center px-4 py-1.5 bg-gray-100 rounded-xl font-black text-gray-900 text-sm border border-gray-200">
+                                        {{ result.total_score|floatformat:1 }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-5 text-center">
+                                    {% if result.grade %}
+                                    <span class="font-black text-sm px-3 py-1 rounded-lg
+                                        {% if result.grade == 'A' %}bg-green-50 text-green-700
+                                        {% elif result.grade == 'B' %}bg-blue-50 text-blue-700
+                                        {% elif result.grade == 'C' %}bg-yellow-50 text-yellow-700
+                                        {% else %}bg-red-50 text-red-700{% endif %}">
+                                        {{ result.grade }}
+                                    </span>
+                                    {% else %}
+                                        <span class="text-gray-300">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="px-6 py-16 text-center text-gray-400">
+                                    <div class="text-4xl mb-4 grayscale opacity-50">📑</div>
+                                    <p class="font-medium">No exam scores recorded for this term yet.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar (Report Card / Domains) -->
+        <div class="space-y-6">
+            <div>
+                <h2 class="text-2xl font-black text-gray-900 mb-6 flex items-center gap-3">
+                    <div class="w-2 h-8 bg-blue-500 rounded-full shadow-sm"></div>
+                    Behavior Insights
+                </h2>
+                
+                <div class="bg-white border border-gray-100 rounded-[2rem] p-8 shadow-sm">
+                    {% if report_card %}
+                        <div class="mb-8">
+                            <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Attendance Rate</h3>
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 shadow-inner">
+                                <span class="font-bold text-gray-500">Days Present</span>
+                                <div class="flex items-baseline gap-1">
+                                    <span class="font-black text-2xl text-gray-900">{{ report_card.times_present|default:"0" }}</span>
+                                    <span class="text-sm font-bold text-gray-400">/ {{ report_card.times_school_opened|default:"0" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Teacher's Remark</h3>
+                            <div class="p-5 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl border border-yellow-100/50 shadow-sm">
+                                {% if report_card.teacher_comment %}
+                                <p class="text-sm font-bold text-yellow-900 leading-relaxed italic">
+                                    "{{ report_card.teacher_comment }}"
+                                </p>
+                                {% else %}
+                                <p class="text-sm font-bold text-yellow-700/50 italic text-center">
+                                    No remark provided for this term.
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-10">
+                            <div class="text-4xl mb-4 grayscale opacity-50">📂</div>
+                            <p class="text-sm font-bold text-gray-400 max-w-[200px] mx-auto">The report card for the current term has not been initialized.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

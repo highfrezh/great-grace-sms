@@ -21,7 +21,7 @@ class ExamForm(forms.ModelForm):
         model = Exam
         fields = [
             'title', 'subject', 'teacher', 'session', 'term',
-            'duration_minutes', 'theory_attachment'
+            'duration_minutes', 'theory_attachment', 'randomize_questions'
         ]
         widgets = {
             'title': forms.TextInput(attrs={
@@ -38,6 +38,9 @@ class ExamForm(forms.ModelForm):
             'theory_attachment': forms.FileInput(attrs={
                 'class': 'form-input',
                 'accept': '.pdf,.docx,.doc'
+            }),
+            'randomize_questions': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 m-0 rounded border-gray-300'
             }),
         }
 
@@ -73,7 +76,7 @@ class TeacherExamForm(forms.ModelForm):
         model = Exam
         fields = [
             'title', 'subject', 'session', 'term',
-            'duration_minutes', 'theory_attachment'
+            'duration_minutes', 'theory_attachment', 'randomize_questions'
         ]
         widgets = {
             'title': forms.TextInput(attrs={
@@ -89,6 +92,9 @@ class TeacherExamForm(forms.ModelForm):
             'theory_attachment': forms.FileInput(attrs={
                 'class': 'form-control',
                 'accept': '.pdf,.docx,.doc'
+            }),
+            'randomize_questions': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 m-0 rounded border-gray-300'
             }),
         }
 
@@ -290,6 +296,16 @@ class CAScoreForm(forms.Form):
                 self.fields[f'ca2_{student.id}'] = forms.DecimalField(
                     max_digits=5, decimal_places=2,
                     min_value=0, max_value=exam.ca2_marks,
+                    required=False,
+                    widget=forms.NumberInput(attrs={
+                        'class': 'w-20 px-2 py-1 text-sm border border-gray-200 rounded-lg text-center',
+                        'step': '0.5',
+                        'placeholder': '0'
+                    })
+                )
+                self.fields[f'theory_{student.id}'] = forms.DecimalField(
+                    max_digits=5, decimal_places=2,
+                    min_value=0, max_value=exam.theory_marks,
                     required=False,
                     widget=forms.NumberInput(attrs={
                         'class': 'w-20 px-2 py-1 text-sm border border-gray-200 rounded-lg text-center',

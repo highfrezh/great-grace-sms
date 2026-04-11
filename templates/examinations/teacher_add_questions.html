@@ -459,61 +459,19 @@ function addQuestionForm() {
         <label class="form-label">
           Question Text <span class="required">*</span>
         </label>
-        <div class="flex gap-2 mb-2">
-          <button type="button"
-                  onclick="insertLatex(this, '$$  $$')"
-                  class="px-2 py-1 text-xs bg-blue-50 text-blue-700
-                        border border-blue-200 rounded-lg hover:bg-blue-100">
-            + Math Block
-          </button>
-          <button type="button"
-                  onclick="insertLatex(this, '$  $')"
-                  class="px-2 py-1 text-xs bg-blue-50 text-blue-700
-                        border border-blue-200 rounded-lg hover:bg-blue-100">
-            + Inline Math
-          </button>
-          <button type="button"
-                  onclick="insertYorubaChar(this, 'ẹ')"
-                  class="px-2 py-1 text-xs bg-green-50 text-green-700
-                        border border-green-200 rounded-lg hover:bg-green-100 font-serif">
-            ẹ
-          </button>
-          <button type="button"
-                  onclick="insertYorubaChar(this, 'ọ')"
-                  class="px-2 py-1 text-xs bg-green-50 text-green-700
-                        border border-green-200 rounded-lg hover:bg-green-100 font-serif">
-            ọ
-          </button>
-          <button type="button"
-                  onclick="insertYorubaChar(this, 'ṣ')"
-                  class="px-2 py-1 text-xs bg-green-50 text-green-700
-                        border border-green-200 rounded-lg hover:bg-green-100 font-serif">
-            ṣ
-          </button>
-          <button type="button"
-                  onclick="insertYorubaChar(this, 'à')"
-                  class="px-2 py-1 text-xs bg-green-50 text-green-700
-                        border border-green-200 rounded-lg hover:bg-green-100 font-serif">
-            à
-          </button>
-          <button type="button"
-                  onclick="insertYorubaChar(this, 'á')"
-                  class="px-2 py-1 text-xs bg-green-50 text-green-700
-                        border border-green-200 rounded-lg hover:bg-green-100 font-serif">
-            á
-          </button>
-          <button type="button"
-                  onclick="insertYorubaChar(this, 'è')"
-                  class="px-2 py-1 text-xs bg-green-50 text-green-700
-                        border border-green-200 rounded-lg hover:bg-green-100 font-serif">
-            è
-          </button>
-          <button type="button"
-                  onclick="insertYorubaChar(this, 'é')"
-                  class="px-2 py-1 text-xs bg-green-50 text-green-700
-                        border border-green-200 rounded-lg hover:bg-green-100 font-serif">
-            é
-          </button>
+        <div class="flex flex-wrap gap-2 mb-2">
+          <button type="button" onclick="insertLatex(this, '$$  $$')" class="px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100">+ Math Block</button>
+          <button type="button" onclick="insertLatex(this, '$  $')" class="px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100">+ Inline Math</button>
+          <button type="button" onclick="insertLatex(this, '\\frac{ }{ }')" class="px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100">÷ Fraction</button>
+          <button type="button" onclick="insertLatex(this, '\\sqrt{ }')" class="px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100">√ Sqrt</button>
+          <div style="width: 1px; background: #E5E7EB; margin: 0 4px;"></div>
+          {% for char in "ẹọṣ" %}
+          <button type="button" onclick="insertYorubaChar(this, '{{ char }}')" class="px-2 py-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 font-serif">{{ char }}</button>
+          {% endfor %}
+          <div style="width: 1px; background: #E5E7EB; margin: 0 4px; border-left: 1px dashed #eee;"></div>
+          {% for char in "áàéèẹ́ẹ̀íìóòọ́ọ̀úùńǹ" %}
+          <button type="button" onclick="insertYorubaChar(this, '{{ char }}')" class="px-2 py-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 font-serif">{{ char }}</button>
+          {% endfor %}
         </div>
         <textarea name="question_${questionIndex}_text"
                   class="form-control question-textarea"
@@ -524,10 +482,8 @@ function addQuestionForm() {
         <div class="char-count">0 / 500 characters</div>
 
         <!-- Live Preview -->
-        <div class="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-lg
-                    min-h-[50px] text-sm text-gray-700 preview-box"
-            style="font-family: 'Noto Sans', sans-serif; display:none;">
-          <p class="text-xs text-gray-400 mb-1">Preview:</p>
+        <div class="mt-1 text-sm text-gray-600 preview-box"
+            style="font-family: 'Noto Sans', sans-serif; display:none; white-space: pre-wrap;">
           <div class="preview-content"></div>
         </div>
       </div>
@@ -552,19 +508,59 @@ function addQuestionForm() {
         <div class="options-grid">
           <div>
             <label class="form-label">Option A <span class="required">*</span></label>
-            <input type="text" name="question_${questionIndex}_option_a" class="form-control option-input" placeholder="Enter option A" maxlength="500" required>
+            <div class="flex flex-wrap gap-1 mb-1">
+              <button type="button" onclick="insertLatex(this, '$  $')" class="px-1.5 py-0.5 text-[10px] bg-blue-50 text-blue-700 border border-blue-100 rounded hover:bg-blue-100">$ Math</button>
+              <div style="width: 1px; background: #E5E7EB; margin: 0 2px;"></div>
+              {% for char in "ẹọṣáàéè" %}
+              <button type="button" onclick="insertYorubaChar(this, '{{ char }}')" class="px-1.5 py-0.5 text-[10px] bg-green-50 text-green-700 border border-green-100 rounded hover:bg-green-100 font-serif">{{ char }}</button>
+              {% endfor %}
+            </div>
+            <input type="text" name="question_${questionIndex}_option_a" class="form-control option-input" placeholder="Enter option A" maxlength="500" required oninput="updatePreview(this)">
+            <div class="mt-1 text-sm text-gray-600 preview-box" style="font-family: 'Noto Sans', sans-serif; display:none; white-space: pre-wrap;">
+              <div class="preview-content"></div>
+            </div>
           </div>
           <div>
             <label class="form-label">Option B <span class="required">*</span></label>
-            <input type="text" name="question_${questionIndex}_option_b" class="form-control option-input" placeholder="Enter option B" maxlength="500" required>
+            <div class="flex flex-wrap gap-1 mb-1">
+              <button type="button" onclick="insertLatex(this, '$  $')" class="px-1.5 py-0.5 text-[10px] bg-blue-50 text-blue-700 border border-blue-100 rounded hover:bg-blue-100">$ Math</button>
+              <div style="width: 1px; background: #E5E7EB; margin: 0 2px;"></div>
+              {% for char in "ẹọṣáàéè" %}
+              <button type="button" onclick="insertYorubaChar(this, '{{ char }}')" class="px-1.5 py-0.5 text-[10px] bg-green-50 text-green-700 border border-green-100 rounded hover:bg-green-100 font-serif">{{ char }}</button>
+              {% endfor %}
+            </div>
+            <input type="text" name="question_${questionIndex}_option_b" class="form-control option-input" placeholder="Enter option B" maxlength="500" required oninput="updatePreview(this)">
+            <div class="mt-1 text-sm text-gray-600 preview-box" style="font-family: 'Noto Sans', sans-serif; display:none; white-space: pre-wrap;">
+              <div class="preview-content"></div>
+            </div>
           </div>
           <div>
             <label class="form-label">Option C <span class="required">*</span></label>
-            <input type="text" name="question_${questionIndex}_option_c" class="form-control option-input" placeholder="Enter option C" maxlength="500" required>
+            <div class="flex flex-wrap gap-1 mb-1">
+              <button type="button" onclick="insertLatex(this, '$  $')" class="px-1.5 py-0.5 text-[10px] bg-blue-50 text-blue-700 border border-blue-100 rounded hover:bg-blue-100">$ Math</button>
+              <div style="width: 1px; background: #E5E7EB; margin: 0 2px;"></div>
+              {% for char in "ẹọṣáàéè" %}
+              <button type="button" onclick="insertYorubaChar(this, '{{ char }}')" class="px-1.5 py-0.5 text-[10px] bg-green-50 text-green-700 border border-green-100 rounded hover:bg-green-100 font-serif">{{ char }}</button>
+              {% endfor %}
+            </div>
+            <input type="text" name="question_${questionIndex}_option_c" class="form-control option-input" placeholder="Enter option C" maxlength="500" required oninput="updatePreview(this)">
+            <div class="mt-1 text-sm text-gray-600 preview-box" style="font-family: 'Noto Sans', sans-serif; display:none; white-space: pre-wrap;">
+              <div class="preview-content"></div>
+            </div>
           </div>
           <div>
             <label class="form-label">Option D <span class="required">*</span></label>
-            <input type="text" name="question_${questionIndex}_option_d" class="form-control option-input" placeholder="Enter option D" maxlength="500" required>
+            <div class="flex flex-wrap gap-1 mb-1">
+              <button type="button" onclick="insertLatex(this, '$  $')" class="px-1.5 py-0.5 text-[10px] bg-blue-50 text-blue-700 border border-blue-100 rounded hover:bg-blue-100">$ Math</button>
+              <div style="width: 1px; background: #E5E7EB; margin: 0 2px;"></div>
+              {% for char in "ẹọṣáàéè" %}
+              <button type="button" onclick="insertYorubaChar(this, '{{ char }}')" class="px-1.5 py-0.5 text-[10px] bg-green-50 text-green-700 border border-green-100 rounded hover:bg-green-100 font-serif">{{ char }}</button>
+              {% endfor %}
+            </div>
+            <input type="text" name="question_${questionIndex}_option_d" class="form-control option-input" placeholder="Enter option D" maxlength="500" required oninput="updatePreview(this)">
+            <div class="mt-1 text-sm text-gray-600 preview-box" style="font-family: 'Noto Sans', sans-serif; display:none; white-space: pre-wrap;">
+              <div class="preview-content"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -685,17 +681,24 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-function updatePreview(textarea) {
-  const previewBox = textarea.nextElementSibling.nextElementSibling;
+function updatePreview(el) {
+  const parent = el.parentElement;
+  const previewBox = parent.querySelector('.preview-box');
+  if (!previewBox) return;
+  
   const previewContent = previewBox.querySelector('.preview-content');
-  const text = textarea.value.trim();
+  const text = el.value.trim();
 
   if (text) {
     previewBox.style.display = 'block';
+    
+    // Setting innerHTML so MathJax parses TeX and entities properly
     previewContent.innerHTML = text;
+    
     // Re-render MathJax
-    if (window.MathJax) {
-      MathJax.typesetPromise([previewContent]).catch(err => console.log(err));
+    if (window.MathJax && typeof MathJax.typesetPromise === 'function') {
+      MathJax.typesetClear([previewContent]);
+      MathJax.typesetPromise([previewContent]).catch(err => console.log('MathJax Error:', err));
     }
   } else {
     previewBox.style.display = 'none';
@@ -703,11 +706,8 @@ function updatePreview(textarea) {
 }
 
 function insertLatex(btn, template) {
-  // Find the nearest textarea in the same question card
-  const card = btn.closest('.question-card') ||
-                btn.closest('.form-group').parentElement;
-  const textarea = card.querySelector('.question-textarea') ||
-                   card.querySelector('textarea');
+  const parent = btn.parentElement.parentElement;
+  const textarea = parent.querySelector('textarea, input[type="text"]');
   if (!textarea) return;
 
   const start = textarea.selectionStart;
@@ -715,11 +715,9 @@ function insertLatex(btn, template) {
   const before = textarea.value.substring(0, start);
   const after = textarea.value.substring(end);
 
-  // Place cursor inside the template
   const inner = template.replace(/\s+/, ' ');
   textarea.value = before + inner + after;
 
-  // Position cursor inside the math brackets
   const cursorPos = start + Math.floor(template.length / 2);
   textarea.setSelectionRange(cursorPos, cursorPos);
   textarea.focus();
@@ -727,10 +725,8 @@ function insertLatex(btn, template) {
 }
 
 function insertYorubaChar(btn, char) {
-  const card = btn.closest('.question-card') ||
-               btn.closest('.form-group').parentElement;
-  const textarea = card.querySelector('.question-textarea') ||
-                   card.querySelector('textarea[name*="_text"]');
+  const parent = btn.parentElement.parentElement;
+  const textarea = parent.querySelector('textarea, input[type="text"]');
   if (!textarea) return;
 
   const start = textarea.selectionStart;

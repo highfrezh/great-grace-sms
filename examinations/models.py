@@ -47,6 +47,11 @@ class Exam(models.Model):
         help_text="Upload theory/written questions file for printing (PDF, DOCX, DOC only)"
     )
 
+    randomize_questions = models.BooleanField(
+        default=True,
+        help_text="Shuffle question order for each student taking the exam"
+    )
+
     # ── Publication & Approval Status ────────────────────────────
     class ExamStatus(models.TextChoices):
         DRAFT = 'DRAFT', 'Draft (Editing)'
@@ -156,6 +161,27 @@ class Exam(models.Model):
         if count > 0:
             return float(self.obj_marks) / count
         return 0.0
+
+    @property
+    def ca1_marks(self):
+        """Get CA1 marks from configuration"""
+        from .models import ExamConfiguration
+        config = ExamConfiguration.objects.filter(session=self.session, term=self.term).first()
+        return (config.ca1_marks_percentage / 100) * config.total_marks if config else 20.0
+
+    @property
+    def ca2_marks(self):
+        """Get CA2 marks from configuration"""
+        from .models import ExamConfiguration
+        config = ExamConfiguration.objects.filter(session=self.session, term=self.term).first()
+        return (config.ca2_marks_percentage / 100) * config.total_marks if config else 20.0
+
+    @property
+    def theory_marks(self):
+        """Get total Theory marks from configuration"""
+        from .models import ExamConfiguration
+        config = ExamConfiguration.objects.filter(session=self.session, term=self.term).first()
+        return (config.theory_marks_percentage / 100) * config.total_marks if config else 30.0
 
     # ── Workflow Methods ──────────────────────────────
     def can_edit(self):

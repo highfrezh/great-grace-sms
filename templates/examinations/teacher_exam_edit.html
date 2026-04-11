@@ -403,27 +403,6 @@
         {% endif %}
       </div>
 
-      <!-- Publication Status -->
-      <div class="section-header">
-        <div class="section-title">Publication Status</div>
-      </div>
-      <div class="section-content">
-        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-          <div>
-            <p class="font-medium text-gray-800">Is Published ?</p>
-            <p class="text-xs text-gray-500 mt-1">
-              {% if exam.is_published %}
-                Students can view and take this exam
-              {% else %}
-                Only teachers can see this exam
-              {% endif %}
-            </p>
-          </div>
-          <label class="switch">
-            {{ form.is_published }}
-            <span class="slider"></span>
-          </label>
-        </div>
         
         {% if exam.is_published %}
           <div class="warning-box mt-4">
@@ -438,6 +417,24 @@
             </div>
           </div>
         {% endif %}
+      </div>
+
+      <!-- Advanced Options (Collapsible) -->
+      <div class="section-header" id="advancedToggle" style="cursor: pointer;">
+        <div class="section-title flex justify-between items-center w-full">
+          <span>Advanced Options</span>
+          <svg id="advancedIcon" class="w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="transform: rotate(180deg);">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </div>
+      </div>
+      <div class="section-content" id="advancedContent" style="display: block;">
+        <label for="id_randomize_questions" class="flex items-center gap-3 cursor-pointer select-none group">
+          <div class="flex items-center justify-center">
+            {{ form.randomize_questions }}
+          </div>
+          <span class="text-sm font-medium text-gray-700 group-hover:text-[#851A10] transition-colors">Shuffle questions for each student</span>
+        </label>
       </div>
 
       <!-- Submit Buttons -->
@@ -680,6 +677,23 @@
       });
     }
     
+    // Advanced Options Toggle
+    const advancedToggle = document.getElementById('advancedToggle');
+    const advancedContent = document.getElementById('advancedContent');
+    const advancedIcon = document.getElementById('advancedIcon');
+    
+    if (advancedToggle) {
+      advancedToggle.addEventListener('click', function() {
+        if (advancedContent.style.display === 'none') {
+          advancedContent.style.display = 'block';
+          advancedIcon.style.transform = 'rotate(180deg)';
+        } else {
+          advancedContent.style.display = 'none';
+          advancedIcon.style.transform = 'rotate(0deg)';
+        }
+      });
+    }
+
     console.log('✅ Form initialization complete');
   });
 </script>

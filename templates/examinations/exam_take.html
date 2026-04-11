@@ -589,7 +589,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/exam-timer.js' %}"></script>
+<script src="{% static 'js/exam-timer.js' %}?v=1.7"></script>
 <script>
 class ExamNavigator {
     constructor(totalQuestions) {
@@ -638,6 +638,7 @@ class ExamNavigator {
     }
 
     showQuestion(index) {
+        index = parseInt(index);
         if (index < 1 || index > this.total) return;
         
         document.querySelectorAll('.question-item').forEach(q => q.classList.remove('active'));

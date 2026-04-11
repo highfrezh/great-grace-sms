@@ -58,8 +58,19 @@ class ExamTimer {
     // ────────────────────────────────────────────────────────
 
     startTimer() {
-        this.timerIntervalId = setInterval(() => {
+        const tick = () => {
+            if (this._isSubmitting) return;
+
             this.timeRemaining--;
+            
+            // Auto-submit on timeout
+            if (this.timeRemaining <= 0) {
+                this.timeRemaining = 0;
+                this.updateUI();
+                this.handleAutoSubmit('TIME_UP');
+                return; // Stop the loop
+            }
+            
             this.updateUI();
 
             // Check warning thresholds
@@ -71,42 +82,87 @@ class ExamTimer {
                 this.showWarning('1 minute remaining - Better hurry!');
             }
 
-            // Auto-submit on timeout
-            if (this.timeRemaining === 0) {
-                this.handleAutoSubmit('TIME_UP');
+            // Update hidden input
+            if (this.timeRemainingInput) {
+                this.timeRemainingInput.value = Math.max(0, this.timeRemaining);
             }
 
-            // Update hidden input
-            this.timeRemainingInput.value = Math.max(0, this.timeRemaining);
-        }, 1000);
+            // Recursive call for more reliability than setInterval
+            this.timerIntervalId = setTimeout(tick, 1000);
+        };
+        
+        tick(); // Start immediately
+    }
+
+    syncWithServer() {
+        if (this._isSubmitting) return;
+
+        fetch(`/examinations/${this.examId}/timer-status/`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.is_complete) {
+                    this.handleAlreadySubmitted();
+                    return;
+                }
+                
+                // Sync if server time is less (connection recovery or drift)
+                if (data.time_remaining !== undefined && data.time_remaining < this.timeRemaining) {
+                    console.log('⟳ Syncing timer with server:', this.formatTime(data.time_remaining));
+                    this.timeRemaining = data.time_remaining;
+                    this.updateUI();
+                }
+
+                if (this.timeRemaining <= 0) {
+                    this.handleAutoSubmit('TIME_UP');
+                }
+            })
+            .catch(error => console.error('Sync failed:', error));
     }
 
     updateUI() {
         // Format and display timer
         const formatted = this.formatTime(this.timeRemaining);
-        this.timerDisplay.textContent = formatted;
+        
+        if (this.timerDisplay) {
+            this.timerDisplay.textContent = formatted;
+        }
 
         // Update document title with time
         document.title = `[${formatted}] Exam`;
 
         // Apply styling based on time remaining
-        this.timerDisplay.classList.remove('warning', 'danger');
-        
-        if (this.timeRemaining <= this.thresholds.danger) {
-            this.timerDisplay.classList.add('danger');
-        } else if (this.timeRemaining <= this.thresholds.warning) {
-            this.timerDisplay.classList.add('warning');
+        if (this.timerDisplay) {
+            this.timerDisplay.classList.remove('warning', 'danger');
+            
+            if (this.timeRemaining <= this.thresholds.danger) {
+                this.timerDisplay.classList.add('danger');
+            } else if (this.timeRemaining <= this.thresholds.warning) {
+                this.timerDisplay.classList.add('warning');
+            }
         }
 
         // Update progress bar
-        const progressPercent = ((this.duration - this.timeRemaining) / this.duration) * 100;
-        this.progressFill.style.width = progressPercent + '%';
+        if (this.progressFill) {
+            const progressPercent = ((this.duration - this.timeRemaining) / this.duration) * 100;
+            this.progressFill.style.width = progressPercent + '%';
+        }
 
         // Update answer count
-        const answered = document.querySelectorAll('.question-radio:checked').length;
-        const total = document.querySelectorAll('.question-radio').length;
-        document.getElementById('answeredCount').textContent = answered;
-        document.getElementById('timeRemainingText').textContent = formatted;
+        const answeredCountEl = document.getElementById('answeredCount');
+        if (answeredCountEl) {
+            const answered = document.querySelectorAll('.question-radio:checked').length;
+            answeredCountEl.textContent = answered;
+        }
+
+        const timeRemainingTextEl = document.getElementById('timeRemainingText');
+        if (timeRemainingTextEl) {
+            timeRemainingTextEl.textContent = formatted;
+        }
+    }
+
+    checkExamStatus() {
+        // Alias for compatibility if needed elsewhere, but redirects to syncWithServer
+        this.syncWithServer();
     }
 
     formatTime(seconds) {
@@ -135,6 +191,15 @@ class ExamTimer {
     }
 
     autoSave() {
+        if (this._isSubmitting) return;
+
+        // Add timeout to prevent blocking auto-submit
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            console.warn('⚠ Auto-save request timed out and was aborted.');
+            controller.abort();
+        }, 5000);
+
         const formData = this.collectAnswers();
         formData.append('time_remaining', this.timeRemaining);
         formData.append('tab_switches', this.tabSwitches);
@@ -147,6 +212,7 @@ class ExamTimer {
         fetch(`/examinations/${this.examId}/autosave/`, {
             method: 'POST',
             body: formData,
+            signal: controller.signal,
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
                 'X-CSRFToken': this.csrfToken
@@ -165,8 +231,15 @@ class ExamTimer {
             }
         })
         .catch(error => {
-            console.error('Auto-save failed:', error);
+            if (error.name === 'AbortError') {
+                console.error('Auto-save aborted due to timeout');
+            } else {
+                console.error('Auto-save failed:', error);
+            }
             this.showSaveError();
+        })
+        .finally(() => {
+            clearTimeout(timeoutId);
         });
     }
 
@@ -181,28 +254,28 @@ class ExamTimer {
     }
 
     showSavingIndicator() {
-        this.autosaveIndicator.style.display = 'flex';
-        this.autosaveDot.classList.add('saving');
-        this.autosaveText.textContent = 'Saving...';
+        if (this.autosaveIndicator) this.autosaveIndicator.style.display = 'flex';
+        if (this.autosaveDot) this.autosaveDot.classList.add('saving');
+        if (this.autosaveText) this.autosaveText.textContent = 'Saving...';
     }
 
     showSavedIndicator() {
-        this.autosaveDot.classList.remove('saving');
-        this.autosaveText.textContent = 'Saved';
+        if (this.autosaveDot) this.autosaveDot.classList.remove('saving');
+        if (this.autosaveText) this.autosaveText.textContent = 'Saved';
         
         // Hide after 3 seconds
         setTimeout(() => {
-            this.autosaveIndicator.style.display = 'none';
+            if (this.autosaveIndicator) this.autosaveIndicator.style.display = 'none';
         }, 3000);
     }
 
     showSaveError() {
-        this.autosaveDot.classList.remove('saving');
-        this.autosaveText.textContent = '⚠ Save failed';
+        if (this.autosaveDot) this.autosaveDot.classList.remove('saving');
+        if (this.autosaveText) this.autosaveText.textContent = '⚠ Save failed';
         
         // Show error longer
         setTimeout(() => {
-            this.autosaveIndicator.style.display = 'none';
+            if (this.autosaveIndicator) this.autosaveIndicator.style.display = 'none';
         }, 5000);
     }
 
@@ -342,22 +415,30 @@ class ExamTimer {
     }
 
     showViolationModal(title, message, countInfo) {
-        document.getElementById('violationTitle').textContent = title;
-        document.getElementById('violationMessage').textContent = message;
-        document.getElementById('violationCount').textContent = countInfo;
+        const titleEl = document.getElementById('violationTitle');
+        const messageEl = document.getElementById('violationMessage');
+        const countEl = document.getElementById('violationCount');
 
-        this.violationModal.classList.add('show');
+        if (titleEl) titleEl.textContent = title;
+        if (messageEl) messageEl.textContent = message;
+        if (countEl) countEl.textContent = countInfo;
 
-        // Auto-close after 5 seconds or on continue button click
-        const continueBtn = document.getElementById('continueBtn');
-        const autoClose = setTimeout(() => {
-            this.violationModal.classList.remove('show');
-        }, 5000);
+        if (this.violationModal) {
+            this.violationModal.classList.add('show');
 
-        continueBtn.onclick = () => {
-            clearTimeout(autoClose);
-            this.violationModal.classList.remove('show');
-        };
+            // Auto-close after 5 seconds or on continue button click
+            const continueBtn = document.getElementById('continueBtn');
+            const autoClose = setTimeout(() => {
+                this.violationModal.classList.remove('show');
+            }, 5000);
+
+            if (continueBtn) {
+                continueBtn.onclick = () => {
+                    clearTimeout(autoClose);
+                    this.violationModal.classList.remove('show');
+                };
+            }
+        }
     }
 
     showWarning(message) {
@@ -389,58 +470,81 @@ class ExamTimer {
     // AUTO-SUBMIT
     // ────────────────────────────────────────────────────────
 
-    handleAutoSubmit(reason) {
-        clearInterval(this.timerIntervalId);
+    async handleAutoSubmit(reason) {
+        if (this._isSubmitting) return;
+        this._isSubmitting = true;
+
+        console.log(`⚠ Initiating auto-submit. Reason: ${reason}`);
+
+        // 1. Immediate Cleanup
+        clearTimeout(this.timerIntervalId);
         clearInterval(this.autoSaveIntervalId);
         clearInterval(this.statusCheckIntervalId);
 
-        document.getElementById('autoSubmitReason').value = reason;
-
-        // Collect final answers
-        const formData = new FormData(this.examForm);
-        formData.append('time_remaining', 0);
-        formData.append('tab_switches', this.tabSwitches);
-        formData.append('fullscreen_exits', this.fullscreenExits);
-        formData.append('auto_submit_reason', reason);
-        formData.append('csrfmiddlewaretoken', this.csrfToken);
-
-        // Show auto-submit message
+        // 2. Visual Feedback
         const message = reason === 'TIME_UP' 
-            ? 'Time is up! Your exam is being auto-submitted...'
-            : 'Your exam has been auto-submitted due to malpractice violation.';
+            ? 'Time is up! Submitting your exam...'
+            : 'Auto-submitting due to violation...';
+        
+        if (typeof this.showWarning === 'function') {
+            this.showWarning(message);
+        }
 
-        this.showWarning(message);
+        // 3. Robust AJAX Auto-Submit (Primary Method)
+        try {
+            const formData = this.collectAnswers();
+            formData.append('tab_switches', this.tabSwitches);
+            formData.append('fullscreen_exits', this.fullscreenExits);
+            formData.append('auto_submit_reason', reason);
+            formData.append('time_remaining', 0);
+            formData.append('csrfmiddlewaretoken', this.csrfToken);
 
-        // Submit exam
-        fetch(`/examinations/${this.examId}/auto-submit/`, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': this.csrfToken
-            }
-        })
-        .then(async response => {
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            return response.json();
-        })
-        .then(data => {
-            if (data.status === 'auto_submitted') {
-                // Redirect to results
-                setTimeout(() => {
+            const response = await fetch(`/examinations/${this.examId}/auto-submit/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': this.csrfToken
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.redirect_url) {
+                    console.log('🚀 AJAX auto-submit successful. Redirecting...');
                     window.location.href = data.redirect_url;
-                }, 2000);
+                    return;
+                }
             }
-        })
-        .catch(error => {
-            console.error('Auto-submit failed:', error);
-            // Fallback: try form submission
+        } catch (error) {
+            console.error('AJAX auto-submit failed, falling back to form:', error);
+        }
+
+        // 4. Fallback: Native Form Submission
+        // Populate hidden fields just in case
+        const reasonInput = document.getElementById('autoSubmitReason');
+        if (reasonInput) reasonInput.value = reason;
+        const timeRemainingInput = document.getElementById('timeRemaining');
+        if (timeRemainingInput) timeRemainingInput.value = 0;
+
+        console.log('🚀 Executing fallback native form submission');
+        const submitBtn = document.getElementById('hiddenSubmitBtn');
+        if (submitBtn) {
+            submitBtn.click();
+        } else {
             this.examForm.submit();
-        });
+        }
+
+        // 5. Final Fallback: Force Navigation
+        setTimeout(() => {
+            const fallbackUrl = `/examinations/${this.examId}/result/`;
+            console.log(`Final Fallback: Redirection to ${fallbackUrl}`);
+            window.location.href = fallbackUrl;
+        }, 3000);
     }
 
     handleAlreadySubmitted() {
-        clearInterval(this.timerIntervalId);
+        clearTimeout(this.timerIntervalId);
         clearInterval(this.autoSaveIntervalId);
         clearInterval(this.statusCheckIntervalId);
 
@@ -455,28 +559,13 @@ class ExamTimer {
     // ────────────────────────────────────────────────────────
 
     setupStatusCheck() {
-        // Check server status every 30 seconds for connection recovery
+        // Check server status every 60 seconds for synchronization
         this.statusCheckIntervalId = setInterval(() => {
-            this.checkExamStatus();
-        }, 30000);
+            this.syncWithServer();
+        }, 60000);
     }
 
-    checkExamStatus() {
-        fetch(`/examinations/${this.examId}/timer-status/`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.is_complete) {
-                    this.handleAlreadySubmitted();
-                } else if (data.time_remaining !== undefined) {
-                    // Update time from server if it's less (connection recovery)
-                    if (data.time_remaining < this.timeRemaining) {
-                        this.timeRemaining = data.time_remaining;
-                    }
-                    console.log(`✓ Server status check: ${this.formatTime(this.timeRemaining)}`);
-                }
-            })
-            .catch(error => console.error('Status check failed:', error));
-    }
+    // syncWithServer is now implemented above near startTimer
 
     // ────────────────────────────────────────────────────────
     // FORM SUBMIT
@@ -485,9 +574,9 @@ class ExamTimer {
     setupFormSubmit() {
         this.examForm.addEventListener('submit', (e) => {
             // Don't prevent default - let it submit
-            clearInterval(this.timerInterval);
-            clearInterval(this.autoSaveInterval);
-            clearInterval(this.statusCheckInterval);
+            clearTimeout(this.timerIntervalId);
+            clearInterval(this.autoSaveIntervalId);
+            clearInterval(this.statusCheckIntervalId);
 
             // Update state before submit
             this.tabSwitchesInput.value = this.tabSwitches;

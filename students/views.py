@@ -46,8 +46,9 @@ def student_list(request):
             Q(last_name__icontains=search_query) |
             Q(other_names__icontains=search_query) |
             Q(admission_number__icontains=search_query) |
-            Q(email__icontains=search_query)
-        )
+            Q(user__email__icontains=search_query) |
+            Q(guardians__email__icontains=search_query)
+        ).distinct()
 
     if class_arm_filter:
         active_students = active_students.filter(
@@ -241,11 +242,11 @@ def create_student_user(student):
     
     user = User.objects.create_user(
         username=username,
-        email=student.email or f'{username}@greatgrace.edu',
+        email=f'{username}@greatgrace.edu',
         first_name=student.first_name,
         last_name=student.last_name,
         password=password,
-        phone_number=student.phone or '00000000000',
+        phone_number='00000000000',
         is_first_login=True
     )
     
@@ -332,8 +333,6 @@ def student_bulk_import(request):
                             admission_number=admission_number,
                             date_of_birth=pd.to_datetime(row.get('date_of_birth')).date() if pd.notna(row.get('date_of_birth')) else None,
                             gender=str(row.get('gender', '')).upper()[:1] if pd.notna(row.get('gender')) else 'M',
-                            phone=str(row.get('phone', '')).strip() if pd.notna(row.get('phone')) else '',
-                            email=str(row.get('email', '')).strip().lower() if pd.notna(row.get('email')) else '',
                             address=str(row.get('address', '')).strip() if pd.notna(row.get('address')) else '',
                         )
                         
@@ -726,4 +725,79 @@ def student_dashboard(request):
     }
     
     return render(request, 'students/student_dashboard.html', context)
+
+
+@login_required
+@class_teacher_required
+def my_students_list(request):
+    current_session = AcademicSession.get_current()
+    if not current_session:
+        messages.warning(request, "No active academic session found.")
+        return redirect('accounts:dashboard')
+        
+    class_arms = ClassArm.objects.filter(class_teacher=request.user, session=current_session)
+    
+    # We want ALL students who have ever been enrolled in this class during this session.
+    enrollments = StudentEnrollment.objects.filter(
+        class_arm__in=class_arms,
+        session=current_session
+    ).select_related('student', 'class_arm').order_by('class_arm__name', 'student__last_name')
+    
+    query = request.GET.get('q', '').strip()
+    if query:
+        from django.db.models import Q
+        enrollments = enrollments.filter(
+            Q(student__first_name__icontains=query) |
+            Q(student__last_name__icontains=query) |
+            Q(student__other_names__icontains=query) |
+            Q(student__admission_number__icontains=query)
+        )
+    
+    context = {
+        'enrollments': enrollments,
+        'class_arms': class_arms,
+        'current_session': current_session,
+        'query': query,
+        'page_title': 'My Students'
+    }
+    return render(request, 'students/my_students_list.html', context)
+
+
+@login_required
+@class_teacher_required
+def my_student_profile(request, student_id):
+    student = get_object_or_404(Student, id=student_id)
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
+    
+    # Verify the student belongs to one of the teacher's class arms for the current session
+    class_arms = ClassArm.objects.filter(class_teacher=request.user, session=current_session)
+    enrollment = StudentEnrollment.objects.filter(
+        student=student, session=current_session, class_arm__in=class_arms
+    ).first()
+    
+    if not enrollment:
+        messages.error(request, "You are not the class teacher for this student in the current session.")
+        return redirect('students:my_students_list')
+        
+    from results.models import ReportCard
+    from examinations.models import ExamResult
+    
+    report_card = ReportCard.objects.filter(
+        student=student, session=current_session, term=current_term
+    ).first()
+    
+    exam_results = ExamResult.objects.filter(
+        student=student, exam__session=current_session, exam__term=current_term
+    ).select_related('exam__subject')
+    
+    context = {
+        'student': student,
+        'enrollment': enrollment,
+        'report_card': report_card,
+        'exam_results': exam_results,
+        'current_term': current_term,
+        'page_title': f"{student.full_name} | Profile"
+    }
+    return render(request, 'students/my_student_profile.html', context)
 

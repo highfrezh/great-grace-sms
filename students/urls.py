@@ -19,4 +19,8 @@ urlpatterns = [
     # Attendance
     path('attendance/', views.attendance_mark, name='attendance_mark_default'),
     path('attendance/<int:pk>/', views.attendance_mark, name='attendance_mark'),
+
+    # Class Teacher Portal
+    path('my-students/', views.my_students_list, name='my_students_list'),
+    path('my-students/<int:student_id>/', views.my_student_profile, name='my_student_profile'),
 ]

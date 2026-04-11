@@ -1,0 +1,411 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Update Results — {{ student.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .update-container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 1.5rem;
+        padding: 2rem;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        border: 1px solid #F3F4F6;
+    }
+    
+    .section-header {
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #374151;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+    }
+    
+    .section-title-icon {
+        width: 2rem;
+        height: 2rem;
+        background: #FEF2F2;
+        color: #851A10;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+    
+    .rating-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 0.75rem;
+    }
+    
+    .rating-item {
+        background: #F9FAFB;
+        padding: 0.75rem 1rem;
+        border-radius: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid #F3F4F6;
+        transition: all 0.2s ease;
+    }
+    
+    .rating-item:hover {
+        border-color: #FECACA;
+        background: #FFF5F3;
+    }
+    
+    .attribute-name {
+        font-weight: 600;
+        color: #374151;
+        font-size: 0.85rem;
+    }
+    
+    .rating-select {
+        background: white;
+        border: 1.5px solid #E5E7EB;
+        border-radius: 0.5rem;
+        padding: 0.375rem 0.75rem;
+        font-weight: 600;
+        color: #851A10;
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: all 0.2s ease;
+    }
+    
+    .rating-select:hover {
+        border-color: #851A10;
+    }
+    
+    .rating-select:focus {
+        border-color: #851A10;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(133, 26, 16, 0.1);
+    }
+    
+    .form-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1.5px solid #E5E7EB;
+        border-radius: 0.75rem;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+        outline: none;
+    }
+    
+    .form-input:focus {
+        border-color: #851A10;
+        box-shadow: 0 0 0 3px rgba(133, 26, 16, 0.1);
+    }
+    
+    .form-label {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #6B7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+    
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #851A10 0%, #A52318 100%);
+        color: white;
+        font-weight: 600;
+        border-radius: 0.75rem;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 12px -3px rgba(133, 26, 16, 0.3);
+    }
+    
+    .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: white;
+        color: #374151;
+        font-weight: 600;
+        border-radius: 0.75rem;
+        transition: all 0.2s ease;
+        border: 1px solid #E5E7EB;
+        text-decoration: none;
+    }
+    
+    .btn-secondary:hover {
+        background: #F9FAFB;
+        border-color: #851A10;
+        color: #851A10;
+    }
+    
+    .info-box {
+        background: linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%);
+        border-radius: 1rem;
+        padding: 1rem;
+        border: 1px solid #DBEAFE;
+    }
+    
+    .student-avatar {
+        width: 5rem;
+        height: 5rem;
+        background: linear-gradient(135deg, #851A10 0%, #A52318 100%);
+        color: white;
+        border-radius: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: 700;
+        box-shadow: 0 10px 15px -3px rgba(133, 26, 16, 0.2);
+    }
+    
+    @media (max-width: 768px) {
+        .update-container {
+            padding: 1rem;
+        }
+        
+        .form-card {
+            padding: 1.5rem;
+        }
+        
+        .rating-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="update-container">
+    <!-- Header with Actions -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <a href="{% url 'results:report_card_management' %}" class="btn-secondary">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to Class Management
+        </a>
+        <button form="update-form" type="submit" class="btn-primary">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+            </svg>
+            Save Results
+        </button>
+    </div>
+
+    <!-- Main Form Card -->
+    <div class="form-card">
+        <!-- Student Header -->
+        <div class="flex items-center gap-5 mb-8 pb-6 border-b border-gray-100">
+            <div class="student-avatar">
+                {{ student.first_name|first }}{{ student.last_name|first }}
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold" style="color:#635E57;">{{ student.full_name }}</h1>
+                <div class="flex flex-wrap items-center gap-3 mt-1">
+                    <span class="text-xs font-mono text-gray-500">{{ student.admission_number }}</span>
+                    <span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+                    <span class="text-xs font-semibold text-gray-500">{{ report_card.class_arm.full_name }}</span>
+                    <span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+                    <span class="text-xs font-semibold text-gray-500">{{ report_card.class_arm.class_level.level_name }}</span>
+                </div>
+            </div>
+        </div>
+
+        <form id="update-form" method="POST">
+            {% csrf_token %}
+            
+            <!-- Attendance & Comments Section -->
+            <div class="mb-8">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <div class="section-title-icon">📝</div>
+                        Attendance & Remarks
+                    </h3>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+                    <div>
+                        <label class="form-label">Days Present</label>
+                        {{ form.attendance_present }}
+                        <p class="text-xs text-gray-400 mt-1">Number of days student was present</p>
+                    </div>
+                    <div>
+                        <label class="form-label">Total School Days</label>
+                        {{ form.attendance_total }}
+                        <p class="text-xs text-gray-400 mt-1">Total days in the term</p>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="form-label">Class Teacher's Remark</label>
+                    {{ form.teacher_comment }}
+                    <p class="text-xs text-gray-400 mt-1">Optional comment about student's performance</p>
+                </div>
+            </div>
+
+            <!-- Affective Domain Section -->
+            <div class="mb-8">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <div class="section-title-icon">🌟</div>
+                        Affective Domain
+                    </h3>
+                    <p class="text-xs text-gray-500 ml-12 -mt-2">Rates student's attitude, behavior, and social skills</p>
+                </div>
+                
+                <div class="rating-grid">
+                    {% for rating in affective %}
+                    <div class="rating-item">
+                        <span class="attribute-name">{{ rating.attribute_name }}</span>
+                        <select name="rating_{{ rating.id }}" class="rating-select">
+                            <option value="">Select</option>
+                            {% for i in "12345"|make_list %}
+                                <option value="{{ i }}" {% if rating.rating|slugify == i %}selected{% endif %}>
+                                    {% if i == "5" %}5 - Excellent
+                                    {% elif i == "4" %}4 - Very Good
+                                    {% elif i == "3" %}3 - Good
+                                    {% elif i == "2" %}2 - Fair
+                                    {% elif i == "1" %}1 - Poor
+                                    {% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Psychomotor Domain Section -->
+            <div class="mb-6">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <div class="section-title-icon">🛠️</div>
+                        Psychomotor Domain
+                    </h3>
+                    <p class="text-xs text-gray-500 ml-12 -mt-2">Rates student's physical skills and coordination</p>
+                </div>
+                
+                <div class="rating-grid">
+                    {% for rating in psychomotor %}
+                    <div class="rating-item">
+                        <span class="attribute-name">{{ rating.attribute_name }}</span>
+                        <select name="rating_{{ rating.id }}" class="rating-select">
+                            <option value="">Select</option>
+                            {% for i in "12345"|make_list %}
+                                <option value="{{ i }}" {% if rating.rating|slugify == i %}selected{% endif %}>
+                                    {% if i == "5" %}5 - Excellent
+                                    {% elif i == "4" %}4 - Very Good
+                                    {% elif i == "3" %}3 - Good
+                                    {% elif i == "2" %}2 - Fair
+                                    {% elif i == "1" %}1 - Poor
+                                    {% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Info Boxes -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+        <div class="info-box">
+            <div class="flex items-start gap-3">
+                <div class="text-blue-600">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div>
+                    <h4 class="font-bold text-blue-900 text-sm">Grading Key for Domains</h4>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-1 mt-2">
+                        <p class="text-xs text-blue-700">5 - Excellent</p>
+                        <p class="text-xs text-blue-700">4 - Very Good</p>
+                        <p class="text-xs text-blue-700">3 - Good</p>
+                        <p class="text-xs text-blue-700">2 - Fair</p>
+                        <p class="text-xs text-blue-700">1 - Poor</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-box">
+            <div class="flex items-start gap-3">
+                <div class="text-green-600">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div>
+                    <h4 class="font-bold text-green-900 text-sm">Quick Tips</h4>
+                    <ul class="text-xs text-green-700 mt-2 space-y-1">
+                        <li>• Attendance percentage is auto-calculated</li>
+                        <li>• All domain ratings are required</li>
+                        <li>• Comments will appear on report card</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sticky Footer for Mobile -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 shadow-lg md:hidden z-50">
+        <div class="flex gap-3">
+            <a href="{% url 'results:report_card_management' %}" class="flex-1 btn-secondary justify-center">
+                Cancel
+            </a>
+            <button form="update-form" type="submit" class="flex-1 btn-primary justify-center">
+                Save Results
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-calculate attendance percentage
+    document.addEventListener('DOMContentLoaded', function() {
+        const presentInput = document.querySelector('input[name="attendance_present"]');
+        const totalInput = document.querySelector('input[name="attendance_total"]');
+        
+        function updateAttendancePreview() {
+            const present = parseInt(presentInput?.value) || 0;
+            const total = parseInt(totalInput?.value) || 0;
+            
+            if (total > 0) {
+                const percentage = (present / total * 100).toFixed(1);
+                // You can add a preview element if needed
+                console.log(`Attendance: ${percentage}%`);
+            }
+        }
+        
+        if (presentInput && totalInput) {
+            presentInput.addEventListener('input', updateAttendancePreview);
+            totalInput.addEventListener('input', updateAttendancePreview);
+        }
+    });
+</script>
+{% endblock %}

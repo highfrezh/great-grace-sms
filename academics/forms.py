@@ -296,3 +296,43 @@ class SubjectTeacherAssignmentForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class SubjectSearchForm(forms.Form):
+    """Form for searching and filtering subjects"""
+    
+    STATUS_CHOICES = [
+        ('', 'All Status'),
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+    ]
+    
+    query = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'Search name or code...',
+            'style': 'padding-left: 2.5rem;'
+        })
+    )
+    class_arm = forms.ModelChoiceField(
+        queryset=ClassArm.objects.none(),
+        required=False,
+        empty_label="All Classes",
+        widget=forms.Select(attrs={'class': 'form-input'})
+    )
+    status = forms.ChoiceField(
+        choices=STATUS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-input'})
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Fetch class arms for the current session to populate the dropdown
+        current_session = AcademicSession.get_current()
+        if current_session:
+            self.fields['class_arm'].queryset = ClassArm.objects.filter(
+                session=current_session
+            ).select_related('level').order_by('level__order', 'name')

@@ -152,60 +152,25 @@
           {% endif %}
         </div>
         <div>
-          <label class="form-label">Blood Group</label>
-          {{ student_form.blood_group }}
-          <p class="form-hint">For medical records</p>
-        </div>
-      </div>
-      
-      <div class="two-col-grid mt-5">
-        <div>
-          <label class="form-label">Phone Number</label>
-          {{ student_form.phone }}
-          <p class="form-hint">Student's personal phone (if any)</p>
-        </div>
-        <div>
-          <label class="form-label">Email Address</label>
-          {{ student_form.email }}
-          <p class="form-hint">Used for communication</p>
-        </div>
-      </div>
-      
-      <div class="two-col-grid mt-5">
-        <div>
           <label class="form-label">Home Address</label>
           {{ student_form.address }}
           <p class="form-hint">Residential address</p>
-        </div>
+        </div>        
+      </div>
+      
+      <div class="two-col-grid mt-5">
         <div>
           <label class="form-label">Allergies</label>
           {{ student_form.allergies }}
           <p class="form-hint">Any known allergies</p>
         </div>
-      </div>
-      
-      <div class="two-col-grid mt-5">
         <div>
           <label class="form-label">Medical Conditions</label>
           {{ student_form.medical_conditions }}
           <p class="form-hint">Chronic conditions</p>
         </div>
-        <div>
-          <label class="form-label">Emergency Contact</label>
-          {{ student_form.emergency_contact }}
-          <p class="form-hint">Person to contact in emergency</p>
-        </div>
       </div>
       
-      <div class="two-col-grid mt-5">
-        <div>
-          <label class="form-label">Emergency Phone</label>
-          {{ student_form.emergency_phone }}
-          <p class="form-hint">Emergency contact number</p>
-        </div>
-      </div>
-      
-      {% if is_edit %}
       <div class="mt-6 pt-4 border-t border-gray-100">
         <div class="flex items-center gap-3">
           {{ student_form.is_active }}
@@ -213,7 +178,6 @@
         </div>
         <p class="form-hint mt-1">Inactive students cannot log in or access the portal</p>
       </div>
-      {% endif %}
     </div>
   </div>
   

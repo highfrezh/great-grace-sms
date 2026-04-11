@@ -11,33 +11,8 @@
 
 
 {% block extra_css %}
-
-<!-- MathJax -->
-
-<script>
-
-  MathJax = {
-
-    tex: {
-
-      inlineMath: [['$', '$'], ['\\(', '\\)']],
-
-      displayMath: [['$$', '$$'], ['\\[', '\\]']]
-
-    },
-
-    svg: { fontCache: 'global' }
-
-  };
-
-</script>
-
-<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-
 <!-- Noto Sans for Yoruba -->
-
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-
 {% endblock %}
 
 
@@ -185,9 +160,15 @@
 
 
   .toolbar-btn.math:hover {
-
     background: #DBEAFE;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
 
+  .toolbar-btn.yoruba:hover {
+    background: #DCFCE7;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   }
 
 
@@ -215,27 +196,18 @@
   /* Preview box */
 
   .preview-box {
-
     margin-top: 0.5rem;
-
-    padding: 0.75rem 1rem;
-
-    background: #FAFAFA;
-
-    border: 1px solid #E5E7EB;
-
+    padding: 10px 12px;
+    background: #F9FAFB;
+    border: 1px dashed #E5E7EB;
     border-radius: 0.5rem;
-
     font-family: 'Noto Sans', sans-serif;
-
-    font-size: 0.9rem;
-
-    line-height: 1.7;
-
-    min-height: 44px;
-
+    font-size: 0.85rem;
+    line-height: 1.5;
+    min-height: auto;
     display: none;
-
+    white-space: pre-wrap;
+    color: #374151;
   }
 
 
@@ -527,57 +499,23 @@
 
 
         <!-- Toolbar -->
-
-        <div class="input-toolbar" data-target="question_text">
-
-          <span class="text-xs text-gray-400 self-center mr-1">Math:</span>
-
-          <button type="button" class="toolbar-btn math"
-
-                  onclick="insertText('question_text', '$  $', 1)">
-
-            $ Inline $
-
-          </button>
-
-          <button type="button" class="toolbar-btn math"
-
-                  onclick="insertText('question_text', '$$  $$', 2)">
-
-            $$ Block $$
-
-          </button>
-
-          <button type="button" class="toolbar-btn math"
-
-                  onclick="insertText('question_text', '\\frac{  }{  }', 7)">
-
-            ÷ Fraction
-
-          </button>
-
-          <button type="button" class="toolbar-btn math"
-
-                  onclick="insertText('question_text', '\\sqrt{  }', 7)">
-
-            √ Sqrt
-
-          </button>
-
-          <span class="text-xs text-gray-400 self-center ml-2 mr-1">Yoruba:</span>
-
-          {% for char in "ẹọṣàáèéìíòóùú" %}
-
-            <button type="button" class="toolbar-btn yoruba"
-
-                    onclick="insertChar('question_text', '{{ char }}')">
-
-              {{ char }}
-
-            </button>
-
+        <div class="input-toolbar">
+          <span style="font-size: 0.7rem; color: #9CA3AF; align-self: center; margin-right: 4px; font-weight: 600;">MATH:</span>
+          <button type="button" class="toolbar-btn math" onclick="insertText('question_text', '$  $', 1)">$ Inline</button>
+          <button type="button" class="toolbar-btn math" onclick="insertText('question_text', '$$  $$', 2)">$$ Block</button>
+          <button type="button" class="toolbar-btn math" onclick="insertText('question_text', '\\frac{ }{ }', 7)">÷ Fraction</button>
+          <button type="button" class="toolbar-btn math" onclick="insertText('question_text', '\\sqrt{ }', 7)">√ Sqrt</button>
+          
+          <div style="width: 1px; background: #E5E7EB; margin: 0 4px;"></div>
+          
+          <span style="font-size: 0.7rem; color: #9CA3AF; align-self: center; margin-right: 4px; font-weight: 600;">YORUBA:</span>
+          {% for char in "ẹọṣ" %}
+            <button type="button" class="toolbar-btn yoruba" onclick="insertChar('question_text', '{{ char }}')">{{ char }}</button>
           {% endfor %}
-
+          <div style="width: 1px; background: #E5E7EB; margin: 0 4px; border-left: 1px dashed #eee;"></div>
+          {% for char in "áàéèẹ́ẹ̀íìóòọ́ọ̀úùńǹ" %}
+            <button type="button" class="toolbar-btn yoruba" style="min-width: 25px;" onclick="insertChar('question_text', '{{ char }}')">{{ char }}</button>
+          {% endfor %}
         </div>
 
 
@@ -597,11 +535,7 @@
         <!-- Live Preview -->
 
         <div class="preview-box" id="preview_question">
-
-          <div class="preview-label">Preview</div>
-
-          <div class="preview-content">{{ question.question_text }}</div>
-
+          <div class="preview-content">{{ question.question_text|linebreaksbr }}</div>
         </div>
 
       </div>
@@ -679,27 +613,13 @@
           </div>
 
           <div class="input-toolbar">
-
-            <span class="text-xs text-gray-400 self-center mr-1">Math:</span>
-
-            <button type="button" class="toolbar-btn math"
-
-                    onclick="insertText('option_a', '$  $', 1)">$…$</button>
-
-            <button type="button" class="toolbar-btn math"
-
-                    onclick="insertText('option_a', '\\frac{}{  }', 7)">÷</button>
-
-            <span class="text-xs text-gray-400 self-center ml-2 mr-1">Yoruba:</span>
-
-            {% for char in "ẹọṣàáèé" %}
-
-              <button type="button" class="toolbar-btn yoruba"
-
-                      onclick="insertChar('option_a', '{{ char }}')">{{ char }}</button>
-
+            <span style="font-size: 0.7rem; color: #9CA3AF; align-self: center; margin-right: 4px; font-weight: 600;">MATH:</span>
+            <button type="button" class="toolbar-btn math" onclick="insertText('option_a', '$  $', 1)">$ Math</button>
+            <div style="width: 1px; background: #E5E7EB; margin: 0 4px;"></div>
+            <span style="font-size: 0.7rem; color: #9CA3AF; align-self: center; margin-right: 4px; font-weight: 600;">YORUBA:</span>
+            {% for char in "ẹọṣáàéè" %}
+              <button type="button" class="toolbar-btn yoruba" onclick="insertChar('option_a', '{{ char }}')">{{ char }}</button>
             {% endfor %}
-
           </div>
 
           <input type="text" name="option_a" id="option_a" class="option-input"
@@ -709,11 +629,7 @@
                  oninput="updatePreview('option_a', 'preview_opt_a')">
 
           <div class="preview-box" id="preview_opt_a">
-
-            <div class="preview-label">Preview</div>
-
-            <div class="preview-content">{{ question.option_a }}</div>
-
+            <div class="preview-content">{{ question.option_a|linebreaksbr }}</div>
           </div>
 
         </div>
@@ -741,27 +657,13 @@
           </div>
 
           <div class="input-toolbar">
-
-            <span class="text-xs text-gray-400 self-center mr-1">Math:</span>
-
-            <button type="button" class="toolbar-btn math"
-
-                    onclick="insertText('option_b', '$  $', 1)">$…$</button>
-
-            <button type="button" class="toolbar-btn math"
-
-                    onclick="insertText('option_b', '\\frac{}{  }', 7)">÷</button>
-
-            <span class="text-xs text-gray-400 self-center ml-2 mr-1">Yoruba:</span>
-
-            {% for char in "ẹọṣàáèé" %}
-
-              <button type="button" class="toolbar-btn yoruba"
-
-                      onclick="insertChar('option_b', '{{ char }}')">{{ char }}</button>
-
+            <span style="font-size: 0.7rem; color: #9CA3AF; align-self: center; margin-right: 4px; font-weight: 600;">MATH:</span>
+            <button type="button" class="toolbar-btn math" onclick="insertText('option_b', '$  $', 1)">$ Math</button>
+            <div style="width: 1px; background: #E5E7EB; margin: 0 4px;"></div>
+            <span style="font-size: 0.7rem; color: #9CA3AF; align-self: center; margin-right: 4px; font-weight: 600;">YORUBA:</span>
+            {% for char in "ẹọṣáàéè" %}
+              <button type="button" class="toolbar-btn yoruba" onclick="insertChar('option_b', '{{ char }}')">{{ char }}</button>
             {% endfor %}
-
           </div>
 
           <input type="text" name="option_b" id="option_b" class="option-input"
@@ -771,11 +673,7 @@
                  oninput="updatePreview('option_b', 'preview_opt_b')">
 
           <div class="preview-box" id="preview_opt_b">
-
-            <div class="preview-label">Preview</div>
-
-            <div class="preview-content">{{ question.option_b }}</div>
-
+            <div class="preview-content">{{ question.option_b|linebreaksbr }}</div>
           </div>
 
         </div>
@@ -803,27 +701,13 @@
           </div>
 
           <div class="input-toolbar">
-
-            <span class="text-xs text-gray-400 self-center mr-1">Math:</span>
-
-            <button type="button" class="toolbar-btn math"
-
-                    onclick="insertText('option_c', '$  $', 1)">$…$</button>
-
-            <button type="button" class="toolbar-btn math"
-
-                    onclick="insertText('option_c', '\\frac{}{  }', 7)">÷</button>
-
-            <span class="text-xs text-gray-400 self-center ml-2 mr-1">Yoruba:</span>
-
-            {% for char in "ẹọṣàáèé" %}
-
-              <button type="button" class="toolbar-btn yoruba"
-
-                      onclick="insertChar('option_c', '{{ char }}')">{{ char }}</button>
-
+            <span style="font-size: 0.7rem; color: #9CA3AF; align-self: center; margin-right: 4px; font-weight: 600;">MATH:</span>
+            <button type="button" class="toolbar-btn math" onclick="insertText('option_c', '$  $', 1)">$ Math</button>
+            <div style="width: 1px; background: #E5E7EB; margin: 0 4px;"></div>
+            <span style="font-size: 0.7rem; color: #9CA3AF; align-self: center; margin-right: 4px; font-weight: 600;">YORUBA:</span>
+            {% for char in "ẹọṣáàéè" %}
+              <button type="button" class="toolbar-btn yoruba" onclick="insertChar('option_c', '{{ char }}')">{{ char }}</button>
             {% endfor %}
-
           </div>
 
           <input type="text" name="option_c" id="option_c" class="option-input"
@@ -833,11 +717,7 @@
                  oninput="updatePreview('option_c', 'preview_opt_c')">
 
           <div class="preview-box" id="preview_opt_c">
-
-            <div class="preview-label">Preview</div>
-
-            <div class="preview-content">{{ question.option_c }}</div>
-
+            <div class="preview-content">{{ question.option_c|linebreaksbr }}</div>
           </div>
 
         </div>
@@ -865,27 +745,13 @@
           </div>
 
           <div class="input-toolbar">
-
-            <span class="text-xs text-gray-400 self-center mr-1">Math:</span>
-
-            <button type="button" class="toolbar-btn math"
-
-                    onclick="insertText('option_d', '$  $', 1)">$…$</button>
-
-            <button type="button" class="toolbar-btn math"
-
-                    onclick="insertText('option_d', '\\frac{}{  }', 7)">÷</button>
-
-            <span class="text-xs text-gray-400 self-center ml-2 mr-1">Yoruba:</span>
-
-            {% for char in "ẹọṣàáèé" %}
-
-              <button type="button" class="toolbar-btn yoruba"
-
-                      onclick="insertChar('option_d', '{{ char }}')">{{ char }}</button>
-
+            <span style="font-size: 0.7rem; color: #9CA3AF; align-self: center; margin-right: 4px; font-weight: 600;">MATH:</span>
+            <button type="button" class="toolbar-btn math" onclick="insertText('option_d', '$  $', 1)">$ Math</button>
+            <div style="width: 1px; background: #E5E7EB; margin: 0 4px;"></div>
+            <span style="font-size: 0.7rem; color: #9CA3AF; align-self: center; margin-right: 4px; font-weight: 600;">YORUBA:</span>
+            {% for char in "ẹọṣáàéè" %}
+              <button type="button" class="toolbar-btn yoruba" onclick="insertChar('option_d', '{{ char }}')">{{ char }}</button>
             {% endfor %}
-
           </div>
 
           <input type="text" name="option_d" id="option_d" class="option-input"
@@ -895,11 +761,7 @@
                  oninput="updatePreview('option_d', 'preview_opt_d')">
 
           <div class="preview-box" id="preview_opt_d">
-
-            <div class="preview-label">Preview</div>
-
-            <div class="preview-content">{{ question.option_d }}</div>
-
+            <div class="preview-content">{{ question.option_d|linebreaksbr }}</div>
           </div>
 
         </div>
@@ -998,86 +860,63 @@
 
 <script>
 
+  // ── Helper to resolve preview ID ────────────────────
+  function getPreviewId(fieldId) {
+    if (fieldId === 'question_text') return 'preview_question';
+    return 'preview_opt_' + fieldId.replace('option_', '');
+  }
+
   // ── Insert text at cursor position ──────────────────
-
   function insertText(fieldId, template, cursorOffset) {
-
     const el = document.getElementById(fieldId);
-
     if (!el) return;
-
     const start = el.selectionStart;
-
     const end   = el.selectionEnd;
 
     el.value = el.value.slice(0, start) + template + el.value.slice(end);
-
     el.selectionStart = el.selectionEnd = start + cursorOffset;
-
     el.focus();
-
-    updatePreview(fieldId, 'preview_' + fieldId.replace('option_', 'opt_'));
-
+    updatePreview(fieldId, getPreviewId(fieldId));
   }
-
-
 
   // ── Insert single Yoruba character ──────────────────
-
   function insertChar(fieldId, char) {
-
     const el = document.getElementById(fieldId);
-
     if (!el) return;
-
     const start = el.selectionStart;
+    const end   = el.selectionEnd;
 
-    el.value = el.value.slice(0, start) + char + el.value.slice(el.selectionEnd);
-
-    el.selectionStart = el.selectionEnd = start + 1;
-
+    el.value = el.value.slice(0, start) + char + el.value.slice(end);
+    el.selectionStart = el.selectionEnd = start + char.length;
     el.focus();
-
-    updatePreview(fieldId, 'preview_' + fieldId.replace('option_', 'opt_'));
-
+    updatePreview(fieldId, getPreviewId(fieldId));
   }
 
-
-
   // ── Live preview with MathJax ────────────────────────
-
   function updatePreview(fieldId, previewId) {
-
     const el      = document.getElementById(fieldId);
-
     const preview = document.getElementById(previewId);
-
     if (!el || !preview) return;
-
+    
     const text = el.value.trim();
-
-    if (!text) { preview.style.display = 'none'; return; }
-
-
-
-    preview.style.display = 'block';
-
-    const content = preview.querySelector('.preview-content');
-
-    content.innerHTML = '';
-
-    content.appendChild(document.createTextNode(text));
-
-
-
-    if (window.MathJax) {
-
-      MathJax.typesetClear([content]);
-
-      MathJax.typesetPromise([content]).catch(err => console.warn(err));
-
+    
+    if (!text) { 
+      preview.style.display = 'none'; 
+      return; 
     }
 
+    preview.style.display = 'block';
+    const content = preview.querySelector('.preview-content');
+    if (!content) return;
+
+    // Use innerHTML so MathJax can parse TeX and any HTML entities correctly
+    content.innerHTML = text;
+
+    if (window.MathJax && typeof MathJax.typesetPromise === 'function') {
+      // Clear previous typesetting and apply new math symbols
+      MathJax.typesetClear([content]);
+      MathJax.typesetPromise([content]).catch(err => console.warn('MathJax Error:', err));
+    }
   }
 
 

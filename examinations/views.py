@@ -23,6 +23,7 @@ from .forms import (
     ExamForm, TeacherExamForm, QuestionForm, TheoryQuestionForm,
     VettingForm, CAScoreForm, ExamConfigurationForm
 )
+from results.models import ReportCard, ResultAuditLog
 import random
 
 
@@ -898,8 +899,19 @@ def exam_submission_report(request, pk):
     )
 
     if not submission.is_complete:
-        messages.warning(request, "You must complete the exam to see the report.")
-        return redirect('examinations:exam_take', pk=pk)
+        # Check if time is actually up (Safety break for loop)
+        elapsed_seconds = (timezone.now() - submission.started_at).total_seconds()
+        total_seconds = exam.duration_minutes * 60
+        if elapsed_seconds >= total_seconds:
+            # Auto-finalize it now if it wasn't already
+            submission.status = ExamSubmission.SubmissionStatus.AUTO_SUBMITTED
+            submission.submitted_at = timezone.now()
+            submission.auto_submitted_reason = 'TIME_UP (Safety Finalize)'
+            submission.save()
+            messages.info(request, "Your exam time has expired. Results have been automatically compiled.")
+        else:
+            messages.warning(request, "You must complete the exam to see the report.")
+            return redirect('examinations:exam_take', pk=pk)
 
     # Calculate statistics
     total_questions = exam.objectives.count()
@@ -1054,6 +1066,7 @@ def teacher_exam_create(request):
                 term = form.cleaned_data['term']
                 duration_minutes = form.cleaned_data['duration_minutes']
                 theory_attachment = form.cleaned_data.get('theory_attachment')
+                randomize_questions = form.cleaned_data.get('randomize_questions', True)
                 
                 # Get all class_arms for this subject from teacher's assignments
                 assignments = SubjectTeacherAssignment.objects.filter(
@@ -1082,7 +1095,8 @@ def teacher_exam_create(request):
                     session=session,
                     term=term,
                     duration_minutes=duration_minutes,
-                    theory_attachment=theory_attachment
+                    theory_attachment=theory_attachment,
+                    randomize_questions=randomize_questions
                 )
                 exam.save()
                 
@@ -1496,28 +1510,43 @@ def ca_score_entry(request, pk):
         enrollments__is_active=True
     ).order_by('last_name', 'first_name').distinct()
 
-    form = CAScoreForm(
-        request.POST or None,
-        students=students,
-        exam=exam
-    )
-
-    if request.method == 'POST' and form.is_valid():
-        for student in students:
-            ca1 = form.cleaned_data.get(f'ca1_{student.id}') or 0
-            ca2 = form.cleaned_data.get(f'ca2_{student.id}') or 0
+    if request.method == 'POST':
+        student_id = request.POST.get('student_id')
+        if student_id:
+            student = get_object_or_404(Student, pk=student_id)
+            ca1 = request.POST.get('ca1', 0) or 0
+            ca2 = request.POST.get('ca2', 0) or 0
+            theory = request.POST.get('theory', 0) or 0
+            obj_score = request.POST.get('obj_score', 0) or 0
 
             result, _ = ExamResult.objects.get_or_create(
                 exam=exam,
                 student=student
             )
-            result.ca1_score = ca1
-            result.ca2_score = ca2
+            result.ca1_score = float(ca1)
+            result.ca2_score = float(ca2)
+            result.theory_score = float(theory)
+            result.obj_score = float(obj_score)
             result.last_modified_by = request.user
+            
+            # Audit Logging
+            report_card, _ = ReportCard.objects.get_or_create(
+                student=student,
+                session=exam.session,
+                term=exam.term,
+                class_arm=student.enrollments.filter(session=exam.session, is_active=True).first().class_arm
+            )
+            
+            ResultAuditLog.objects.create(
+                report_card=report_card,
+                modified_by=request.user,
+                action=f"Updated Scores for {exam.subject.name}",
+                change_details=f"CA1: {ca1}, CA2: {ca2}, Theory: {theory}, CBT: {obj_score}"
+            )
+            
             result.save()
-
-        messages.success(request, 'CA scores saved successfully.')
-        return redirect('examinations:ca_score_entry', pk=pk)
+            messages.success(request, f'Scores updated successfully for {student.full_name}.')
+            return redirect('examinations:ca_score_entry', pk=pk)
 
     # Get existing CA scores
     existing_results = {
@@ -1525,12 +1554,11 @@ def ca_score_entry(request, pk):
         for r in ExamResult.objects.filter(exam=exam)
     }
 
-    return render(request, 'examinations/ca_score_entry.html', {
+    return render(request, 'examinations/subject_score_entry.html', {
         'exam': exam,
         'students': students,
-        'form': form,
         'existing_results': existing_results,
-        'page_title': f'CA Scores — {exam.title}'
+        'page_title': f'Score Entry — {exam.title}'
     })
 
 
@@ -1934,15 +1962,32 @@ def examiner_exam_review(request, exam_id):
 @examiner_required
 def exam_schedule_list(request):
     """List all approved exams available for scheduling"""
-    current_session = AcademicSession.get_current()
-    current_term = Term.get_current()
+    session_id = request.GET.get('session')
+    term_id = request.GET.get('term')
+    class_arm_id = request.GET.get('class_arm')
+
+    if session_id:
+        current_session = get_object_or_404(AcademicSession, pk=session_id)
+    else:
+        current_session = AcademicSession.get_current()
+        
+    if term_id:
+        current_term = get_object_or_404(Term, pk=term_id)
+    else:
+        current_term = Term.get_current()
+
+    # Get all approved exams
+    queryset = Exam.objects.filter(status=Exam.ExamStatus.APPROVED)
     
-    # Get all approved exams that can be scheduled
-    exams = Exam.objects.filter(
-        session=current_session,
-        term=current_term,
-        status=Exam.ExamStatus.APPROVED
-    ).select_related('subject').prefetch_related('class_arms').order_by('subject__name')
+    if current_session:
+        queryset = queryset.filter(session=current_session)
+    if current_term:
+        queryset = queryset.filter(term=current_term)
+        
+    if class_arm_id:
+        queryset = queryset.filter(class_arms__id=class_arm_id)
+
+    exams = queryset.select_related('subject').prefetch_related('class_arms').order_by('subject__name').distinct()
     
     # Separate scheduled and unscheduled
     scheduled_exams = [e for e in exams if e.scheduled_start_datetime]
@@ -1952,8 +1997,12 @@ def exam_schedule_list(request):
         'page_title': 'Schedule Exams',
         'current_session': current_session,
         'current_term': current_term,
+        'selected_class_arm': int(class_arm_id) if class_arm_id else None,
         'scheduled_exams': scheduled_exams,
         'unscheduled_exams': unscheduled_exams,
+        'sessions': AcademicSession.objects.all().order_by('-start_date'),
+        'terms': Term.objects.all().order_by('id'),
+        'class_arms': ClassArm.objects.all().order_by('name'),
     })
 
 

@@ -331,11 +331,11 @@
 <!-- Reset Confirmation Modal -->
 <div x-show="actionModal.show && actionModal.type === 'Reset'" 
      x-cloak
-     class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+     class="fixed inset-0 flex items-center justify-center p-4" style="z-index: 1000; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
     <div @click.outside="actionModal.show = false" 
-         class="bg-white rounded-2xl p-6 max-w-[320px] w-full shadow-2xl border border-gray-100">
-        <div class="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center mb-4 mx-auto">
-            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+         class="bg-white rounded-2xl p-6 w-full shadow-2xl border border-gray-100" style="max-width: 320px;">
+        <div class="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center mb-4 mx-auto" style="background-color: #fef2f2;">
+            <svg class="w-6 h-6 text-red-600" style="color: #dc2626;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </div>
         
         <h3 class="text-lg font-bold text-gray-900 text-center mb-1">Reset Attempt?</h3>
@@ -345,7 +345,7 @@
 
         <form :action="actionModal.url" method="POST" class="flex flex-col gap-2">
             {% csrf_token %}
-            <button type="submit" class="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-red-100">
+            <button type="submit" class="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm transition-all" style="background-color: #dc2626;">
                 Yes, Reset
             </button>
             <button type="button" @click="actionModal.show = false" class="w-full py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-xl font-bold text-sm transition-all">

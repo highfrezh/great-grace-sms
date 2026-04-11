@@ -163,6 +163,47 @@
   <p class="text-sm text-gray-500 ml-4">Set the date and time for approved exams so students know when to take them</p>
 </div>
 
+<!-- Filter Form -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-8">
+  <form method="GET" class="flex flex-wrap gap-4 items-end">
+    <div class="flex-1 min-w-[200px]">
+      <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Session</label>
+      <select name="session" class="w-full rounded-lg border-gray-300 focus:border-[#851A10] focus:ring focus:ring-[#851A10]/20 text-sm">
+        <option value="">All Sessions</option>
+        {% for session in sessions %}
+        <option value="{{ session.id }}" {% if current_session and current_session.id == session.id %}selected{% endif %}>{{ session.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="flex-1 min-w-[200px]">
+      <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Term</label>
+      <select name="term" class="w-full rounded-lg border-gray-300 focus:border-[#851A10] focus:ring focus:ring-[#851A10]/20 text-sm">
+        <option value="">All Terms</option>
+        {% for term in terms %}
+        <option value="{{ term.id }}" {% if current_term and current_term.id == term.id %}selected{% endif %}>{{ term.name|default:term.get_name_display }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="flex-1 min-w-[200px]">
+      <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Class Arm</label>
+      <select name="class_arm" class="w-full rounded-lg border-gray-300 focus:border-[#851A10] focus:ring focus:ring-[#851A10]/20 text-sm">
+        <option value="">All Classes</option>
+        {% for arm in class_arms %}
+        <option value="{{ arm.id }}" {% if selected_class_arm == arm.id %}selected{% endif %}>{{ arm }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <button type="submit" class="px-6 py-2 bg-[#851A10] text-white rounded-lg font-semibold hover:bg-[#68140c] transition-colors text-sm h-[42px]">
+        Filter
+      </button>
+      <a href="{% url 'examinations:exam_schedule_list' %}" class="px-6 py-2 bg-gray-100 text-gray-600 rounded-lg font-semibold hover:bg-gray-200 transition-colors text-sm inline-flex items-center h-[42px] ml-2" style="text-decoration: none;">
+        Reset
+      </a>
+    </div>
+  </form>
+</div>
+
 <!-- Statistics -->
 <div class="stats-row">
   <div class="stat-card">

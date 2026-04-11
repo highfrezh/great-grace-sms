@@ -1,0 +1,467 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    /* ── Page ── */
+    .principal-page {
+        background: #F8F9FC;
+        min-height: 100vh;
+        padding: 2rem;
+    }
+
+    /* ── Welcome Banner ── */
+    .welcome-banner {
+        background: linear-gradient(135deg, #851A10 0%, #6c140d 50%, #4a0d09 100%);
+        border-radius: 1.5rem;
+        padding: 2rem 2.5rem;
+        color: white;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+
+    .welcome-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 50%;
+    }
+
+    .welcome-banner::after {
+        content: '';
+        position: absolute;
+        bottom: -60%;
+        right: 15%;
+        width: 300px;
+        height: 300px;
+        background: rgba(255,255,255,0.04);
+        border-radius: 50%;
+    }
+
+    .session-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.25);
+        backdrop-filter: blur(10px);
+        padding: 0.375rem 1rem;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: white;
+        margin-bottom: 1rem;
+    }
+
+    /* ── KPI Cards ── */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .kpi-card {
+        background: white;
+        border-radius: 1.25rem;
+        padding: 1.5rem;
+        border: 1px solid #F0F0F5;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+
+    .kpi-card::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        border-radius: 0 0 1.25rem 1.25rem;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .kpi-card:hover::after { opacity: 1; }
+    .kpi-red::after { background: linear-gradient(90deg, #851A10, #A52318); }
+    .kpi-blue::after { background: linear-gradient(90deg, #3B82F6, #6366F1); }
+    .kpi-green::after { background: linear-gradient(90deg, #10B981, #059669); }
+    .kpi-amber::after { background: linear-gradient(90deg, #F59E0B, #EF4444); }
+
+    .kpi-icon {
+        width: 3rem;
+        height: 3rem;
+        border-radius: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+
+    .kpi-icon-red   { background: #FEF2F2; color: #851A10; }
+    .kpi-icon-blue  { background: #EFF6FF; color: #3B82F6; }
+    .kpi-icon-green { background: #ECFDF5; color: #10B981; }
+    .kpi-icon-amber { background: #FFF7ED; color: #F59E0B; }
+
+    .kpi-value {
+        font-size: 2.25rem;
+        font-weight: 900;
+        color: #111827;
+        line-height: 1;
+        margin-bottom: 0.375rem;
+    }
+
+    .kpi-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #6B7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* ── Section Cards ── */
+    .section-card {
+        background: white;
+        border-radius: 1.25rem;
+        border: 1px solid #F0F0F5;
+        padding: 1.5rem;
+        height: 100%;
+    }
+
+    .section-title {
+        font-size: 0.875rem;
+        font-weight: 800;
+        color: #1F2937;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* ── Progress Bars ── */
+    .progress-bar-track {
+        background: #F3F4F6;
+        border-radius: 9999px;
+        height: 8px;
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        border-radius: 9999px;
+        transition: width 0.8s ease;
+    }
+
+    /* ── Quick Actions ── */
+    .quick-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .quick-action-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.875rem 1rem;
+        border-radius: 1rem;
+        border: 1.5px solid #E5E7EB;
+        background: #FAFAFA;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        color: #374151;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+
+    .quick-action-btn:hover {
+        background: #FEF2F2;
+        border-color: #FECACA;
+        color: #851A10;
+        transform: translateX(3px);
+    }
+
+    .quick-action-btn .qa-icon {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background: #F3F4F6;
+        color: #6B7280;
+        transition: all 0.2s ease;
+    }
+
+    .quick-action-btn:hover .qa-icon {
+        background: #FEE2E2;
+        color: #851A10;
+    }
+
+    /* ── Activity Feed ── */
+    .activity-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.875rem;
+        padding: 0.875rem 0;
+        border-bottom: 1px solid #F3F4F6;
+    }
+
+    .activity-item:last-child { border-bottom: none; }
+
+    .activity-dot {
+        width: 0.625rem;
+        height: 0.625rem;
+        border-radius: 50%;
+        background: #851A10;
+        flex-shrink: 0;
+        margin-top: 0.3rem;
+    }
+
+    /* ── Gender Pill ── */
+    .gender-pill {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #F9FAFB;
+        border-radius: 1rem;
+        padding: 0.875rem 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* ── Exam Status Row ── */
+    .exam-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.6rem 0;
+        border-bottom: 1px solid #F3F4F6;
+    }
+
+    .exam-row:last-child { border-bottom: none; }
+
+    .exam-badge {
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.2rem 0.625rem;
+        border-radius: 9999px;
+    }
+
+    @media (max-width: 1024px) {
+        .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+        .kpi-grid { grid-template-columns: 1fr; }
+        .principal-page { padding: 1rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="principal-page">
+
+    <!-- ── Welcome Banner ── -->
+    <div class="welcome-banner">
+        <div style="position:relative;z-index:1;">
+            {% if current_session %}
+            <div class="session-badge">
+                <svg class="w-3 h-3.1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                {{ current_session.name }} &mdash; {% if current_term %}{{ current_term.get_name_display }}{% else %}No Term Active{% endif %}
+            </div>
+            {% endif %}
+            <h1 class="text-3xl font-black mb-1">
+                Welcome back, {{ request.user.get_full_name|default:request.user.username }}
+            </h1>
+            <p class="text-red-200 text-sm font-medium">
+                {{ today|date:"l, F j, Y" }} &bull; Principal's Command Centre
+            </p>
+        </div>
+    </div>
+
+    <!-- ── KPI Cards ── -->
+    <div class="kpi-grid">
+        <div class="kpi-card kpi-red">
+            <div class="kpi-icon kpi-icon-red">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+            </div>
+            <div class="kpi-value">{{ total_students }}</div>
+            <div class="kpi-label">Students Enrolled</div>
+        </div>
+
+        <div class="kpi-card kpi-blue">
+            <div class="kpi-icon kpi-icon-blue">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+            </div>
+            <div class="kpi-value">{{ total_staff }}</div>
+            <div class="kpi-label">Teaching Staff</div>
+        </div>
+
+        <div class="kpi-card kpi-green">
+            <div class="kpi-icon kpi-icon-green">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+            </div>
+            <div class="kpi-value">{{ total_classes }}</div>
+            <div class="kpi-label">Active Classes</div>
+        </div>
+
+        <div class="kpi-card kpi-amber">
+            <div class="kpi-icon kpi-icon-amber">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+            </div>
+            <div class="kpi-value">{{ exams_awaiting }}</div>
+            <div class="kpi-label">Exams Awaiting Approval</div>
+        </div>
+    </div>
+
+    <!-- ── Main Grid ── -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left Column (2/3 width) -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Recent Activity -->
+            <div class="section-card">
+                <div class="section-title">
+                    <svg class="w-4 h-4 text-[#851A10]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Recent Result Changes
+                </div>
+
+                {% for log in recent_activity %}
+                <div class="activity-item">
+                    <div class="activity-dot"></div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-800 truncate">
+                            {{ log.report_card.student.full_name }}
+                        </p>
+                        <p class="text-xs text-gray-500">{{ log.action }} &bull; by {{ log.modified_by.get_full_name|default:log.modified_by.username }}</p>
+                        <p class="text-xs font-mono text-gray-400 mt-0.5">{{ log.created_at|timesince }} ago</p>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-sm text-gray-400 italic text-center py-4">No recent result changes.</p>
+                {% endfor %}
+
+                {% if recent_activity %}
+                <a href="{% url 'results:all_student_results' %}" class="mt-3 text-xs font-semibold text-[#851A10] hover:underline">
+                    View all results &rarr;
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right Column (1/3 width) -->
+        <div class="space-y-6">
+
+            <!-- Quick Actions -->
+            <div class="section-card">
+                <div class="section-title">
+                    <svg class="w-4 h-4 text-[#851A10]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    Quick Actions
+                </div>
+                <div class="quick-actions-grid">
+                    <a href="{% url 'results:all_student_results' %}" class="quick-action-btn">
+                        <span class="qa-icon">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                        </span>
+                        All Results
+                    </a>
+                    <a href="{% url 'students:student_list' %}" class="quick-action-btn">
+                        <span class="qa-icon">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                        </span>
+                        All Students
+                    </a>
+                    <a href="{% url 'examinations:examiner_dashboard' %}" class="quick-action-btn">
+                        <span class="qa-icon">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </span>
+                        Approve Exams
+                    </a>
+                    <a href="{% url 'examinations:exam_config_list' %}" class="quick-action-btn">
+                        <span class="qa-icon">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+                        </span>
+                        Exam Config
+                    </a>
+                </div>
+            </div>
+
+            <!-- Student Demographics -->
+            <div class="section-card">
+                <div class="section-title">
+                    <svg class="w-4 h-4 text-[#851A10]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
+                    </svg>
+                    Student Demographics
+                </div>
+
+                <div class="space-y-2">
+                    <div class="gender-pill">
+                        <div class="w-3 h-3 rounded-full bg-blue-400 flex-shrink-0"></div>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm font-semibold text-gray-700">Male</span>
+                                <span class="text-sm font-black text-blue-600">{{ male_count }}</span>
+                            </div>
+                            <div class="progress-bar-track mt-1">
+                                {% if total_students > 0 %}
+                                <div class="progress-bar-fill bg-blue-400" style="width: {% widthratio male_count total_students 100 %}%"></div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="gender-pill">
+                        <div class="w-3 h-3 rounded-full bg-pink-400 flex-shrink-0"></div>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm font-semibold text-gray-700">Female</span>
+                                <span class="text-sm font-black text-pink-600">{{ female_count }}</span>
+                            </div>
+                            <div class="progress-bar-track mt-1">
+                                {% if total_students > 0 %}
+                                <div class="progress-bar-fill bg-pink-400" style="width: {% widthratio female_count total_students 100 %}%"></div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-center">
+                    <span class="text-xs text-gray-400 font-medium">Total: {{ total_students }} students across {{ total_classes }} classes</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

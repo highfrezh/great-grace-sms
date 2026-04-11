@@ -12,9 +12,7 @@ class StudentForm(forms.ModelForm):
         fields = [
             'first_name', 'last_name', 'other_names',
             'date_of_birth', 'gender',
-            'phone', 'email', 'address',
-            'blood_group', 'allergies', 'medical_conditions',
-            'emergency_contact', 'emergency_phone',
+            'address', 'allergies', 'medical_conditions',
             'is_active'
         ]
         widgets = {
@@ -23,16 +21,16 @@ class StudentForm(forms.ModelForm):
             'other_names': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Other Names (optional)'}),
             'date_of_birth': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
             'gender': forms.Select(attrs={'class': 'form-input'}),
-            'phone': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Phone Number'}),
-            'email': forms.EmailInput(attrs={'class': 'form-input', 'placeholder': 'Email Address'}),
             'address': forms.Textarea(attrs={'class': 'form-input', 'rows': 3, 'placeholder': 'Home Address'}),
-            'blood_group': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. O+'}),
             'allergies': forms.Textarea(attrs={'class': 'form-input', 'rows': 2, 'placeholder': 'Known allergies'}),
             'medical_conditions': forms.Textarea(attrs={'class': 'form-input', 'rows': 2, 'placeholder': 'Medical conditions'}),
-            'emergency_contact': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Emergency Contact Name'}),
-            'emergency_phone': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Emergency Phone'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.fields['is_active'].initial = True
 
 
 class GuardianForm(forms.ModelForm):

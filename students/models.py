@@ -8,7 +8,7 @@ def generate_admission_number():
     year = AcademicSession.get_current()
     year_str = year.name.split('/')[0] if year else '2024'
     
-    prefix = f"GG/{year_str}/"
+    prefix = f"GGS/{year_str}/"
     last_student = Student.objects.filter(
         admission_number__startswith=prefix
     ).order_by('-admission_number').first()
@@ -19,7 +19,7 @@ def generate_admission_number():
     else:
         new_num = 1
     
-    return f"{prefix}{new_num:05d}"
+    return f"{prefix}{new_num:03d}"
 
 
 class Student(models.Model):
@@ -45,17 +45,10 @@ class Student(models.Model):
     last_name = models.CharField(max_length=50)
     other_names = models.CharField(max_length=50, blank=True)
     date_of_birth = models.DateField()
-    gender = models.CharField(max_length=1, choices=Gender.choices)
-    
-    phone = models.CharField(max_length=15, blank=True)
-    email = models.EmailField(blank=True)
-    address = models.TextField(blank=True)
-    
-    blood_group = models.CharField(max_length=5, blank=True)
+    gender = models.CharField(max_length=1, choices=Gender.choices)    
+    address = models.TextField(blank=True)    
     allergies = models.TextField(blank=True)
     medical_conditions = models.TextField(blank=True)
-    emergency_contact = models.CharField(max_length=100, blank=True)
-    emergency_phone = models.CharField(max_length=15, blank=True)
     
     is_active = models.BooleanField(default=True)
     date_admitted = models.DateField(auto_now_add=True)

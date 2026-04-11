@@ -6,7 +6,8 @@ from accounts.decorators import admin_staff_required
 from .models import AcademicSession, Term, ClassLevel, ClassArm, Subject, ClassArmSubject, SubjectTeacherAssignment
 from .forms import (
     AcademicSessionForm, TermForm, ClassLevelForm,
-    ClassArmForm, SubjectForm, SubjectTeacherAssignmentForm
+    ClassArmForm, SubjectForm, SubjectTeacherAssignmentForm,
+    SubjectSearchForm
 )
 
 
@@ -240,9 +241,39 @@ def class_arm_edit(request, pk):
 @login_required
 @admin_staff_required
 def subject_list(request):
-    subjects = Subject.objects.all()
+    form = SubjectSearchForm(request.GET or None)
+    subjects = Subject.objects.all().prefetch_related('class_arms__class_arm')
+    
+    if form.is_valid():
+        query = form.cleaned_data.get('query')
+        class_arm = form.cleaned_data.get('class_arm')
+        status = form.cleaned_data.get('status')
+        
+        if query:
+            from django.db.models import Q
+            subjects = subjects.filter(
+                Q(name__icontains=query) |
+                Q(code__icontains=query)
+            )
+            
+        if class_arm:
+            subjects = subjects.filter(class_arms__class_arm=class_arm)
+            
+        if status:
+            if status == 'active':
+                subjects = subjects.filter(is_active=True)
+            elif status == 'inactive':
+                subjects = subjects.filter(is_active=False)
+                
+    subjects = subjects.distinct()
+    
+    current_session = AcademicSession.get_current()
+    class_arms = ClassArm.objects.filter(session=current_session).select_related('level').order_by('level__order', 'name') if current_session else ClassArm.objects.none()
+    
     return render(request, 'academics/subject_list.html', {
         'subjects': subjects,
+        'form': form,
+        'class_arms': class_arms,
         'page_title': 'Subjects'
     })
 

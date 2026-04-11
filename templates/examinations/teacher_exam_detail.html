@@ -376,9 +376,11 @@
             <div class="question-item">
               <div class="flex items-start justify-between">
                 <div class="flex-1">
-                  <p class="text-sm font-medium text-gray-900 mb-2">
-                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold mr-2" style="background:#851A10; color:white;">{{ forloop.counter }}</span>
-                    {{ question.question_text|truncatewords:20 }}
+                  <p class="text-sm font-medium text-gray-900 mb-2" style="white-space: pre-wrap;">
+                    <div class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold mr-2 px-2 py-1 mb-3" style="background:#851A10; color:white;">{{ forloop.counter }}</div>
+                    <br>
+                    <br>
+                    <div class="text-sm font-medium text-gray-900 mb-2" style="white-space: pre-wrap;">{{ question.question_text }}</div>
                   </p>
                   {% if question.question_image %}
                     <div class="flex items-center gap-1 mt-2">

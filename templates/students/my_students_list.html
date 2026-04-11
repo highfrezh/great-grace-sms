@@ -1,0 +1,360 @@
+{% extends 'base.html' %}
+
+{% block title %}My Students — Class Teacher Portal{% endblock %}
+
+{% block content %}
+<style>
+  .stat-card {
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid #F3F4F6;
+    padding: 1rem;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .stat-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  .stat-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .student-card {
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid #F3F4F6;
+    padding: 1.25rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: block;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .student-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #851A10 0%, #A52318 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .student-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+  
+  .student-card:hover::before {
+    opacity: 1;
+  }
+  
+  .avatar {
+    width: 4rem;
+    height: 4rem;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, #FEF2F2 0%, #FFF5F3 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #851A10;
+    border: 2px solid white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 9999px;
+  }
+  
+  .class-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    background: #F1F5F9;
+    border-radius: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #475569;
+  }
+  
+  .gender-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+  
+  .gender-male {
+    background: #DBEAFE;
+    color: #1E40AF;
+  }
+  
+  .gender-female {
+    background: #FCE7F3;
+    color: #BE185D;
+  }
+  
+  .search-container {
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 1rem;
+    padding: 0.3rem;
+    transition: all 0.3s ease;
+    width: 100%;
+  }
+  
+  .search-container:focus-within {
+    border-color: #851A10;
+    box-shadow: 0 0 0 3px rgba(133, 26, 16, 0.1);
+  }
+  
+  .search-input-field {
+    flex-grow: 1;
+    border: none;
+    background: transparent;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    outline: none;
+  }
+  
+  .search-icon-wrapper {
+    padding-left: 0.75rem;
+    color: #9CA3AF;
+  }
+  
+  .search-container:focus-within .search-icon-wrapper {
+    color: #851A10;
+  }
+  
+  .search-submit-btn {
+    background: #851A10;
+    color: white;
+    border: none;
+    border-radius: 0.75rem;
+    padding: 0.5rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  
+  .search-submit-btn:hover {
+    background: #A52318;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(133, 26, 16, 0.2);
+  }
+  
+  .clear-search-btn {
+    color: #9CA3AF;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .clear-search-btn:hover {
+    color: #DC2626;
+    background: #FEF2F2;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 1rem;
+    border: 2px dashed #E5E7EB;
+  }
+  
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .section-indicator {
+    width: 4px;
+    height: 1.5rem;
+    background: #851A10;
+    border-radius: 4px;
+  }
+  
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #374151;
+  }
+  
+  .section-count {
+    padding: 0.25rem 0.75rem;
+    background: #F3F4F6;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6B7280;
+  }
+</style>
+
+<div class="max-w-7xl mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+        <div>
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-1 h-8 rounded-full" style="background:#851A10;"></div>
+                <h1 class="text-2xl font-bold" style="color:#635E57;">My Students</h1>
+            </div>
+            <p class="text-sm text-gray-500 ml-4">
+                Manage and view progress for students under your assigned care
+                {% if current_session %} — {{ current_session.name }}{% endif %}
+            </p>
+        </div>
+        
+        <form method="GET" class="max-w-md w-full">
+            <div class="search-container">
+                <div class="search-icon-wrapper">
+                    <svg class="w-5 h-5 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                
+                <input type="text" 
+                       name="q" 
+                       value="{{ query }}"
+                       placeholder="Search by name or admission number..." 
+                       class="search-input-field">
+                       
+                {% if query %}
+                <a href="{% url 'students:my_students_list' %}" class="clear-search-btn mr-1" title="Clear Search">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </a>
+                {% endif %}
+                
+                <button type="submit" class="search-submit-btn">
+                    Search
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Student Grid by Class -->
+    {% regroup enrollments by class_arm as class_arms_list %}
+    
+    {% for class_group in class_arms_list %}
+    <div class="mb-10">
+        <div class="section-header">
+            <div class="section-indicator"></div>
+            <h2 class="section-title">{{ class_group.grouper.name }}</h2>
+            <span class="section-count">{{ class_group.list|length }} Students</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {% for enrollment in class_group.list %}
+            <a href="{% url 'students:my_student_profile' enrollment.student.id %}" class="student-card">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="avatar">
+                        {% if enrollment.student.user and enrollment.student.user.profile_picture %}
+                            <img src="{{ enrollment.student.user.profile_picture.url }}" alt="{{ enrollment.student.full_name }}">
+                        {% else %}
+                            <span>{{ enrollment.student.first_name|first }}{{ enrollment.student.last_name|first }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 class="font-bold text-gray-900 truncate" title="{{ enrollment.student.full_name }}">
+                            {{ enrollment.student.full_name }}
+                        </h3>
+                        <p class="text-xs text-gray-400 font-mono mt-0.5">{{ enrollment.student.admission_number }}</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <span class="gender-badge {% if enrollment.student.gender == 'MALE' %}gender-male{% else %}gender-female{% endif %}">
+                        {% if enrollment.student.gender == 'MALE' %}
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                        {% else %}
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                        {% endif %}
+                        {{ enrollment.student.get_gender_display }}
+                    </span>
+                    <span class="text-xs font-medium text-[#851A10] opacity-0 group-hover:opacity-100 transition-opacity">
+                        View Profile →
+                    </span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+            <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">No Students Assigned</h3>
+        <p class="text-gray-500 max-w-md mx-auto">
+            You are not assigned to any class arms with active students this session.
+            Please contact the administrator to assign you to a class.
+        </p>
+    </div>
+    {% endfor %}
+    
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="flex justify-center gap-2 mt-8">
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" 
+               class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition">Previous</a>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <span class="px-4 py-2 bg-[#851A10] text-white rounded-lg">{{ num }}</span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <a href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}" 
+                   class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}" 
+               class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
