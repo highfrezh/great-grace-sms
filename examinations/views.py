@@ -622,14 +622,24 @@ def exam_take(request, pk):
     if submission.is_complete:
         return redirect('examinations:exam_result_student', pk=pk)
 
-    # Calculate remaining time on resume (account for elapsed time)
+    # Calculate remaining time on resume (account for elapsed time with 5-min grace period)
     if not created:
-        elapsed_seconds = (timezone.now() - submission.started_at).total_seconds()
-        time_remaining = max(0, (exam.duration_minutes * 60) - int(elapsed_seconds))
-        # But use saved remaining_time if it's less (connection recovery)
-        if submission.time_remaining_seconds and submission.time_remaining_seconds < time_remaining:
-            time_remaining = submission.time_remaining_seconds
-        submission.time_remaining_seconds = time_remaining
+        # Use last_autosave_at as reference if available, otherwise started_at
+        reference_time = submission.last_autosave_at or submission.started_at
+        time_away = (timezone.now() - reference_time).total_seconds()
+        
+        # Apply 5-minute (300s) grace period
+        penalty = max(0, int(time_away) - 300)
+        
+        if penalty > 0:
+            # Deduct penalty from the LAST SAVED remaining time
+            if submission.time_remaining_seconds is not None:
+                submission.time_remaining_seconds = max(0, submission.time_remaining_seconds - penalty)
+            else:
+                # Fallback calculation if somehow time_remaining_seconds was null
+                total_seconds = exam.duration_minutes * 60
+                submission.time_remaining_seconds = max(0, total_seconds - int(time_away))
+        
         submission.save()
 
     # Get questions
@@ -795,14 +805,20 @@ def exam_timer_status(request, pk):
             'message': 'Exam already submitted'
         })
 
-    # Calculate actual remaining time
-    elapsed_seconds = (timezone.now() - submission.started_at).total_seconds()
-    total_seconds = exam.duration_minutes * 60
-    calculated_remaining = max(0, total_seconds - int(elapsed_seconds))
+    # Calculate actual remaining time with 5-min grace period logic
+    reference_time = submission.last_autosave_at or submission.started_at
+    time_away = (timezone.now() - reference_time).total_seconds()
     
-    # Use saved remaining time if less (for connection recovery)
+    # Apply 5-minute (300s) grace period
+    penalty = max(0, int(time_away) - 300)
+    
     if submission.time_remaining_seconds is not None:
-        calculated_remaining = min(calculated_remaining, submission.time_remaining_seconds)
+        # Penalty is only applied to the last known saved time
+        calculated_remaining = max(0, submission.time_remaining_seconds - penalty)
+    else:
+        # Fallback to absolute wall-clock if no autosave exists yet
+        total_seconds = exam.duration_minutes * 60
+        calculated_remaining = max(0, total_seconds - int(time_away))
 
     return JsonResponse({
         'status': 'ok',

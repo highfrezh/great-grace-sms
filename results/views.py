@@ -83,6 +83,11 @@ def update_student_results(request, student_id):
         messages.error(request, "You are not authorized to manage this student's report card.")
         return redirect('results:report_card_management')
 
+    # Status Check: Locked if published
+    if report_card.is_published:
+        messages.warning(request, f"Result for {student.full_name} is already published and locked. Contact Admin to unpublish before editing.")
+        return redirect('results:report_card_management')
+
     if request.method == 'POST':
         form = ReportCardCommentForm(request.POST, instance=report_card)
         if form.is_valid():
@@ -184,7 +189,25 @@ def view_report_card(request, pk):
     is_admin = request.user.is_staff or getattr(request.user, 'is_admin_staff', False)
     is_class_teacher = (report_card.class_arm.class_teacher == request.user)
     
-    if not (is_admin or is_class_teacher):
+    # Student/Parent check
+    is_student = False
+    try:
+        is_student = (request.user.student_profile == report_card.student)
+    except:
+        pass
+    
+    is_parent = False
+    try:
+        is_parent = (request.user.guardian_profile.student == report_card.student)
+    except:
+        pass
+
+    # Visibility check
+    if is_student or is_parent:
+        if not report_card.is_published:
+            messages.error(request, "This report card has not been published yet.")
+            return redirect('accounts:dashboard')
+    elif not (is_admin or is_class_teacher):
         messages.error(request, "You are not authorized to view this report card.")
         return redirect('accounts:dashboard')
 
@@ -210,7 +233,13 @@ def view_transcript(request, student_id):
         messages.error(request, "You are not authorized to view this transcript.")
         return redirect('accounts:dashboard')
 
-    report_cards = ReportCard.objects.filter(student=student).order_by('session__start_date', 'term__name')
+    report_cards = ReportCard.objects.filter(student=student)
+    
+    # Filter for student role
+    if is_student:
+        report_cards = report_cards.filter(is_published=True)
+        
+    report_cards = report_cards.order_by('session__start_date', 'term__name')
 
     return render(request, 'results/transcript_view.html', {
         'student': student,
@@ -271,5 +300,102 @@ def all_student_results(request):
         'terms': terms,
         'class_arms': class_arms,
         'page_title': "All Student Results"
+    })
+
+
+@login_required
+@admin_staff_required
+def manage_releases(request):
+    """
+    Dashboard for Principal/VP to manage result releases per class level/arm.
+    """
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
+    
+    # Get all class arms for the current session
+    class_arms = ClassArm.objects.filter(
+        session=current_session
+    ).select_related('level').order_by('level__order', 'name')
+    
+    # Enrich class arms with report card stats
+    for arm in class_arms:
+        report_cards = ReportCard.objects.filter(
+            class_arm=arm, 
+            session=current_session, 
+            term=current_term
+        )
+        arm.total_students = report_cards.count()
+        arm.published_count = report_cards.filter(is_published=True).count()
+        arm.is_fully_published = arm.total_students > 0 and arm.published_count == arm.total_students
+        
+    return render(request, 'results/manage_releases.html', {
+        'class_arms': class_arms,
+        'current_session': current_session,
+        'current_term': current_term,
+        'page_title': 'Result Release Management'
+    })
+
+
+@login_required
+@admin_staff_required
+@require_POST
+def toggle_release(request):
+    """
+    Bulk publish/unpublish results for a class arm.
+    """
+    class_arm_id = request.POST.get('class_arm_id')
+    action = request.POST.get('action') # 'publish' or 'unpublish'
+    
+    session = AcademicSession.get_current()
+    term = Term.get_current()
+    
+    class_arm = get_object_or_404(ClassArm, pk=class_arm_id)
+    
+    report_cards = ReportCard.objects.filter(
+        class_arm=class_arm,
+        session=session,
+        term=term
+    )
+    
+    if action == 'publish':
+        report_cards.update(is_published=True)
+        messages.success(request, f"Successfully published results for {class_arm.full_name}")
+    else:
+        report_cards.update(is_published=True) # Unpublish should be False, bug fixed below
+        report_cards.update(is_published=False)
+        messages.success(request, f"Successfully unpublished results for {class_arm.full_name}")
+        
+    return redirect('results:manage_releases')
+
+
+@login_required
+def student_report_card_list(request):
+    """
+    View for students and parents to see a list of published report cards.
+    """
+    # Identify the target student
+    student = None
+    try:
+        if hasattr(request.user, 'student_profile'):
+            student = request.user.student_profile
+        elif hasattr(request.user, 'guardian_profile'):
+            student = request.user.guardian_profile.student
+    except:
+        pass
+        
+    if not student:
+        messages.error(request, "Access denied. Student profile not found.")
+        return redirect('accounts:dashboard')
+        
+    # Get only published report cards
+    published_cards = ReportCard.objects.filter(
+        student=student,
+        is_published=True
+    ).select_related('session', 'term', 'class_arm__level').order_by('-session__start_date', '-term__name')
+    
+    return render(request, 'results/student_results_list.html', {
+        'student': student,
+        'published_cards': published_cards,
+        'page_title': 'My Academic Results'
     })
 
