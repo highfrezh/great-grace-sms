@@ -586,6 +586,7 @@ def student_dashboard(request):
     """
     Student dashboard - view profile, current session, subjects, and available exams
     """
+    now = timezone.now()
     try:
         student = request.user.student_profile
     except Student.DoesNotExist:
@@ -665,7 +666,8 @@ def student_dashboard(request):
                 'exam': exam,
                 'submission': submission,
                 'exam_status': exam_status,
-                'can_take_exam': exam is not None and (submission is None or submission.status == ExamSubmission.SubmissionStatus.IN_PROGRESS)
+                'is_scheduled_to_start': exam is not None and (exam.scheduled_start_datetime is None or now >= exam.scheduled_start_datetime),
+                'can_take_exam': exam is not None and (exam.scheduled_start_datetime is None or now >= exam.scheduled_start_datetime) and (submission is None or submission.status == ExamSubmission.SubmissionStatus.IN_PROGRESS)
             })
     
     # Get recent exam results
@@ -677,31 +679,36 @@ def student_dashboard(request):
     
     # Calculate stats
     total_subjects = len(subjects_data)
-    total_exams_available = sum(1 for s in subjects_data if s['exam'])
-    exams_completed = ExamSubmission.objects.filter(
-        student=student,
-        status__in=[
-            ExamSubmission.SubmissionStatus.SUBMITTED,
-            ExamSubmission.SubmissionStatus.AUTO_SUBMITTED
-        ]
-    ).count()
     
-    results_published = recent_results.count()
-    avg_score = ExamResult.objects.filter(
-        student=student,
-        is_published=True
-    ).aggregate(Avg('total_score'))['total_score__avg'] or 0
-    
-    # Get upcoming scheduled exams
-    from django.utils import timezone
-    now = timezone.now()
-    
+    # Get upcoming scheduled exams and release status
     can_view_exams = True
     if exam_config and exam_config.exam_start_date:
         if now < exam_config.exam_start_date:
             can_view_exams = False
     
     if can_view_exams:
+        # Only count exams as available if they have reached their scheduled start time
+        total_exams_available = sum(1 for s in subjects_data if s['exam'] and s['is_scheduled_to_start'])
+        
+        # Only count completed exams for the CURRENT session and term
+        exams_completed = ExamSubmission.objects.filter(
+            student=student,
+            exam__session=current_session,
+            exam__term=current_term,
+            status__in=[
+                ExamSubmission.SubmissionStatus.SUBMITTED,
+                ExamSubmission.SubmissionStatus.AUTO_SUBMITTED
+            ]
+        ).count()
+        
+        results_published = recent_results.count()
+        avg_score = ExamResult.objects.filter(
+            student=student,
+            exam__session=current_session,
+            exam__term=current_term,
+            is_published=True
+        ).aggregate(Avg('total_score'))['total_score__avg'] or 0
+        
         upcoming_exams = Exam.objects.filter(
             class_arms=class_arm,
             term=current_term,
@@ -709,20 +716,24 @@ def student_dashboard(request):
             status=Exam.ExamStatus.APPROVED,
             scheduled_start_datetime__isnull=False
         ).select_related('subject').order_by('scheduled_start_datetime')[:5]
+        
+        # Check for submissions for these exams
+        from examinations.models import ExamSubmission
+        submissions = ExamSubmission.objects.filter(
+            student=student,
+            exam__in=upcoming_exams,
+            status__in=['SUBMITTED', 'AUTO_SUBMITTED']
+        ).values_list('exam_id', flat=True)
+        
+        # Attach submission status to each exam
+        for exam in upcoming_exams:
+            exam.has_submitted = exam.id in submissions
     else:
+        total_exams_available = 0
+        exams_completed = 0
+        results_published = 0
+        avg_score = 0
         upcoming_exams = Exam.objects.none()
-    
-    # Check for submissions for these exams
-    from examinations.models import ExamSubmission
-    submissions = ExamSubmission.objects.filter(
-        student=student,
-        exam__in=upcoming_exams,
-        status__in=['SUBMITTED', 'AUTO_SUBMITTED']
-    ).values_list('exam_id', flat=True)
-    
-    # Attach submission status to each exam
-    for exam in upcoming_exams:
-        exam.has_submitted = exam.id in submissions
     
     context = {
         'student': student,
