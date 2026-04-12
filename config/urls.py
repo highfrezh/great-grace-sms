@@ -12,7 +12,6 @@ urlpatterns = [
     path('examinations/', include('examinations.urls')),
     path('results/', include('results.urls')),
     path('schemes/', include('schemes.urls')),
-    path('timetable/', include('timetable.urls')),
     path('promotions/', include('promotions.urls')),
     path('portal/', include('portal.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

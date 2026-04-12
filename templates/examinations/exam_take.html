@@ -4,6 +4,12 @@
 
 {% block title %}{{ exam.title }} - CBT Exam{% endblock %}
 
+{% block sidebar %}{% endblock %}
+{% block top_navbar %}{% endblock %}
+{% block main_layout %}
+class="ml-0 flex-1 flex flex-col transition-all duration-300 ease-in-out"
+{% endblock %}
+
 {% block extra_css %}
 <style>
     :root {
@@ -68,12 +74,12 @@
 
     /* Timer Display */
     .timer-section {
-        background: rgba(255,255,255,0.15);
+        background: rgba(255, 255, 255, 0.15);
         padding: 10px 20px;
         border-radius: 12px;
         backdrop-filter: blur(4px);
         text-align: center;
-        border: 1px solid rgba(255,255,255,0.2);
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .timer-display {
@@ -89,7 +95,7 @@
         background: white;
         padding: 24px;
         border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         border: 1px solid var(--gray-200);
     }
 
@@ -190,7 +196,7 @@
     .question-view {
         background: white;
         border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         border: 1px solid var(--gray-200);
         padding: 40px;
         min-height: 500px;
@@ -208,8 +214,15 @@
     }
 
     @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .question-header {
@@ -346,7 +359,7 @@
         background: white;
         padding: 12px 20px;
         border-radius: 12px;
-        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         display: flex;
         align-items: center;
         gap: 10px;
@@ -367,8 +380,15 @@
     }
 
     @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.3; }
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.3;
+        }
     }
 
     /* Keyboard Hints */
@@ -409,8 +429,15 @@
     }
 
     @keyframes modalFadeIn {
-        from { opacity: 0; transform: scale(0.95); }
-        to { opacity: 1; transform: scale(1); }
+        from {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
     }
 
     .violation-icon {
@@ -432,7 +459,6 @@
         line-height: 1.6;
         margin-bottom: 25px;
     }
-
 </style>
 {% endblock %}
 
@@ -461,17 +487,18 @@
             <input type="hidden" name="tab_switches" id="tabSwitches" value="0">
             <input type="hidden" name="fullscreen_exits" id="fullscreenExits" value="0">
             <input type="hidden" name="auto_submit_reason" id="autoSubmitReason" value="">
-            
+
             <!-- Hidden Submit Button for Robustness -->
             <button type="submit" id="hiddenSubmitBtn" style="display: none;"></button>
 
             <div class="question-view" id="questionView">
                 {% for question in questions %}
-                <div class="question-item" id="q-{{ forloop.counter }}" data-index="{{ forloop.counter }}" data-id="{{ question.id }}">
+                <div class="question-item" id="q-{{ forloop.counter }}" data-index="{{ forloop.counter }}"
+                    data-id="{{ question.id }}">
                     <div class="question-header">
                         <span class="question-badge">Question {{ forloop.counter }} of {{ questions|length }}</span>
-                        <button type="button" class="text-gray-400 hover:text-warning text-xl transition-colors" 
-                                onclick="toggleFlag('{{ forloop.counter }}')" id="flag-btn-{{ forloop.counter }}">
+                        <button type="button" class="text-gray-400 hover:text-warning text-xl transition-colors"
+                            onclick="toggleFlag('{{ forloop.counter }}')" id="flag-btn-{{ forloop.counter }}">
                             ⚑
                         </button>
                     </div>
@@ -479,7 +506,8 @@
                     <div class="question-text">
                         {{ question.question_text }}
                         {% if question.question_image %}
-                        <img src="{{ question.question_image.url }}" alt="Question" class="mt-6 rounded-xl shadow-lg max-h-64 object-contain block mx-auto">
+                        <img src="{{ question.question_image.url }}" alt="Question"
+                            class="mt-6 rounded-xl shadow-lg max-h-64 object-contain block mx-auto">
                         {% endif %}
                     </div>
 
@@ -487,9 +515,9 @@
                         {% for letter in "ABCD" %}
                         <label class="option-card" id="card-{{ forloop.parentloop.counter }}-{{ letter }}">
                             {% with ans=existing_answers|dict_get:question.id %}
-                            <input type="radio" name="answer_{{ question.id }}" value="{{ letter }}" 
-                                   class="hidden q-option question-radio" data-q-index="{{ forloop.parentloop.counter }}"
-                                   {% if ans == letter %}checked{% endif %}>
+                            <input type="radio" name="answer_{{ question.id }}" value="{{ letter }}"
+                                class="hidden q-option question-radio" data-q-index="{{ forloop.parentloop.counter }}"
+                                {% if ans == letter %}checked{% endif %}>
                             {% endwith %}
                             <div class="option-key">{{ letter }}</div>
                             <div class="option-label">{{ question|get_option:letter }}</div>
@@ -501,9 +529,10 @@
                         <button type="button" class="nav-btn prev" id="prevBtn" onclick="examNavigator.prev()" {% if forloop.first %}disabled{% endif %}>
                             ← Previous <span class="keyboard-hint ml-2">[P]</span>
                         </button>
-                        
+
                         {% if forloop.last %}
-                        <button type="button" class="nav-btn next" onclick="examNavigator.showSubmitModal()" style="background-color: var(--success);">
+                        <button type="button" class="nav-btn next" onclick="examNavigator.showSubmitModal()"
+                            style="background-color: var(--success);">
                             ✓ Finish Exam
                         </button>
                         {% else %}
@@ -520,27 +549,37 @@
         <!-- Sidebar Navigation -->
         <div class="exam-nav-sidebar">
             <h3 class="nav-grid-title">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/></svg>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                </svg>
                 Navigation
             </h3>
-            
+
             <div class="nav-grid" id="navGrid">
                 {% for i in questions %}
-                <div class="nav-item" id="nav-item-{{ forloop.counter }}" data-index="{{ forloop.counter }}" onclick="examNavigator.goTo('{{ forloop.counter }}')">
+                <div class="nav-item" id="nav-item-{{ forloop.counter }}" data-index="{{ forloop.counter }}"
+                    onclick="examNavigator.goTo('{{ forloop.counter }}')">
                     {{ forloop.counter }}
                 </div>
                 {% endfor %}
             </div>
 
             <div class="nav-legend">
-                <div class="legend-item"><div class="legend-box" style="background-color: var(--primary);"></div><span>Active</span></div>
-                <div class="legend-item"><div class="legend-box" style="background-color: #d4edda; border: 1px solid #c3e6cb;"></div><span>Answered</span></div>
-                <div class="legend-item"><div class="legend-box" style="border: 2px solid var(--warning);"></div><span>Flagged</span></div>
+                <div class="legend-item">
+                    <div class="legend-box" style="background-color: var(--primary);"></div><span>Active</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box" style="background-color: #d4edda; border: 1px solid #c3e6cb;"></div>
+                    <span>Answered</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box" style="border: 2px solid var(--warning);"></div><span>Flagged</span>
+                </div>
             </div>
 
             <!-- Submit Button (Always Visible in Sidebar) -->
-            <button type="button" onclick="examNavigator.showSubmitModal()" 
-                    class="w-full mt-6 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all">
+            <button type="button" onclick="examNavigator.showSubmitModal()"
+                class="w-full mt-6 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all">
                 Submit Exam
             </button>
         </div>
@@ -553,218 +592,221 @@
     <span class="autosave-text text-xs font-bold text-gray-600" id="autosaveText">Saved</span>
 </div>
 
-    <!-- Violation Modal -->
-    <div class="violation-modal" id="violationModal">
-        <div class="violation-content">
-            <div class="violation-icon" id="violationIcon">⚠️</div>
-            <div class="violation-title" id="violationTitle">Warning</div>
-            <div class="violation-message" id="violationMessage">You have left the exam window.</div>
-            <div class="violation-count" id="violationCount"></div>
-            <button type="button" class="violation-btn continue" id="continueBtn">
-                Continue Exam
+<!-- Violation Modal -->
+<div class="violation-modal" id="violationModal">
+    <div class="violation-content">
+        <div class="violation-icon" id="violationIcon">⚠️</div>
+        <div class="violation-title" id="violationTitle">Warning</div>
+        <div class="violation-message" id="violationMessage">You have left the exam window.</div>
+        <div class="violation-count" id="violationCount"></div>
+        <button type="button" class="violation-btn continue" id="continueBtn">
+            Continue Exam
+        </button>
+    </div>
+</div>
+
+<!-- Submission Confirmation Modal -->
+<div class="violation-modal" id="submissionConfirmModal">
+    <div class="violation-content">
+        <div class="violation-icon text-primary">✓</div>
+        <div class="violation-title">Submit Exam?</div>
+        <div class="violation-message">
+            You have answered <strong id="modalAnsweredCount">0</strong> out of <strong id="modalTotalCount">0</strong>
+            questions.
+            <br><br>
+            Are you sure you want to finalize your exam? This action cannot be undone.
+        </div>
+        <div class="flex gap-4 justify-center mt-6">
+            <button type="button" class="nav-btn prev"
+                onclick="document.getElementById('submissionConfirmModal').classList.remove('show')">
+                No, Go Back
+            </button>
+            <button type="button" class="nav-btn next" onclick="submitExamNow()"
+                style="background-color: var(--success);">
+                Yes, Submit Now
             </button>
         </div>
     </div>
-
-    <!-- Submission Confirmation Modal -->
-    <div class="violation-modal" id="submissionConfirmModal">
-        <div class="violation-content">
-            <div class="violation-icon text-primary">✓</div>
-            <div class="violation-title">Submit Exam?</div>
-            <div class="violation-message">
-                You have answered <strong id="modalAnsweredCount">0</strong> out of <strong id="modalTotalCount">0</strong> questions.
-                <br><br>
-                Are you sure you want to finalize your exam? This action cannot be undone.
-            </div>
-            <div class="flex gap-4 justify-center mt-6">
-                <button type="button" class="nav-btn prev" onclick="document.getElementById('submissionConfirmModal').classList.remove('show')">
-                    No, Go Back
-                </button>
-                <button type="button" class="nav-btn next" onclick="submitExamNow()" style="background-color: var(--success);">
-                    Yes, Submit Now
-                </button>
-            </div>
-        </div>
-    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'js/exam-timer.js' %}?v=1.7"></script>
 <script>
-class ExamNavigator {
-    constructor(totalQuestions) {
-        this.total = totalQuestions;
-        this.current = 1;
-        this.flagged = new Set();
-        this.init();
-    }
+    class ExamNavigator {
+        constructor(totalQuestions) {
+            this.total = totalQuestions;
+            this.current = 1;
+            this.flagged = new Set();
+            this.init();
+        }
 
-    init() {
-        this.showQuestion(1);
-        this.setupEventListeners();
-        this.updateNavGrid();
-    }
+        init() {
+            this.showQuestion(1);
+            this.setupEventListeners();
+            this.updateNavGrid();
+        }
 
-    setupEventListeners() {
-        // Option selection UI
-        document.querySelectorAll('.q-option').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const qIndex = e.target.dataset.qIndex;
-                this.updateOptionHighlight(qIndex);
-                this.updateNavGrid();
-                
-                // Trigger global timer update if needed
-                if (window.examTimer) window.examTimer.updateUI();
+        setupEventListeners() {
+            // Option selection UI
+            document.querySelectorAll('.q-option').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    const qIndex = e.target.dataset.qIndex;
+                    this.updateOptionHighlight(qIndex);
+                    this.updateNavGrid();
+
+                    // Trigger global timer update if needed
+                    if (window.examTimer) window.examTimer.updateUI();
+                });
             });
-        });
 
-        // Keyboard Shortcuts
-        document.addEventListener('keyup', (e) => {
-            const key = e.key.toLowerCase();
-            
-            // A, B, C, D
-            if (['a', 'b', 'c', 'd'].includes(key)) {
-                this.selectOption(key.toUpperCase());
-            }
-            // Next (N)
-            if (key === 'n') {
-                this.next();
-            }
-            // Previous (P)
-            if (key === 'p') {
-                this.prev();
-            }
-        });
-    }
+            // Keyboard Shortcuts
+            document.addEventListener('keyup', (e) => {
+                const key = e.key.toLowerCase();
 
-    showQuestion(index) {
-        index = parseInt(index);
-        if (index < 1 || index > this.total) return;
-        
-        document.querySelectorAll('.question-item').forEach(q => q.classList.remove('active'));
-        document.getElementById(`q-${index}`).classList.add('active');
-        
-        this.current = index;
-        this.updateNavGrid();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    next() {
-        if (this.current < this.total) this.showQuestion(this.current + 1);
-    }
-
-    prev() {
-        if (this.current > 1) this.showQuestion(this.current - 1);
-    }
-
-    goTo(index) {
-        this.showQuestion(index);
-    }
-
-    selectOption(letter) {
-        const option = document.querySelector(`#q-${this.current} input[value="${letter}"]`);
-        if (option) {
-            option.checked = true;
-            option.dispatchEvent(new Event('change'));
+                // A, B, C, D
+                if (['a', 'b', 'c', 'd'].includes(key)) {
+                    this.selectOption(key.toUpperCase());
+                }
+                // Next (N)
+                if (key === 'n') {
+                    this.next();
+                }
+                // Previous (P)
+                if (key === 'p') {
+                    this.prev();
+                }
+            });
         }
-    }
 
-    toggleFlag(index) {
-        const btn = document.getElementById(`flag-btn-${index}`);
-        if (this.flagged.has(index)) {
-            this.flagged.delete(index);
-            btn.classList.remove('text-warning');
-        } else {
-            this.flagged.add(index);
-            btn.classList.add('text-warning');
+        showQuestion(index) {
+            index = parseInt(index);
+            if (index < 1 || index > this.total) return;
+
+            document.querySelectorAll('.question-item').forEach(q => q.classList.remove('active'));
+            document.getElementById(`q-${index}`).classList.add('active');
+
+            this.current = index;
+            this.updateNavGrid();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-        this.updateNavGrid();
-    }
 
-    updateNavGrid() {
-        document.querySelectorAll('.nav-item').forEach(item => {
-            const idx = parseInt(item.dataset.index);
-            item.classList.remove('current', 'answered', 'flagged');
-            
-            if (idx === this.current) {
-                item.classList.add('current');
+        next() {
+            if (this.current < this.total) this.showQuestion(this.current + 1);
+        }
+
+        prev() {
+            if (this.current > 1) this.showQuestion(this.current - 1);
+        }
+
+        goTo(index) {
+            this.showQuestion(index);
+        }
+
+        selectOption(letter) {
+            const option = document.querySelector(`#q-${this.current} input[value="${letter}"]`);
+            if (option) {
+                option.checked = true;
+                option.dispatchEvent(new Event('change'));
             }
-            
-            // Check if answered
-            const isAnswered = document.querySelector(`input[name^="answer_"][data-q-index="${idx}"]:checked`);
-            if (isAnswered) item.classList.add('answered');
-            
-            if (this.flagged.has(idx)) item.classList.add('flagged');
-        });
-    }
+        }
 
-    updateOptionHighlight(qIndex) {
-        document.querySelectorAll(`#q-${qIndex} .option-card`).forEach(card => {
-            const radio = card.querySelector('input');
-            if (radio.checked) {
-                card.classList.add('selected');
+        toggleFlag(index) {
+            const btn = document.getElementById(`flag-btn-${index}`);
+            if (this.flagged.has(index)) {
+                this.flagged.delete(index);
+                btn.classList.remove('text-warning');
             } else {
-                card.classList.remove('selected');
+                this.flagged.add(index);
+                btn.classList.add('text-warning');
+            }
+            this.updateNavGrid();
+        }
+
+        updateNavGrid() {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                const idx = parseInt(item.dataset.index);
+                item.classList.remove('current', 'answered', 'flagged');
+
+                if (idx === this.current) {
+                    item.classList.add('current');
+                }
+
+                // Check if answered
+                const isAnswered = document.querySelector(`input[name^="answer_"][data-q-index="${idx}"]:checked`);
+                if (isAnswered) item.classList.add('answered');
+
+                if (this.flagged.has(idx)) item.classList.add('flagged');
+            });
+        }
+
+        updateOptionHighlight(qIndex) {
+            document.querySelectorAll(`#q-${qIndex} .option-card`).forEach(card => {
+                const radio = card.querySelector('input');
+                if (radio.checked) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            });
+        }
+
+        showSubmitModal() {
+            const answered = document.querySelectorAll('.question-radio:checked').length;
+
+            document.getElementById('modalAnsweredCount').innerText = answered;
+            document.getElementById('modalTotalCount').innerText = this.total;
+
+            document.getElementById('submissionConfirmModal').classList.add('show');
+        }
+    }
+
+    // Helper for flagged toggle
+    window.toggleFlag = (index) => {
+        if (window.examNavigator) window.examNavigator.toggleFlag(parseInt(index));
+    };
+
+    // Helper for final submission
+    window.submitExamNow = () => {
+        const form = document.getElementById('examForm');
+        const submitBtn = document.getElementById('hiddenSubmitBtn');
+
+        // Update final time and malnutrition data just before submission
+        if (window.examTimer) {
+            document.getElementById('timeRemaining').value = window.examTimer.timeRemaining;
+            document.getElementById('tabSwitches').value = window.examTimer.tabSwitches;
+            document.getElementById('fullscreenExits').value = window.examTimer.fullscreenExits;
+        }
+
+        if (submitBtn) {
+            submitBtn.click();
+        } else {
+            form.submit();
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        window.examNavigator = new ExamNavigator(parseInt("{{ questions|length|default:0 }}") || 0);
+
+        // Initial highlight for pre-existing answers
+        const qCount = parseInt("{{ questions|length|default:0 }}") || 0;
+        for (let i = 1; i <= qCount; i++) {
+            examNavigator.updateOptionHighlight(i);
+        }
+
+        // Initialize exam timer
+        const examTimer = new ExamTimer({
+            examId: parseInt("{{ exam.id|default:0 }}"),
+            duration: parseInt("{{ exam_duration_minutes|default:60 }}"),
+            initialTime: parseInt("{{ time_remaining|default:0 }}"),
+            autoSaveInterval: 30,
+            timerThresholds: {
+                warning: 300,
+                danger: 60
             }
         });
-    }
 
-    showSubmitModal() {
-        const answered = document.querySelectorAll('.question-radio:checked').length;
-        
-        document.getElementById('modalAnsweredCount').innerText = answered;
-        document.getElementById('modalTotalCount').innerText = this.total;
-        
-        document.getElementById('submissionConfirmModal').classList.add('show');
-    }
-}
-
-// Helper for flagged toggle
-window.toggleFlag = (index) => {
-    if (window.examNavigator) window.examNavigator.toggleFlag(parseInt(index));
-};
-
-// Helper for final submission
-window.submitExamNow = () => {
-    const form = document.getElementById('examForm');
-    const submitBtn = document.getElementById('hiddenSubmitBtn');
-    
-    // Update final time and malnutrition data just before submission
-    if (window.examTimer) {
-        document.getElementById('timeRemaining').value = window.examTimer.timeRemaining;
-        document.getElementById('tabSwitches').value = window.examTimer.tabSwitches;
-        document.getElementById('fullscreenExits').value = window.examTimer.fullscreenExits;
-    }
-    
-    if (submitBtn) {
-        submitBtn.click();
-    } else {
-        form.submit();
-    }
-};
-
-document.addEventListener('DOMContentLoaded', function() {
-    window.examNavigator = new ExamNavigator(parseInt("{{ questions|length|default:0 }}") || 0);
-    
-    // Initial highlight for pre-existing answers
-    const qCount = parseInt("{{ questions|length|default:0 }}") || 0;
-    for (let i = 1; i <= qCount; i++) {
-        examNavigator.updateOptionHighlight(i);
-    }
-
-    // Initialize exam timer
-    const examTimer = new ExamTimer({
-        examId: parseInt("{{ exam.id|default:0 }}"),
-        duration: parseInt("{{ exam_duration_minutes|default:60 }}"),
-        initialTime: parseInt("{{ time_remaining|default:0 }}"),
-        autoSaveInterval: 30,
-        timerThresholds: {
-            warning: 300,
-            danger: 60
-        }
+        window.examTimer = examTimer;
     });
-    
-    window.examTimer = examTimer;
-});
 </script>
 {% endblock %}

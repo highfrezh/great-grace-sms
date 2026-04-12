@@ -3,6 +3,12 @@
 
 {% block title %}{{ page_title }}{% endblock %}
 
+{% block sidebar %}{% endblock %}
+{% block top_navbar %}{% endblock %}
+{% block main_layout %}
+class="ml-0 flex-1 flex flex-col transition-all duration-300 ease-in-out"
+{% endblock %}
+
 {% block extra_css %}
 <style>
     :root {
@@ -24,7 +30,7 @@
     .report-card {
         background: white;
         border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         overflow: hidden;
         border: 1px solid #eee;
     }
@@ -90,10 +96,21 @@
         letter-spacing: 1px;
     }
 
-    .stat-total { color: var(--dark); }
-    .stat-correct { color: var(--success); }
-    .stat-wrong { color: var(--danger); }
-    .stat-unanswered { color: var(--warning); }
+    .stat-total {
+        color: var(--dark);
+    }
+
+    .stat-correct {
+        color: var(--success);
+    }
+
+    .stat-wrong {
+        color: var(--danger);
+    }
+
+    .stat-unanswered {
+        color: var(--warning);
+    }
 
     .score-section {
         text-align: center;
@@ -173,7 +190,7 @@
         justify-content: space-between;
         align-items: center;
         font-size: 0.95rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
     }
 
     .violation-type {
@@ -263,14 +280,15 @@
                 <span class="score-max">/ {{ max_obj_marks }}</span>
             </div>
             <h3 style="margin: 0; font-weight: 700; color: var(--dark);">Objective Score</h3>
-            <p style="color: #666; font-size: 0.9rem; margin-top: 5px;">Your performance has been recorded successfully.</p>
+            <p style="color: #666; font-size: 0.9rem; margin-top: 5px;">Your performance has been recorded successfully.
+            </p>
         </div>
     </div>
 
 
     <div class="action-buttons">
-        <a href="{% url 'students:student_dashboard' %}" class="btn-primary-custom">
-            Return to Dashboard
+        <a href="{% url 'accounts:logout' %}" class="btn-primary-custom">
+            Logout and Finish
         </a>
     </div>
 </div>

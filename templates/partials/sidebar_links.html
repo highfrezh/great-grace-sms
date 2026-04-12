@@ -460,7 +460,7 @@
 {% endif %}
 
 <!-- Scheme of Work -->
-<a href="#"
+<a href="{% url 'schemes:scheme_list' %}"
    class="flex items-center px-4 py-2.5 transition text-white
           {% if current_app == 'schemes' %}opacity-100{% else %}opacity-60 hover:opacity-100{% endif %}"
    {% if current_app == 'schemes' %}
