@@ -672,6 +672,11 @@ class ExamConfiguration(models.Model):
         help_text="Show exam results immediately after submission"
     )
     
+    exam_start_date = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Official start date for exams. Upcoming exams become visible on student dashboard from this date."
+    )
+    
     # ── Metadata ───────────────────────────────────────
     configured_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

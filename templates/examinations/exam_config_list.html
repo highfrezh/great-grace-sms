@@ -24,6 +24,51 @@
       </a>
     </div>
 
+    <!-- Filters Bar -->
+    <div class="bg-white rounded-xl p-4 border border-gray-100 shadow-sm mb-8">
+      <form method="get" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+        <!-- Session Filter -->
+        <div>
+          <label for="session" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Academic Session</label>
+          <select name="session" id="session" 
+                  class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#851A10] focus:border-transparent outline-none transition">
+            <option value="">All Sessions</option>
+            {% for s in available_sessions %}
+              <option value="{{ s.id }}" {% if selected_session == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Term Filter -->
+        <div>
+          <label for="term" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Term</label>
+          <select name="term" id="term" 
+                  class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#851A10] focus:border-transparent outline-none transition">
+            <option value="">All Terms</option>
+            {% for t in available_terms %}
+              <option value="{{ t.id }}" {% if selected_term == t.id|stringformat:"s" %}selected{% endif %}>{{ t.get_name_display }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-2">
+          <button type="submit" class="flex-1 btn-primary py-2 text-sm" style="background: #851A10;">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display:inline-block;">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+            </svg>
+            Filter
+          </button>
+          {% if selected_session or selected_term %}
+            <a href="{% url 'examinations:exam_config_list' %}" 
+               class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition inline-flex items-center justify-center">
+              Reset
+            </a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+
     <!-- Current Config Highlight -->
     {% if current_config %}
     <div class="mb-6 p-6 rounded-lg" style="background: linear-gradient(135deg, #FFF5F3 0%, #FFFFFF 100%); border-left: 4px solid #851A10;">
@@ -72,7 +117,7 @@
       </div>
 
       <!-- Deadlines -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200">
         <div>
           <p class="text-xs text-gray-600 uppercase font-semibold">Question Submission</p>
           <p class="text-sm font-semibold text-gray-900 mt-1">
@@ -104,6 +149,28 @@
             <span class="inline-block mt-1 px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">
               PASSED
             </span>
+          {% endif %}
+        </div>
+        <div>
+          <p class="text-xs text-orange-600 uppercase font-semibold">🚀 Exam Start Date</p>
+          <p class="text-sm font-semibold text-gray-900 mt-1">
+            {% if current_config.exam_start_date %}
+              {{ current_config.exam_start_date|date:"M d, Y H:i" }}
+            {% else %}
+              Not Set
+            {% endif %}
+          </p>
+          {% if current_config.exam_start_date %}
+            {% now "Y-m-d H:i" as current_time %}
+            {% if current_config.exam_start_date|date:"Y-m-d H:i" <= current_time %}
+              <span class="inline-block mt-1 px-2 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-800">
+                RELEASED
+              </span>
+            {% else %}
+              <span class="inline-block mt-1 px-2 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-800">
+                SCHEDULED
+              </span>
+            {% endif %}
           {% endif %}
         </div>
       </div>
@@ -165,6 +232,7 @@
                     <p>📝 Q-Submit: {{ config.question_submission_deadline|date:"M d, Y" }}</p>
                     <p>✓ Vetting: {{ config.exam_vetting_deadline|date:"M d, Y" }}</p>
                     <p>✅ Approve: {{ config.exam_approval_deadline|date:"M d, Y" }}</p>
+                    <p class="text-orange-600 font-semibold">🚀 Start: {{ config.exam_start_date|date:"M d, Y"|default:"Not Set" }}</p>
                   </div>
                 </td>
 

@@ -601,6 +601,13 @@ def student_dashboard(request):
         current_session = None
         current_term = None
     
+    # Get exam configuration
+    from examinations.models import ExamConfiguration
+    exam_config = ExamConfiguration.objects.filter(
+        session=current_session,
+        term=current_term
+    ).first()
+    
     # Get current enrollment
     current_enrollment = student.enrollments.filter(
         is_active=True,
@@ -686,13 +693,24 @@ def student_dashboard(request):
     ).aggregate(Avg('total_score'))['total_score__avg'] or 0
     
     # Get upcoming scheduled exams
-    upcoming_exams = Exam.objects.filter(
-        class_arms=class_arm,
-        term=current_term,
-        session=current_session,
-        status=Exam.ExamStatus.APPROVED,
-        scheduled_start_datetime__isnull=False
-    ).select_related('subject').order_by('scheduled_start_datetime')[:5]
+    from django.utils import timezone
+    now = timezone.now()
+    
+    can_view_exams = True
+    if exam_config and exam_config.exam_start_date:
+        if now < exam_config.exam_start_date:
+            can_view_exams = False
+    
+    if can_view_exams:
+        upcoming_exams = Exam.objects.filter(
+            class_arms=class_arm,
+            term=current_term,
+            session=current_session,
+            status=Exam.ExamStatus.APPROVED,
+            scheduled_start_datetime__isnull=False
+        ).select_related('subject').order_by('scheduled_start_datetime')[:5]
+    else:
+        upcoming_exams = Exam.objects.none()
     
     # Check for submissions for these exams
     from examinations.models import ExamSubmission
@@ -715,6 +733,8 @@ def student_dashboard(request):
         'subjects_data': subjects_data,
         'recent_results': recent_results,
         'upcoming_exams': upcoming_exams,
+        'can_view_exams': can_view_exams,
+        'exam_start_date': exam_config.exam_start_date if exam_config else None,
         # Stats
         'total_subjects': total_subjects,
         'total_exams_available': total_exams_available,

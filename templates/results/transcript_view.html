@@ -5,153 +5,351 @@
 
 {% block extra_css %}
 <style>
-    .transcript-container {
+    /* Professional Transcript Layout */
+    .transcript-wrapper {
         max-width: 1000px;
-        margin: 40px auto;
-        padding: 0 20px;
-    }
-    .transcript-paper {
+        margin: 0 auto;
         background: white;
-        padding: 60px;
-        border-radius: 4px;
-        box-shadow: 0 0 50px rgba(0,0,0,0.05);
-        border: 1px solid #eee;
-        position: relative;
+        padding: 3rem;
+        font-family: 'Inter', system-ui, sans-serif;
+        color: #1F2937;
     }
-    .transcript-header {
+
+    /* Print Optimization */
+    @media print {
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+        body { 
+            background: white !important; 
+            padding: 0 !important; 
+            margin: 0 !important; 
+        }
+        .transcript-wrapper { 
+            padding: 0;
+            width: 100%;
+        }
+        .no-print { 
+            display: none !important; 
+        }
+        .term-section {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+    }
+
+    .school-header {
         text-align: center;
-        border-bottom: 4px solid #1a202c;
-        padding-bottom: 30px;
-        margin-bottom: 40px;
+        border-bottom: 3px double #851A10;
+        padding-bottom: 1.5rem;
+        margin-bottom: 2rem;
     }
-    .term-block {
-        margin-bottom: 50px;
-        page-break-inside: avoid;
+
+    .school-name {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #1F2937;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
     }
-    .term-title {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 20px;
-        background: #1a202c;
+
+    .school-address {
+        color: #4B5563;
+        font-size: 0.875rem;
+    }
+
+    .transcript-title {
+        display: inline-block;
+        margin-top: 1rem;
+        padding: 0.5rem 2rem;
+        background: #1F2937;
         color: white;
-        font-weight: 900;
+        font-weight: 700;
         font-size: 0.9rem;
         text-transform: uppercase;
         letter-spacing: 0.1em;
-        border-radius: 8px 8px 0 0;
+        border-radius: 4px;
     }
-    .transcript-table {
+
+    .student-info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
+        padding: 1.5rem;
+        background: #F9FAFB;
+        border: 1px solid #E5E7EB;
+        border-radius: 8px;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .info-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #6B7280;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+
+    .info-value {
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .term-section {
+        margin-bottom: 3rem;
+    }
+
+    .term-header {
+        background: #F3F4F6;
+        padding: 0.5rem 1rem;
+        border-left: 5px solid #851A10;
+        margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .term-title {
+        font-weight: 800;
+        font-size: 1rem;
+        color: #1F2937;
+    }
+
+    .term-meta {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6B7280;
+    }
+
+    .results-table {
         width: 100%;
         border-collapse: collapse;
-        border: 2px solid #1a202c;
+        margin-bottom: 1rem;
     }
-    .transcript-table th {
-        background: #f8fafc;
-        padding: 10px;
-        font-size: 0.65rem;
-        font-weight: 900;
-        text-transform: uppercase;
-        border: 1px solid #1a202c;
-        text-align: center;
-    }
-    .transcript-table td {
-        padding: 8px 10px;
-        border: 1px solid #1a202c;
-        font-size: 0.8rem;
+
+    .results-table th {
+        background: #F9FAFB;
+        border: 1px solid #D1D5DB;
+        padding: 0.5rem;
+        font-size: 0.75rem;
         font-weight: 700;
+        text-transform: uppercase;
         text-align: center;
     }
-    .transcript-table td:first-child {
+
+    .results-table td {
+        border: 1px solid #D1D5DB;
+        padding: 0.5rem;
+        font-size: 0.85rem;
+        text-align: center;
+    }
+
+    .results-table td:first-child {
         text-align: left;
-        padding-left: 15px;
+        font-weight: 600;
+        padding-left: 1rem;
     }
-    .summary-row {
-        background: #f8fafc;
-        font-weight: 900 !important;
+
+    .summary-box {
+        background: #F9FAFB;
+        border: 1px solid #D1D5DB;
+        padding: 0.75rem 1rem;
+        display: flex;
+        justify-content: flex-end;
+        gap: 2rem;
+        font-weight: 700;
+        font-size: 0.85rem;
     }
-    @media print {
-        body { background: white !important; }
-        .transcript-paper { box-shadow: none; border: none; padding: 0; }
-        nav, .nav-container, .btn-print { display: none !important; }
+
+    .grading-key {
+        margin-top: 3rem;
+        padding: 1rem;
+        border: 1px solid #E5E7EB;
+        border-radius: 8px;
+        font-size: 0.75rem;
+    }
+
+    .key-title {
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+    }
+
+    .footer-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 4rem;
+        margin-top: 5rem;
+    }
+
+    .signature-area {
+        text-align: center;
+    }
+
+    .sig-line {
+        border-top: 1.5px solid #1F2937;
+        margin-bottom: 0.5rem;
+    }
+
+    .sig-label {
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+
+    .official-seal {
+        width: 120px;
+        height: 120px;
+        border: 2px dashed #D1D5DB;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #D1D5DB;
+        font-size: 0.65rem;
+        text-align: center;
+        border-radius: 50%;
+        margin: 0 auto;
+        text-transform: uppercase;
+        font-weight: 700;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="transcript-container">
-    <div class="flex justify-between items-center mb-8 btn-print">
-        <h1 class="text-2xl font-black text-gray-900">Transcript Preview</h1>
-        <button onclick="window.print()" class="px-6 py-2.5 bg-gray-900 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-black transition-all">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+<div class="max-w-5xl mx-auto py-8 no-print">
+    <div class="flex justify-between items-center mb-6 px-4">
+        <a href="{% url 'students:student_detail' student.pk %}" class="text-sm font-semibold text-gray-500 hover:text-gray-800 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to Profile
+        </a>
+        <button onclick="window.print()" class="bg-gray-800 text-white px-6 py-2 rounded-lg font-bold shadow-lg hover:bg-gray-700 transition-all flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+            </svg>
             Print Transcript
         </button>
     </div>
+</div>
 
-    <div class="transcript-paper">
-        <div class="transcript-header">
-            <h2 class="text-3xl font-black text-gray-900 uppercase">Official Academic Transcript</h2>
-            <p class="text-gray-500 font-bold mt-1">Great Grace International School · Lagos, Nigeria</p>
+<div class="transcript-wrapper shadow-2xl mb-12">
+    <!-- Header -->
+    <div class="school-header">
+        <h1 class="school-name">Great Grace International School</h1>
+        <p class="school-address">123 Education Way, Lagos, Nigeria · +234 800 000 0000</p>
+        <div class="transcript-title">Official Academic Transcript</div>
+    </div>
+
+    <!-- Student Details -->
+    <div class="student-info-grid">
+        <div class="info-item">
+            <span class="info-label">Student Name</span>
+            <span class="info-value">{{ student.full_name|upper }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Admission Number</span>
+            <span class="info-value">{{ student.admission_number }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Gender</span>
+            <span class="info-value">{{ student.get_gender_display }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Date of Birth</span>
+            <span class="info-value">{{ student.date_of_birth|date:"F j, Y" }}</span>
+        </div>
+    </div>
+
+    <!-- Academic History -->
+    {% for term_data in transcript_data %}
+    <div class="term-section">
+        <div class="term-header">
+            <span class="term-title">{{ term_data.report_card.session.name }} — {{ term_data.report_card.term.get_name_display }}</span>
+            <span class="term-meta">Level: {{ term_data.report_card.class_arm.full_name }}</span>
+        </div>
+
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>CA</th>
+                    <th>Exam</th>
+                    <th>Total</th>
+                    <th>Grade</th>
+                    <th>Remark</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for res in term_data.subjects %}
+                <tr>
+                    <td>{{ res.exam.subject.name }}</td>
+                    <td>{{ res.ca1_score|add:res.ca2_score|floatformat:0 }}</td>
+                    <td>{{ res.theory_score|add:res.obj_score|floatformat:0 }}</td>
+                    <td style="font-weight: 700;">{{ res.total_score|floatformat:0 }}</td>
+                    <td style="font-weight: 700;">{{ res.grade }}</td>
+                    <td style="font-size: 0.75rem; font-style: italic;">{{ res.remark }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; color: #9CA3AF;">No data available for this term.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="summary-box">
+            <span>Term Total: {{ term_data.report_card.total_score|floatformat:0 }}</span>
+            <span>Average: {{ term_data.report_card.average|floatformat:1 }}%</span>
+            <span>Position: {{ term_data.report_card.position|default:"—" }}</span>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl">
+        <p class="text-gray-400 font-medium">No official academic records found for this student.</p>
+    </div>
+    {% endfor %}
+
+    <!-- Grading Legend -->
+    <div class="grading-key">
+        <h4 class="key-title">Official Grading Scale</h4>
+        <div class="flex gap-8">
+            <span><strong>A</strong> (70-100%): Excellent</span>
+            <span><strong>B</strong> (60-69%): Good</span>
+            <span><strong>C</strong> (50-59%): Credit</span>
+            <span><strong>D</strong> (45-49%): Pass</span>
+            <span><strong>E</strong> (40-44%): Poor</span>
+            <span><strong>F</strong> (0-39%): Fail</span>
+        </div>
+    </div>
+
+    <!-- Signatures -->
+    <div class="footer-grid">
+        <div class="signature-area">
+            <div class="official-seal">
+                Official<br>School Seal
+            </div>
+        </div>
+        <div>
+            <div style="height: 60px;"></div>
+            <div class="sig-line"></div>
+            <div class="sig-label">Registrar / Exams Officer</div>
             
-            <div class="grid grid-cols-2 gap-8 text-left mt-10 p-6 bg-gray-50 border border-gray-200 rounded-2xl">
-                <div>
-                    <span class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Student Name</span>
-                    <span class="text-lg font-black text-gray-900">{{ student.full_name }}</span>
-                </div>
-                <div class="text-right">
-                    <span class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Admission Number</span>
-                    <span class="text-lg font-black text-gray-900">{{ student.admission_number }}</span>
-                </div>
-            </div>
+            <div style="height: 60px;"></div>
+            <div class="sig-line"></div>
+            <div class="sig-label">School Principal</div>
         </div>
+    </div>
 
-        {% for rc in report_cards %}
-        <div class="term-block">
-            <div class="term-title">
-                <span>{{ rc.session.name }} — {{ rc.term.get_name_display }}</span>
-                <span>{{ rc.class_arm.full_name }}</span>
-            </div>
-            <table class="transcript-table">
-                <thead>
-                    <tr>
-                        <th style="width: 300px;">Subject</th>
-                        <th>CA 1 ({{ rc.term.exam_config.ca1_marks|default:"20"|floatformat:0 }})</th>
-                        <th>CA 2 ({{ rc.term.exam_config.ca2_marks|default:"20"|floatformat:0 }})</th>
-                        <th>Exam ({{ rc.term.exam_config.theory_marks|add:rc.term.exam_config.obj_marks|default:"60"|floatformat:0 }})</th>
-                        <th>Total (100)</th>
-                        <th>Grade</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for res in rc.get_subject_results %}
-                    <tr>
-                        <td>{{ res.exam.subject.name }}</td>
-                        <td>{{ res.ca1_score|floatformat:0 }}</td>
-                        <td>{{ res.ca2_score|floatformat:0 }}</td>
-                        <td>{{ res.theory_score|add:res.obj_score|floatformat:0 }}</td>
-                        <td style="background: #f8fafc;">{{ res.total_score|floatformat:0 }}</td>
-                        <td>{{ res.grade }}</td>
-                    </tr>
-                    {% endfor %}
-                    <tr class="summary-row">
-                        <td colspan="4" style="text-align: right; padding-right: 20px;">Termly Total & Average</td>
-                        <td>{{ rc.total_score|floatformat:0 }}</td>
-                        <td>{{ rc.average|floatformat:1 }}%</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        {% empty %}
-        <div class="py-20 text-center text-gray-400 font-bold">
-            No published results found for this student.
-        </div>
-        {% endfor %}
-
-        <div class="mt-20 pt-10 border-t-2 border-dashed border-gray-200 flex justify-between items-center text-xs font-black text-gray-400 uppercase tracking-widest">
-            <span>Date Issued: {% now "Y-m-d H:i" %}</span>
-            <span>Official School Transcript Copy</span>
-            <span>Registrar's Signature & Stamp</span>
-        </div>
+    <!-- Print Meta -->
+    <div class="mt-8 text-center text-[0.65rem] text-gray-400">
+        Printed on: {{ print_date|date:"F j, Y @ H:i" }} &nbsp;|&nbsp; Verified Official Transcript &nbsp;|&nbsp; Page 1 of 1
     </div>
 </div>
 {% endblock %}

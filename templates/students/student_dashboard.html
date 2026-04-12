@@ -919,18 +919,26 @@
 
     <!-- Upcoming Exams Section -->
 
-    {% if upcoming_exams %}
+    {% if not can_view_exams %}
+    <div class="section">
 
+        <h2 class="section-title">🗓️ Upcoming Exams</h2>
+
+        <div class="empty-state">
+            <div class="empty-state-icon">⏳</div>
+            <p class="empty-state-text">
+                The exam schedule for this term has not been released yet. <br>
+                It will be visible starting <strong>{{ exam_start_date|date:"F d, Y \a\t h:i A" }}</strong>.
+            </p>
+        </div>
+    </div>
+    {% elif upcoming_exams %}
     <div class="section">
 
         <h2 class="section-title">🗓️ Upcoming Exams</h2>
 
         
-
-        {% if upcoming_exams %}
-
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
-
             {% for exam in upcoming_exams %}
             <div style="background: linear-gradient(135deg, rgba(133, 26, 16, 0.08) 0%, rgba(243, 156, 18, 0.08) 100%); border: 1px solid var(--light); border-radius: 8px; padding: 20px;">
                 <div style="font-weight: 600; color: var(--primary); margin-bottom: 10px;">{{ exam.subject.name }}</div>
@@ -967,10 +975,12 @@
                 </div>
             </div>
             {% endfor %}
-
         </div>
+    </div>
+    {% else %}
+    <div class="section">
 
-        {% else %}
+        <h2 class="section-title">🗓️ Upcoming Exams</h2>
 
         <div class="empty-state">
 
@@ -980,10 +990,7 @@
 
         </div>
 
-        {% endif %}
-
     </div>
-
     {% endif %}
 
 

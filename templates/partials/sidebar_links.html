@@ -171,18 +171,6 @@
       </svg>
       <span x-show="sidebarOpen" class="whitespace-nowrap">All Staff</span>
     </a>
-
-    <!-- Add Staff -->
-    <a href="{% url 'staff:staff_create' %}"
-       class="submenu-link flex items-center gap-2 py-2 text-xs text-white transition
-              {% if request.resolver_match.url_name == 'staff_create' %}active opacity-100{% else %}opacity-50 hover:opacity-90{% endif %}">
-      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M12 4v16m8-8H4"/>
-      </svg>
-      <span x-show="sidebarOpen" class="whitespace-nowrap">Add Staff</span>
-    </a>
-
   </div>
 </div>
 {% endif %}
@@ -250,6 +238,7 @@
 
     {% endif %}
 
+    {% if request.user.is_class_teacher %}
     <a href="{% url 'students:attendance_mark_default' %}"
        class="flex items-center gap-2 py-2 text-xs text-white transition
               {% if 'attendance' in request.resolver_match.url_name %}
@@ -266,10 +255,12 @@
       </svg>
       <span x-show="sidebarOpen" class="whitespace-nowrap">Attendance</span>
     </a>
+    {% endif %}
 
   </div>
 </div>
 
+{% if not request.user.student_profile and not request.user.guardian_profile %}
 <!-- Examinations -->
 <div x-data="{ examinationsOpen: {% if current_app == 'examinations' %}true{% else %}false{% endif %} }">
 
@@ -388,6 +379,7 @@
 
   </div>
 </div>
+{% endif %}
 
 <!-- Results (collapsible submenu) -->
 {% if request.user.is_principal or request.user.is_vice_principal or request.user.is_class_teacher or request.user.is_admin_staff %}

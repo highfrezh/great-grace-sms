@@ -325,7 +325,7 @@ class ExamConfigurationForm(forms.ModelForm):
             'ca1_marks_percentage', 'ca2_marks_percentage', 
             'obj_marks_percentage', 'theory_marks_percentage',
             'question_submission_deadline', 'exam_vetting_deadline',
-            'exam_approval_deadline', 'default_exam_duration_minutes',
+            'exam_approval_deadline', 'exam_start_date', 'default_exam_duration_minutes',
             'randomize_questions_by_default', 'show_results_immediately'
         ]
         widgets = {
@@ -368,6 +368,10 @@ class ExamConfigurationForm(forms.ModelForm):
                 'class': 'form-input'
             }),
             'exam_approval_deadline': forms.DateTimeInput(attrs={
+                'type': 'datetime-local',
+                'class': 'form-input'
+            }),
+            'exam_start_date': forms.DateTimeInput(attrs={
                 'type': 'datetime-local',
                 'class': 'form-input'
             }),

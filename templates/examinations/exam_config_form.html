@@ -346,6 +346,17 @@
               {% endif %}
             </div>
           </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="id_exam_start_date">Exam Start Date *</label>
+              {{ form.exam_start_date }}
+              <p class="help-text">Official start date for exams. Upcoming exams become visible on student dashboard from this date.</p>
+              {% if form.exam_start_date.errors %}
+                <span class="error-message">{{ form.exam_start_date.errors.0 }}</span>
+              {% endif %}
+            </div>
+          </div>
         </div>
 
         <!-- CBT Settings -->

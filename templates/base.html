@@ -196,13 +196,22 @@
       <div class="flex items-center gap-4">
 
         <!-- Session Badge -->
+        {% if current_session and current_term %}
         <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg"
              style="background:#f8f0ee;">
-          <div class="w-2 h-2 rounded-full bg-green-500"></div>
+          <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
           <span class="text-xs font-medium" style="color:#851A10;">
-            2024/2025 — First Term
+            {{ current_session.name }} — {{ current_term.get_name_display }}
           </span>
         </div>
+        {% else %}
+        <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50">
+          <div class="w-2 h-2 rounded-full bg-gray-300"></div>
+          <span class="text-xs font-medium text-gray-500">
+            No Active Session
+          </span>
+        </div>
+        {% endif %}
 
         <!-- User Dropdown -->
         <div class="relative" x-data="{ open: false }">

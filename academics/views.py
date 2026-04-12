@@ -89,9 +89,7 @@ def session_delete(request, pk):
 @admin_staff_required
 def term_list(request):
     current_session = AcademicSession.get_current()
-    terms = Term.objects.filter(
-        session=current_session
-    ) if current_session else Term.objects.all()
+    terms = Term.objects.select_related('session').all().order_by('-session__start_date', 'name')
     return render(request, 'academics/term_list.html', {
         'terms': terms,
         'current_session': current_session,

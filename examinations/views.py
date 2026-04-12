@@ -39,15 +39,70 @@ def principal_or_vice_principal_required(view_func):
     return wrapper
 
 
+def submission_deadline_required(view_func):
+    """
+    Check if the question submission deadline has passed.
+    If passed, prevent access for non-administrators.
+    """
+    def wrapper(request, *args, **kwargs):
+        # Admins, Principals and VPs are exempt
+        if request.user.is_superuser or request.user.is_principal or request.user.is_vice_principal:
+            return view_func(request, *args, **kwargs)
+        
+        # Get current configuration
+        current_session = AcademicSession.get_current()
+        current_term = Term.get_current()
+        
+        if current_session and current_term:
+            config = ExamConfiguration.objects.filter(
+                session=current_session,
+                term=current_term
+            ).first()
+            
+            if config and config.question_submission_deadline:
+                if timezone.now() > config.question_submission_deadline:
+                    messages.error(
+                        request,
+                        f"The deadline for exam question submission has passed "
+                        f"({config.question_submission_deadline.strftime('%b %d, %Y at %I:%M %p')}). "
+                        "Please contact the administrator for extensions."
+                    )
+                    return redirect('accounts:dashboard')
+        
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
 # ── EXAM CONFIGURATION (Principal/Vice Principal) ────────────
 
 @login_required
 @principal_or_vice_principal_required
 def exam_configuration_list(request):
-    """List all exam configurations"""
-    configs = ExamConfiguration.objects.select_related(
+    """List all exam configurations with filtering support"""
+    # Base queryset
+    all_configs = ExamConfiguration.objects.all()
+    
+    # Get unique filter options from actual data
+    available_sessions = AcademicSession.objects.filter(
+        id__in=all_configs.values_list('session_id', flat=True)
+    ).distinct().order_by('-start_date')
+    
+    available_terms = Term.objects.filter(
+        id__in=all_configs.values_list('term_id', flat=True)
+    ).distinct().order_by('name')
+    
+    # Apply Filters from GET parameters
+    session_id = request.GET.get('session')
+    term_id = request.GET.get('term')
+    
+    configs = all_configs.select_related(
         'session', 'term', 'configured_by'
     ).order_by('-configured_at')
+    
+    if session_id:
+        configs = configs.filter(session_id=session_id)
+    if term_id:
+        configs = configs.filter(term_id=term_id)
     
     current_session = AcademicSession.get_current()
     current_term = Term.get_current()
@@ -64,7 +119,13 @@ def exam_configuration_list(request):
         'current_config': current_config,
         'current_session': current_session,
         'current_term': current_term,
-        'page_title': 'Exam Configuration'
+        'page_title': 'Exam Configuration',
+        
+        # Filter options and current values
+        'available_sessions': available_sessions,
+        'available_terms': available_terms,
+        'selected_session': session_id,
+        'selected_term': term_id,
     })
 
 
@@ -182,6 +243,7 @@ def exam_list(request):
 
 @login_required
 @teaching_staff_required
+@submission_deadline_required
 def exam_create(request):
     form = ExamForm(
         request.POST or None,
@@ -427,6 +489,7 @@ def question_list(request, exam_pk):
 
 @login_required
 @teaching_staff_required
+@submission_deadline_required
 def question_create(request, exam_pk):
     exam = get_object_or_404(Exam, pk=exam_pk)
     form = QuestionForm(request.POST or None, request.FILES or None)
@@ -501,6 +564,7 @@ def theory_question_list(request, exam_pk):
 
 @login_required
 @teaching_staff_required
+@submission_deadline_required
 def theory_question_create(request, exam_pk):
     exam = get_object_or_404(Exam, pk=exam_pk)
     form = TheoryQuestionForm(request.POST or None)
@@ -1015,33 +1079,67 @@ def theory_score_entry(request, pk):
 @login_required
 @subject_teacher_required
 def teacher_exam_list(request):
-    """List exams created by current teacher"""
+    """List exams created by current teacher with filtering support"""
     try:
         staff_profile = StaffProfile.objects.get(user=request.user)
     except StaffProfile.DoesNotExist:
         messages.error(request, 'Staff profile not found.')
         return redirect('accounts:dashboard')
     
-    exams = Exam.objects.filter(
-        teacher=staff_profile
-    ).select_related(
+    # Base queryset
+    all_teacher_exams = Exam.objects.filter(teacher=staff_profile)
+    
+    # Get unique filter options from the teacher's actual data
+    available_sessions = AcademicSession.objects.filter(
+        id__in=all_teacher_exams.values_list('session_id', flat=True)
+    ).distinct().order_by('-start_date')
+    
+    available_subjects = Subject.objects.filter(
+        id__in=all_teacher_exams.values_list('subject_id', flat=True)
+    ).distinct().order_by('name')
+    
+    available_terms = Term.objects.filter(
+        id__in=all_teacher_exams.values_list('term_id', flat=True)
+    ).distinct().order_by('name')
+    
+    # Apply Filters from GET parameters
+    session_id = request.GET.get('session')
+    term_id = request.GET.get('term')
+    subject_id = request.GET.get('subject')
+    
+    filtered_exams = all_teacher_exams.select_related(
         'subject', 'session', 'term'
     ).prefetch_related('class_arms').order_by('-created_at')
+    
+    if session_id:
+        filtered_exams = filtered_exams.filter(session_id=session_id)
+    if term_id:
+        filtered_exams = filtered_exams.filter(term_id=term_id)
+    if subject_id:
+        filtered_exams = filtered_exams.filter(subject_id=subject_id)
     
     current_session = AcademicSession.get_current()
     current_term = Term.get_current()
     
-    # Count exams by status
-    draft_count = exams.filter(status=Exam.ExamStatus.DRAFT).count()
-    awaiting_approval_count = exams.filter(status=Exam.ExamStatus.AWAITING_APPROVAL).count()
-    approved_count = exams.filter(status=Exam.ExamStatus.APPROVED).count()
+    # Get configuration for deadline countdown
+    config = None
+    is_deadline_passed = False
+    if current_session and current_term:
+        config = ExamConfiguration.objects.filter(
+            session=current_session,
+            term=current_term
+        ).first()
+        if config and config.question_submission_deadline:
+            is_deadline_passed = timezone.now() > config.question_submission_deadline
     
-    # Count total questions across all exams
-    total_questions = ObjectiveQuestion.objects.filter(exam__in=exams).count()
+    # Stats from filtered results (or all? Usually stats reflect the current view)
+    draft_count = filtered_exams.filter(status=Exam.ExamStatus.DRAFT).count()
+    awaiting_approval_count = filtered_exams.filter(status=Exam.ExamStatus.AWAITING_APPROVAL).count()
+    approved_count = filtered_exams.filter(status=Exam.ExamStatus.APPROVED).count()
     
     # Add completion percentage to each exam
     exams_with_completion = []
-    for exam in exams:
+    for exam in filtered_exams:
         has_objectives = exam.objectives.exists()
         has_theory = bool(exam.theory_attachment)
         
@@ -1052,7 +1150,6 @@ def teacher_exam_list(request):
         else:
             completion = 0
         
-        # Store completion as an attribute on the exam object
         exam.completion_percentage = completion
         exams_with_completion.append(exam)
     
@@ -1064,12 +1161,22 @@ def teacher_exam_list(request):
         'draft_count': draft_count,
         'awaiting_approval_count': awaiting_approval_count,
         'approved_count': approved_count,
-        'total_questions': total_questions,
+        'submission_deadline': config.question_submission_deadline if config else None,
+        'is_deadline_passed': is_deadline_passed,
+        
+        # Filter options and current values
+        'available_sessions': available_sessions,
+        'available_subjects': available_subjects,
+        'available_terms': available_terms,
+        'selected_session': session_id,
+        'selected_term': term_id,
+        'selected_subject': subject_id,
     })
 
 
 @login_required
 @subject_teacher_required
+@submission_deadline_required
 def teacher_exam_create(request):
     """Create exam for assigned subject/class"""
     try:
@@ -1267,6 +1374,7 @@ def teacher_exam_edit(request, pk):
 @login_required
 @subject_teacher_required
 @require_POST
+@submission_deadline_required
 def teacher_exam_publish(request, pk):
     """Publish exam created by current teacher for examiner review"""
     try:
