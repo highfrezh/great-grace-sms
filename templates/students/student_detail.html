@@ -41,6 +41,17 @@
         Print Transcript
       </a>
 
+      <!-- Reset Password -->
+      <form method="POST" action="{% url 'students:student_reset_password' student.pk %}" onsubmit="return confirm('Are you sure you want to reset this student\'s password to their date of birth?');" class="inline">
+        {% csrf_token %}
+        <button type="submit" class="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+          </svg>
+          Reset Password
+        </button>
+      </form>
+
       <a href="{% url 'students:student_edit' student.pk %}"
          class="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg border border-gray-200 hover:bg-gray-50 transition">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

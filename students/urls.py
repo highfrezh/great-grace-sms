@@ -14,6 +14,7 @@ urlpatterns = [
     path('<int:pk>/edit/', views.student_edit, name='student_edit'),
     path('<int:pk>/deactivate/', views.student_deactivate, name='student_deactivate'),
     path('<int:pk>/delete/', views.student_delete, name='student_delete'),
+    path('<int:pk>/reset-password/', views.student_reset_password, name='student_reset_password'),
     path('bulk-import/', views.student_bulk_import, name='student_bulk_import'),
     
     # Attendance

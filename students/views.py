@@ -287,6 +287,28 @@ def student_delete(request, pk):
     return redirect('students:student_list')
 
 
+@login_required
+@admin_staff_required
+def student_reset_password(request, pk):
+    """Admin resets a student's password to their date of birth"""
+    student = get_object_or_404(Student, pk=pk)
+    
+    if request.method == 'POST':
+        if student.user:
+            password = student.date_of_birth.strftime('%d%m%Y')  # DDMMYYYY format
+            student.user.set_password(password)
+            student.user.is_first_login = False
+            student.user.save()
+            messages.success(
+                request, 
+                f"Password for {student.full_name} has been reset to their date of birth: {password}"
+            )
+        else:
+            messages.error(request, f"{student.full_name} does not have a user account.")
+            
+    return redirect('students:student_detail', pk=pk)
+
+
 def create_student_user(student):
     """Auto-create student user account with admission number + DOB as password"""
     from accounts.models import Role
