@@ -12,6 +12,16 @@ CSRF_TRUSTED_ORIGINS = config(
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# SECURE_SSL_REDIRECT is intentionally NOT set here.
+# Render.com handles HTTPS at the proxy level. Setting this to True
+# causes ERR_TOO_MANY_REDIRECTS because Django sees internal HTTP traffic.
+
+# Only enforce secure cookies in production (not on local HTTP dev server)
+if not DEBUG:
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+
 # Applications
 DJANGO_APPS = [
     'django.contrib.admin',
@@ -78,13 +88,23 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 import dj_database_url
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL'),
-        conn_max_age=600,
-        ssl_require=True
-    )
-}
+if DEBUG:
+    # Local development: use SQLite (no cloud credentials needed)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    # Production (Render): use Aiven PostgreSQL via DATABASE_URL
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=config('DATABASE_URL'),
+            conn_max_age=600,
+            ssl_require=True
+        )
+    }
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.User'
