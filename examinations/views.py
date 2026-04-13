@@ -1508,6 +1508,114 @@ def teacher_add_questions(request, exam_pk):
 
 @login_required
 @teaching_staff_required
+def teacher_bulk_import_questions(request, exam_pk):
+    """Allow teachers to bulk import objective questions using a .txt file (Aiken format)"""
+    try:
+        staff_profile = StaffProfile.objects.get(user=request.user)
+    except StaffProfile.DoesNotExist:
+        messages.error(request, 'Staff profile not found.')
+        return redirect('accounts:dashboard')
+    
+    exam = get_object_or_404(Exam, pk=exam_pk, teacher=staff_profile)
+    
+    if not exam.can_edit():
+        messages.error(request, 'Cannot add questions to an exam that is not in DRAFT status.')
+        return redirect('examinations:teacher_exam_detail', pk=exam.pk)
+        
+    if request.method == 'POST':
+        if 'import_file' not in request.FILES:
+            messages.error(request, 'Please upload a file.')
+            return redirect('examinations:teacher_bulk_import_questions', exam_pk=exam.pk)
+            
+        import_file = request.FILES['import_file']
+        
+        if not import_file.name.endswith('.txt'):
+            messages.error(request, 'Only .txt files are supported for Aiken format import.')
+            return redirect('examinations:teacher_bulk_import_questions', exam_pk=exam.pk)
+            
+        try:
+            # Read and decode the file (utf-8-sig handles BOM if present)
+            content = import_file.read().decode('utf-8-sig')
+            lines = content.split('\n')
+            
+            questions_to_create = []
+            
+            current_question = ""
+            options = {}
+            correct_answer = None
+            
+            for index, line in enumerate(lines):
+                line = line.strip()
+                if not line:
+                    continue
+                    
+                # Check for Answer
+                if line.upper().startswith("ANSWER:"):
+                    correct_answer = line.split(":", 1)[1].strip().upper()
+                    
+                    # Validate block (Requires A, B, C, D and correct answer)
+                    if current_question and 'A' in options and 'B' in options and 'C' in options and 'D' in options and correct_answer in ['A', 'B', 'C', 'D']:
+                        questions_to_create.append(ObjectiveQuestion(
+                            exam=exam,
+                            question_text=current_question,
+                            option_a=options['A'],
+                            option_b=options['B'],
+                            option_c=options['C'],
+                            option_d=options['D'],
+                            correct_option=correct_answer
+                        ))
+                    else:
+                        messages.warning(request, f'Skipped a question near line {index+1} due to missing valid options or answer.')
+                    
+                    # Reset block
+                    current_question = ""
+                    options = {}
+                    correct_answer = None
+                    continue
+                
+                # Check for Options
+                elif (line.startswith("A.") or line.startswith("A)")) and "A" not in options:
+                    options['A'] = line[2:].strip()
+                elif (line.startswith("B.") or line.startswith("B)")) and "B" not in options:
+                    options['B'] = line[2:].strip()
+                elif (line.startswith("C.") or line.startswith("C)")) and "C" not in options:
+                    options['C'] = line[2:].strip()
+                elif (line.startswith("D.") or line.startswith("D)")) and "D" not in options:
+                    options['D'] = line[2:].strip()
+                else:
+                    # Anything else is treated as question text
+                    if not options:
+                        if current_question:
+                            current_question += "\n" + line
+                        else:
+                            current_question = line
+                    else:
+                        # Malformed, we just ignore extra text after options start
+                        pass
+                        
+            if questions_to_create:
+                with transaction.atomic():
+                    ObjectiveQuestion.objects.bulk_create(questions_to_create)
+                messages.success(request, f'Successfully imported {len(questions_to_create)} questions!')
+                return redirect('examinations:teacher_exam_detail', pk=exam.pk)
+            else:
+                messages.error(request, 'No valid questions found. Please check your file formatting matches the Aiken format guide.')
+                
+        except UnicodeDecodeError:
+            messages.error(request, 'The file must be saved with UTF-8 encoding.')
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+            
+        return redirect('examinations:teacher_bulk_import_questions', exam_pk=exam.pk)
+            
+    return render(request, 'examinations/teacher_bulk_import_questions.html', {
+        'exam': exam,
+        'page_title': f'Bulk Import Questions - {exam.title}'
+    })
+
+
+@login_required
+@teaching_staff_required
 def teacher_question_edit(request, exam_pk, pk):
     """Allow teachers to edit their own objective questions"""
     try:

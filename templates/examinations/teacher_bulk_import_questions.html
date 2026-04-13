@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bulk Import Questions — {{ exam.title }}{% endblock %}
+{% block page_title %}Bulk Import Questions{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+  <!-- Header -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-sm"
+           style="background: linear-gradient(135deg, #851A10 0%, #a62114 100%);">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+        </svg>
+      </div>
+      <div>
+        <h2 class="text-xl font-bold text-gray-800">Bulk Import via .txt File</h2>
+        <p class="text-sm text-gray-500">Exam: <span class="font-semibold">{{ exam.title }}</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Instructions Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <h3 class="font-bold text-gray-800">Aiken Format Instructions</h3>
+      </div>
+      <div class="p-6 space-y-4 text-sm text-gray-600">
+        <p>To import questions, your file must be a simple text file (<code>.txt</code>) formatted in the standard <strong>Aiken format</strong>.</p>
+        
+        <div class="space-y-2">
+          <h4 class="font-bold text-gray-800">Rules:</h4>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>The question must be all on one line.</li>
+            <li>Each option must start with a single uppercase letter, followed by a period or parenthesis, and a space (e.g., <code>A.</code> or <code>A)</code>).</li>
+            <li>The answer line must immediately follow the options.</li>
+            <li>The answer line must begin with "ANSWER: " followed by the correct letter.</li>
+            <li>Separate each question block with a blank line.</li>
+          </ul>
+        </div>
+
+        <div class="bg-[#FFF5F3] p-4 rounded-xl border border-[#FECACA] shadow-inner text-xs font-mono text-gray-800">
+          What is the capital of Nigeria?<br>
+          A. Lagos<br>
+          B. Abuja<br>
+          C. Kano<br>
+          D. Port Harcourt<br>
+          ANSWER: B<br>
+          <br>
+          Which of the following is a primary color?<br>
+          A) Green<br>
+          B) Orange<br>
+          C) Red<br>
+          D) Purple<br>
+          ANSWER: C
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <h3 class="font-bold text-gray-800">Upload File</h3>
+      </div>
+      <div class="p-6">
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+          {% csrf_token %}
+          
+          <div class="flex items-center justify-center w-full">
+            <label for="import_file" class="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+              <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                <svg class="w-10 h-10 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                </svg>
+                <p class="mb-2 text-sm text-gray-500"><span class="font-bold">Click to upload</span> or drag and drop</p>
+                <p class="text-xs text-gray-500">TXT files only</p>
+              </div>
+              <input id="import_file" name="import_file" type="file" accept=".txt" class="hidden" required />
+            </label>
+          </div>
+
+          <p id="file-name-display" class="text-sm font-medium text-center text-gray-700 hidden"></p>
+
+          <div class="flex items-center gap-3">
+            <a href="{% url 'examinations:teacher_exam_detail' exam.pk %}" class="flex-1 text-center py-2.5 px-4 font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
+              Cancel
+            </a>
+            <button type="submit" class="flex-1 py-2.5 px-4 font-bold text-white rounded-xl shadow hover:opacity-90 transition-opacity" style="background:#851A10;">
+              Import Questions
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Simple script to show the selected file name
+  document.getElementById('import_file').addEventListener('change', function(e) {
+    const fileName = e.target.files[0]?.name;
+    const display = document.getElementById('file-name-display');
+    if (fileName) {
+      display.textContent = 'Selected: ' + fileName;
+      display.classList.remove('hidden');
+    } else {
+      display.classList.add('hidden');
+    }
+  });
+</script>
+{% endblock %}

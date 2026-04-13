@@ -18,8 +18,9 @@ urlpatterns = [
     path('teacher/<int:pk>/', views.teacher_exam_detail, name='teacher_exam_detail'),
     path('teacher/<int:pk>/edit/', views.teacher_exam_edit, name='teacher_exam_edit'),
     path('teacher/<int:pk>/publish/', views.teacher_exam_publish, name='teacher_exam_publish'),
-    path('teacher/<int:pk>/delete/', views.teacher_exam_delete, name='teacher_exam_delete'),
+    path('teacher/<int:exam_pk>/delete/', views.teacher_exam_delete, name='teacher_exam_delete'),
     path('teacher/<int:exam_pk>/add-questions/', views.teacher_add_questions, name='teacher_add_questions'),
+    path('teacher/<int:exam_pk>/bulk-import-questions/', views.teacher_bulk_import_questions, name='teacher_bulk_import_questions'),
     path('teacher/<int:exam_pk>/questions/<int:pk>/edit/', views.teacher_question_edit, name='teacher_question_edit'),
     path('teacher/<int:exam_pk>/questions/<int:pk>/delete/', views.teacher_question_delete, name='teacher_question_delete'),
 
