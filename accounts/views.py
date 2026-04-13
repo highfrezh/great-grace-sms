@@ -25,6 +25,15 @@ def login_view(request):
             
         password = request.POST.get('password')
 
+        # Check if user exists but is deactivated
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        user_record = User.objects.filter(username=username).first()
+        if user_record and not user_record.is_active:
+            messages.error(request, 'This account has been deactivated. Please contact administration.')
+            return render(request, 'accounts/login.html')
+
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
