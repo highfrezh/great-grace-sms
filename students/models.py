@@ -82,12 +82,12 @@ class Guardian(models.Model):
         GUARDIAN = 'GUARDIAN', 'Guardian'
         OTHER = 'OTHER', 'Other'
     
-    user = models.OneToOneField(
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        related_name='guardian_profile'
+        related_name='guardian_profiles'
     )
     
     student = models.ForeignKey(

@@ -218,3 +218,17 @@ def staff_reset_password(request, pk):
             f'New password is their phone number.'
         )
     return redirect('staff:staff_detail', pk=pk)
+
+@login_required
+def my_profile(request):
+    """View for a staff member to see their own profile."""
+    try:
+        profile = request.user.staff_profile
+    except StaffProfile.DoesNotExist:
+        messages.error(request, "You do not have a staff profile.")
+        return redirect('accounts:dashboard')
+        
+    return render(request, 'staff/my_profile.html', {
+        'profile': profile,
+        'page_title': 'My Profile'
+    })

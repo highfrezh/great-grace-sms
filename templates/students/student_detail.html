@@ -68,14 +68,6 @@
         <span class="text-sm font-medium" style="color:#635E57;">{{ student.get_gender_display }}</span>
       </div>
       <div class="flex justify-between">
-        <span class="text-sm text-gray-500">Phone</span>
-        <span class="text-sm font-medium" style="color:#635E57;">{{ student.phone|default:"—" }}</span>
-      </div>
-      <div class="flex justify-between">
-        <span class="text-sm text-gray-500">Email</span>
-        <span class="text-sm font-medium" style="color:#635E57;">{{ student.email|default:"—" }}</span>
-      </div>
-      <div class="flex justify-between">
         <span class="text-sm text-gray-500">Address</span>
         <span class="text-sm font-medium" style="color:#635E57;">{{ student.address|default:"—" }}</span>
       </div>
@@ -84,10 +76,6 @@
     <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 mt-6">Medical Information</h3>
     
     <div class="space-y-3">
-      <div class="flex justify-between">
-        <span class="text-sm text-gray-500">Blood Group</span>
-        <span class="text-sm font-medium" style="color:#635E57;">{{ student.blood_group|default:"—" }}</span>
-      </div>
       <div class="flex justify-between">
         <span class="text-sm text-gray-500">Allergies</span>
         <span class="text-sm font-medium" style="color:#635E57;">{{ student.allergies|default:"None recorded" }}</span>

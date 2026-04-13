@@ -114,6 +114,7 @@ def student_create(request):
             if guardian_form.is_valid() and guardian_form.cleaned_data.get('full_name'):
                 guardian = guardian_form.save(commit=False)
                 guardian.student = student
+                guardian.is_primary = True
                 guardian.save()
                 
                 # Auto-create parent user account
@@ -157,15 +158,73 @@ def student_detail(request, pk):
 
 @login_required
 @admin_staff_required
+@transaction.atomic
 def student_edit(request, pk):
-    """Edit student information"""
+    """Edit student information and primary guardian"""
     student = get_object_or_404(Student, pk=pk)
     
+    # Get primary guardian
+    guardian = student.guardians.filter(is_primary=True).first()
+    if not guardian:
+        guardian = student.guardians.first()
+    
     student_form = StudentForm(request.POST or None, instance=student)
+    guardian_form = GuardianForm(request.POST or None, instance=guardian, prefix='guardian')
+    
+    current_enrollment = student.get_current_enrollment()
+    enrollment_form = StudentEnrollmentForm(request.POST or None, instance=current_enrollment)
     
     if request.method == 'POST':
-        if student_form.is_valid():
+        if student_form.is_valid() and guardian_form.is_valid() and enrollment_form.is_valid():
+            old_phone = guardian.phone if guardian else None
+            
             student_form.save()
+            
+            if guardian_form.cleaned_data.get('full_name'):
+                new_guardian = guardian_form.save(commit=False)
+                new_phone = new_guardian.phone
+                
+                if new_phone != old_phone and guardian and guardian.user:
+                    # Sibling-Aware Logic: Update existing or Split away?
+                    user = guardian.user
+                    is_shared = user.guardian_profiles.count() > 1
+                    
+                    if is_shared:
+                        # SPLIT: Move this student to a different account
+                        # Clear the user link on the database record first
+                        guardian.user = None
+                        guardian.save()
+                        
+                        # Now update the local object and create the new user
+                        new_guardian.user = None 
+                        new_guardian.save()
+                        create_guardian_user(new_guardian)
+                        messages.info(request, f"Separated parent account for {new_phone}")
+                    else:
+                        # UPDATE: Only child, just update the existing account info
+                        new_username = new_phone
+                        if User.objects.filter(username=new_username).exclude(id=user.id).exists():
+                            new_username = f"{new_phone}_rev"
+                        
+                        user.username = new_username
+                        user.phone_number = new_phone
+                        user.save()
+                        new_guardian.save()
+                        messages.info(request, f"Parent portal login updated to {new_username}")
+                else:
+                    # No phone change or first-time guardian setup
+                    if not guardian:
+                        new_guardian.student = student
+                        new_guardian.is_primary = True
+                    new_guardian.save()
+                    if not new_guardian.user and new_guardian.phone:
+                        create_guardian_user(new_guardian)
+
+            if enrollment_form.cleaned_data.get('class_arm'):
+                enrollment = enrollment_form.save(commit=False)
+                enrollment.student = student
+                enrollment.save()
+
             messages.success(request, f'{student.full_name} updated successfully.')
             return redirect('students:student_detail', pk=student.pk)
         else:
@@ -173,6 +232,8 @@ def student_edit(request, pk):
     
     return render(request, 'students/student_form.html', {
         'student_form': student_form,
+        'guardian_form': guardian_form,
+        'enrollment_form': enrollment_form,
         'page_title': f'Edit — {student.full_name}',
         'is_edit': True,
         'student': student
@@ -247,7 +308,7 @@ def create_student_user(student):
         last_name=student.last_name,
         password=password,
         phone_number='00000000000',
-        is_first_login=True
+        is_first_login=False
     )
     
     # Assign student role
@@ -262,35 +323,45 @@ def create_student_user(student):
 
 
 def create_guardian_user(guardian):
-    """Auto-create guardian user account for parent portal"""
-    from accounts.models import Role
+    """
+    Auto-create or link guardian user account for parent portal.
+    Uses phone number as direct username and password for first login.
+    """
+    from accounts.models import Role, User
     
-    # Generate username from phone number
-    base_username = f"parent{guardian.phone[-6:]}"  # Last 6 digits of phone
-    username = base_username
-    password = guardian.phone  # Default password is phone number
+    if not guardian.phone:
+        return None
+
+    # check if user already exists with this phone number
+    user = User.objects.filter(phone_number=guardian.phone).first()
     
-    # Handle duplicate usernames
-    counter = 1
-    while User.objects.filter(username=username).exists():
-        username = f"{base_username}{counter}"
-        counter += 1
+    if not user:
+        # Create new user
+        username = guardian.phone
+        password = guardian.phone
+        
+        # Ensure username is unique (highly likely with phone, but safety first)
+        base_username = username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}_{counter}"
+            counter += 1
+            
+        user = User.objects.create_user(
+            username=username,
+            email=guardian.email or f'{username}@greatgrace.edu',
+            first_name=guardian.full_name.split()[0],
+            last_name=guardian.full_name.split()[-1] if len(guardian.full_name.split()) > 1 else '',
+            password=password,
+            phone_number=guardian.phone,
+            is_first_login=True
+        )
+        
+        # Assign parent role
+        parent_role, _ = Role.objects.get_or_create(name='PARENT')
+        user.roles.add(parent_role)
     
-    user = User.objects.create_user(
-        username=username,
-        email=guardian.email or f'{username}@greatgrace.edu',
-        first_name=guardian.full_name.split()[0],
-        last_name=guardian.full_name.split()[-1] if len(guardian.full_name.split()) > 1 else '',
-        password=password,
-        phone_number=guardian.phone,
-        is_first_login=True
-    )
-    
-    # Assign parent role
-    parent_role, _ = Role.objects.get_or_create(name='PARENT')
-    user.roles.add(parent_role)
-    
-    # Link to guardian profile
+    # Link to student's guardian record
     guardian.user = user
     guardian.save()
     
@@ -584,14 +655,30 @@ def attendance_mark(request, pk=None):
 @login_required
 def student_dashboard(request):
     """
-    Student dashboard - view profile, current session, subjects, and available exams
+    Student dashboard - view profile, current session, subjects, and available exams.
+    Also supports Parents viewing their children's portals.
     """
     now = timezone.now()
-    try:
-        student = request.user.student_profile
-    except Student.DoesNotExist:
-        messages.error(request, 'Student profile not found.')
-        return redirect('accounts:dashboard')
+    
+    student_id = request.GET.get('student_id')
+    if student_id and (request.user.is_parent or request.user.is_superuser):
+        # Parents can view their linked children's dashboards
+        student = get_object_or_404(Student, id=student_id)
+        # Verify permission for parents - MUST check that guardian phone matches user phone
+        if request.user.is_parent:
+            if not request.user.guardian_profiles.filter(student=student, phone=request.user.phone_number).exists():
+                messages.error(request, "Access denied: This student is no longer linked to your current phone number.")
+                return redirect('accounts:dashboard')
+    else:
+        # Standard student login
+        try:
+            student = request.user.student_profile
+        except Student.DoesNotExist:
+            # If a parent tries to access the direct /students/dashboard/ without an ID
+            if request.user.is_parent:
+                return redirect('accounts:dashboard')
+            messages.error(request, 'Student profile not found.')
+            return redirect('accounts:dashboard')
     
     # Get current session and term
     current_session = AcademicSession.get_current()
@@ -603,7 +690,7 @@ def student_dashboard(request):
         current_term = None
     
     # Get exam configuration
-    from examinations.models import ExamConfiguration
+    from examinations.models import ExamConfiguration, Exam, ExamSubmission
     exam_config = ExamConfiguration.objects.filter(
         session=current_session,
         term=current_term
@@ -638,8 +725,6 @@ def student_dashboard(request):
             subject = assignment.subject
             
             # Check if exam is available
-            from examinations.models import Exam, ExamSubmission
-            
             exam = Exam.objects.filter(
                 subject=subject,
                 class_arms=class_arm,
@@ -718,7 +803,6 @@ def student_dashboard(request):
         ).select_related('subject').order_by('scheduled_start_datetime')[:5]
         
         # Check for submissions for these exams
-        from examinations.models import ExamSubmission
         submissions = ExamSubmission.objects.filter(
             student=student,
             exam__in=upcoming_exams,

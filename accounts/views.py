@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
@@ -18,6 +19,10 @@ def login_view(request):
 
     if request.method == 'POST':
         username = request.POST.get('username')
+        if username:
+            # Normalize admission numbers (strip slashes and lowercase)
+            username = username.replace('/', '').lower()
+            
         password = request.POST.get('password')
 
         user = authenticate(request, username=username, password=password)
@@ -44,12 +49,26 @@ def logout_view(request):
 @login_required
 def dashboard_view(request):
     user = request.user
+    
+    # Force password change on first login (Exclude Students per request)
+    if user.is_first_login and not user.is_student and request.resolver_match.url_name != 'password_change':
+        messages.info(request, 'For security reasons, please change your password to continue.')
+        return redirect('accounts:password_change')
+
     primary_role = user.primary_role if not user.is_superuser else 'PRINCIPAL'
 
     if primary_role == 'STUDENT':
         return redirect('students:student_dashboard')
     elif primary_role == 'PARENT':
-        return render(request, 'accounts/dashboard_parent.html')
+        # Fetch all children linked to this parent via the Guardian model
+        guardian_links = user.guardian_profiles.all().select_related('student')
+        children = [link.student for link in guardian_links]
+        
+        context = {
+            'page_title': 'Parent Dashboard',
+            'children': children,
+        }
+        return render(request, 'accounts/dashboard_parent.html', context)
 
     # Redirect Principal and Vice Principal to their dedicated dashboard
     if primary_role in ('PRINCIPAL', 'VICE_PRINCIPAL') or user.is_superuser:
@@ -229,4 +248,29 @@ def principal_dashboard(request):
 
     return render(request, 'accounts/dashboard_principal.html', context)
 
+@login_required
+def password_change_view(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            # Update session to prevent logout
+            update_session_auth_hash(request, user)
+            
+            # Mark first login as complete
+            if user.is_first_login:
+                user.is_first_login = False
+                user.save()
+                
+            messages.success(request, 'Your password was successfully updated!')
+            return redirect('accounts:dashboard')
+        else:
+            messages.error(request, 'Please correct the error below.')
+    else:
+        form = PasswordChangeForm(request.user)
+    
+    return render(request, 'accounts/password_change.html', {
+        'form': form,
+        'page_title': 'Change Password'
+    })
 

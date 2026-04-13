@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Parent Dashboard - Great Grace SMS{% endblock %}
+
+{% block page_title %}Parent Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .bg-brand-brown { background-color: #635E57; }
+    .bg-brand-red { background-color: #851A10; }
+    .bg-brand-light { background-color: #f8f0ee; }
+    .bg-brand-red-light { background-color: rgba(133, 26, 16, 0.1); }
+    
+    .hover-bg-brand-red:hover { 
+        background-color: #851A10 !important;
+        color: white !important;
+        border-color: #851A10 !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Welcome Section -->
+    <div class="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm relative overflow-hidden">
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+                <h2 class="text-3xl font-bold text-gray-900">Welcome, {{ request.user.first_name }}!</h2>
+                <p class="text-gray-500 mt-2 text-lg">Manage and monitor your children's academic progress from here.</p>
+            </div>
+            <div class="flex items-center gap-3 bg-brand-light px-4 py-2 rounded-xl">
+                <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
+                    <span class="text-xl">👪</span>
+                </div>
+                <div>
+                    <p class="text-xs text-[#851A10] font-bold uppercase tracking-wider">Total Children</p>
+                    <p class="text-lg font-bold text-[#851A10]">{{ children|length }}</p>
+                </div>
+            </div>
+        </div>
+        <!-- Decorative background element -->
+        <div class="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-brand-light rounded-full opacity-50"></div>
+    </div>
+
+    <!-- Children Overview Section -->
+    <section>
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-bold text-gray-800">My Children</h3>
+        </div>
+
+        {% if children %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for child in children %}
+            <div class="group bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-[#851A10]/20 transition-all duration-500 overflow-hidden flex flex-col">
+                <div class="h-2 bg-brand-red-light group-hover:bg-[#851A10] transition-colors duration-500"></div>
+                <div class="p-8 flex-1">
+                    <div class="flex items-start justify-between mb-6">
+                        <div class="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-500">
+                            {% if child.gender == 'M' %}👦{% else %}👧{% endif %}
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter bg-gray-100 text-gray-600">
+                            {{ child.admission_number }}
+                        </span>
+                    </div>
+                    
+                    <h4 class="text-xl font-bold text-gray-900 group-hover:text-[#851A10] transition-colors duration-300">
+                        {{ child.full_name }}
+                    </h4>
+                    
+                    {% with enrollment=child.get_current_enrollment %}
+                    <p class="text-gray-500 text-sm mt-1">
+                        {% if enrollment %}
+                            {{ enrollment.class_arm.full_name }}
+                        {% else %}
+                            Not currently enrolled
+                        {% endif %}
+                    </p>
+                    {% endwith %}
+
+                    <div class="mt-8 space-y-4">
+                        <div class="flex items-center gap-3 text-sm text-gray-600">
+                            <span class="w-5 text-center opacity-50">📅</span>
+                            <span>Admitted: {{ child.date_admitted|date:"M Y" }}</span>
+                        </div>
+                        <div class="flex items-center gap-3 text-sm text-gray-600">
+                            <span class="w-5 text-center opacity-50">📍</span>
+                            <span class="truncate">{{ child.address|default:"Address not set" }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="p-6 bg-gray-50/50 border-t border-gray-50">
+                    <a href="{% url 'students:student_dashboard' %}?student_id={{ child.id }}" 
+                       class="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-white border border-gray-200 text-sm font-bold text-gray-700 hover-bg-brand-red shadow-sm transition-all duration-300">
+                        View Portal
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
+            <div class="text-6xl mb-4">📭</div>
+            <h4 class="text-xl font-bold text-gray-900">No children linked</h4>
+            <p class="text-gray-500 mt-2">If you have children at this school, please contact the administration to link your account.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Quick Support Section -->
+    {% if children %}
+    <div class="bg-brand-brown rounded-3xl p-8 text-white relative overflow-hidden">
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+            <div class="max-w-xl">
+                <h3 class="text-2xl font-bold">Need Help?</h3>
+                <p class="text-gray-400 mt-2 text-lg">If you notice any errors in your child's data or results, please reach out to the school administration using the contact details below.</p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <div class="bg-white/10 px-6 py-4 rounded-2xl border border-white/5">
+                    <p class="text-xs font-bold text-white/50 uppercase tracking-widest mb-1">Phone</p>
+                    <p class="font-bold text-lg">+234 800 000 0000</p>
+                </div>
+                <div class="bg-white/10 px-6 py-4 rounded-2xl border border-white/5">
+                    <p class="text-xs font-bold text-white/50 uppercase tracking-widest mb-1">Email</p>
+                    <p class="font-bold text-lg">info@greatgrace.edu</p>
+                </div>
+            </div>
+        </div>
+        <!-- Decorative background element -->
+        <div class="absolute bottom-0 right-0 -mb-16 -mr-16 w-64 h-64 bg-white opacity-[0.03] rounded-full"></div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

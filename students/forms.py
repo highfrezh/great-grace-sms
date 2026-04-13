@@ -40,7 +40,7 @@ class GuardianForm(forms.ModelForm):
         model = Guardian
         fields = [
             'full_name', 'relationship', 'phone', 'email',
-            'address', 'occupation', 'is_primary', 'portal_enabled'
+            'address', 'occupation', 'portal_enabled'
         ]
         widgets = {
             'full_name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Full Name'}),
@@ -49,7 +49,6 @@ class GuardianForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-input', 'placeholder': 'Email Address'}),
             'address': forms.Textarea(attrs={'class': 'form-input', 'rows': 2, 'placeholder': 'Address'}),
             'occupation': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Occupation'}),
-            'is_primary': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
             'portal_enabled': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
         }
 

@@ -260,7 +260,7 @@
   </div>
 </div>
 
-{% if not request.user.student_profile and not request.user.guardian_profile %}
+{% if not request.user.is_student and not request.user.is_parent %}
 <!-- Examinations -->
 <div x-data="{ examinationsOpen: {% if current_app == 'examinations' %}true{% else %}false{% endif %} }">
 
@@ -473,20 +473,6 @@
   <span x-show="sidebarOpen" class="ml-3 text-sm whitespace-nowrap">Scheme of Work</span>
 </a>
 
-<!-- Timetable -->
-<a href="#"
-   class="flex items-center px-4 py-2.5 transition text-white
-          {% if current_app == 'timetable' %}opacity-100{% else %}opacity-60 hover:opacity-100{% endif %}"
-   {% if current_app == 'timetable' %}
-   style="background:rgba(133,26,16,0.6);border-left:3px solid #C2B0A1;"
-   {% endif %}>
-  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-  </svg>
-  <span x-show="sidebarOpen" class="ml-3 text-sm whitespace-nowrap">Timetable</span>
-</a>
-
 <!-- Promotions -->
 <a href="#"
    class="flex items-center px-4 py-2.5 transition text-white
@@ -499,7 +485,7 @@
           d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
   </svg>
   <span x-show="sidebarOpen" class="ml-3 text-sm whitespace-nowrap">Promotions</span>
-</a>{% if request.user.student_profile or request.user.guardian_profile %}
+</a>{% if request.user.is_student or request.user.is_parent %}
 <!-- Student/Guardian Portal -->
 <div x-data="{ portalOpen: true }">
   <button @click="portalOpen = !portalOpen"

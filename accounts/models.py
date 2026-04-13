@@ -114,6 +114,13 @@ class User(AbstractUser):
     #     return None
 
     @property
+    def primary_role_display(self):
+        role = self.primary_role
+        if role:
+            return role.replace('_', ' ').title()
+        return "Staff"
+
+    @property
     def primary_role(self):
         """Always returns highest authority role"""
         if self.is_superuser:

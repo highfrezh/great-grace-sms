@@ -21,18 +21,22 @@
             size: A4;
             margin: 15mm;
         }
-        body { 
-            background: white !important; 
-            padding: 0 !important; 
-            margin: 0 !important; 
+
+        body {
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
         }
-        .transcript-wrapper { 
+
+        .transcript-wrapper {
             padding: 0;
             width: 100%;
         }
-        .no-print { 
-            display: none !important; 
+
+        .no-print {
+            display: none !important;
         }
+
         .term-section {
             break-inside: avoid;
             page-break-inside: avoid;
@@ -224,15 +228,18 @@
 {% block content %}
 <div class="max-w-5xl mx-auto py-8 no-print">
     <div class="flex justify-between items-center mb-6 px-4">
-        <a href="{% url 'students:student_detail' student.pk %}" class="text-sm font-semibold text-gray-500 hover:text-gray-800 flex items-center gap-2">
+        <a href="{% url 'students:student_detail' student.pk %}"
+            class="text-sm font-semibold text-gray-500 hover:text-gray-800 flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
             Back to Profile
         </a>
-        <button onclick="window.print()" class="bg-gray-800 text-white px-6 py-2 rounded-lg font-bold shadow-lg hover:bg-gray-700 transition-all flex items-center gap-2">
+        <button onclick="window.print()"
+            class="bg-gray-800 text-white px-6 py-2 rounded-lg font-bold shadow-lg hover:bg-gray-700 transition-all flex items-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
             </svg>
             Print Transcript
         </button>
@@ -242,7 +249,7 @@
 <div class="transcript-wrapper shadow-2xl mb-12">
     <!-- Header -->
     <div class="school-header">
-        <h1 class="school-name">Great Grace International School</h1>
+        <h1 class="school-name">Great Grace Private School</h1>
         <p class="school-address">123 Education Way, Lagos, Nigeria · +234 800 000 0000</p>
         <div class="transcript-title">Official Academic Transcript</div>
     </div>
@@ -271,7 +278,8 @@
     {% for term_data in transcript_data %}
     <div class="term-section">
         <div class="term-header">
-            <span class="term-title">{{ term_data.report_card.session.name }} — {{ term_data.report_card.term.get_name_display }}</span>
+            <span class="term-title">{{ term_data.report_card.session.name }} — {{
+                term_data.report_card.term.get_name_display }}</span>
             <span class="term-meta">Level: {{ term_data.report_card.class_arm.full_name }}</span>
         </div>
 
@@ -340,7 +348,7 @@
             <div style="height: 60px;"></div>
             <div class="sig-line"></div>
             <div class="sig-label">Registrar / Exams Officer</div>
-            
+
             <div style="height: 60px;"></div>
             <div class="sig-line"></div>
             <div class="sig-label">School Principal</div>
@@ -349,7 +357,8 @@
 
     <!-- Print Meta -->
     <div class="mt-8 text-center text-[0.65rem] text-gray-400">
-        Printed on: {{ print_date|date:"F j, Y @ H:i" }} &nbsp;|&nbsp; Verified Official Transcript &nbsp;|&nbsp; Page 1 of 1
+        Printed on: {{ print_date|date:"F j, Y @ H:i" }} &nbsp;|&nbsp; Verified Official Transcript &nbsp;|&nbsp; Page 1
+        of 1
     </div>
 </div>
 {% endblock %}

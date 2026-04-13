@@ -181,7 +181,6 @@
     </div>
   </div>
   
-  {% if not is_edit %}
   <!-- Enrollment Information -->
   <div class="section-card bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
     <div class="px-6 py-4 border-b border-gray-100" style="background:linear-gradient(135deg,#FFF5F3 0%,#FFFFFF 100%);">
@@ -275,15 +274,12 @@
         </div>
       </div>
       
-      <div class="two-col-grid mt-5">
-        <div class="flex items-center gap-3">
-          {{ guardian_form.is_primary }}
-          <label class="text-sm font-medium text-gray-700">Primary Guardian</label>
-        </div>
+      <div class="mt-5">
         <div class="flex items-center gap-3">
           {{ guardian_form.portal_enabled }}
           <label class="text-sm font-medium text-gray-700">Enable Parent Portal Access</label>
         </div>
+        <p class="form-hint mt-1">If enabled, a parent account will legally be attached to their phone number.</p>
       </div>
       
       <div class="mt-4 bg-yellow-50 rounded-lg p-3">
@@ -293,7 +289,7 @@
       </div>
     </div>
   </div>
-  {% endif %}
+
   
   <!-- Actions -->
   <div class="flex items-center justify-end gap-3 pb-6">
