@@ -249,8 +249,10 @@
 <div class="transcript-wrapper shadow-2xl mb-12">
     <!-- Header -->
     <div class="school-header">
+        <img src="{% static 'images/logo.png' %}" alt="Great Grace School Logo" style="height:80px; width:auto; object-fit:contain; margin-bottom:0.75rem;">
         <h1 class="school-name">Great Grace Private School</h1>
-        <p class="school-address">123 Education Way, Lagos, Nigeria · +234 800 000 0000</p>
+        <p class="school-address">!3, Harmony Street, Onihale, Ifo, Ogun State</p>
+        <p class="school-address">E-mail: greatgraceint2@gmail.com</p>
         <div class="transcript-title">Official Academic Transcript</div>
     </div>
 
@@ -278,8 +280,7 @@
     {% for term_data in transcript_data %}
     <div class="term-section">
         <div class="term-header">
-            <span class="term-title">{{ term_data.report_card.session.name }} — {{
-                term_data.report_card.term.get_name_display }}</span>
+            <span class="term-title">{{ term_data.report_card.session.name }} — {{ term_data.report_card.term.get_name_display }}</span>
             <span class="term-meta">Level: {{ term_data.report_card.class_arm.full_name }}</span>
         </div>
 
@@ -328,12 +329,12 @@
     <div class="grading-key">
         <h4 class="key-title">Official Grading Scale</h4>
         <div class="flex gap-8">
-            <span><strong>A</strong> (70-100%): Excellent</span>
-            <span><strong>B</strong> (60-69%): Good</span>
-            <span><strong>C</strong> (50-59%): Credit</span>
-            <span><strong>D</strong> (45-49%): Pass</span>
-            <span><strong>E</strong> (40-44%): Poor</span>
-            <span><strong>F</strong> (0-39%): Fail</span>
+            <span class="px-2"><strong>A</strong> (70-100%): Excellent </span>
+            <span class="px-2"><strong>B</strong> (60-69%): Good </span>
+            <span class="px-2"><strong>C</strong> (50-59%): Credit </span>
+            <span class="px-2"><strong>D</strong> (45-49%): Pass </span>
+            <span class="px-2"><strong>E</strong> (40-44%): Poor </span>
+            <span class="px-2"><strong>F</strong> (0-39%): Fail </span>
         </div>
     </div>
 
