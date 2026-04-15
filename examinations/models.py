@@ -651,30 +651,21 @@ class ExamConfiguration(models.Model):
     question_submission_deadline = models.DateTimeField(
         help_text="Deadline for teachers to submit exam questions"
     )
-    exam_vetting_deadline = models.DateTimeField(
-        help_text="Deadline for examiner to vet exam questions"
-    )
-    exam_approval_deadline = models.DateTimeField(
-        help_text="Deadline for admin to approve exam"
-    )
     
     # ── CBT Settings ───────────────────────────────────
     default_exam_duration_minutes = models.PositiveIntegerField(
         default=60,
         help_text="Default duration for exam in minutes"
     )
-    randomize_questions_by_default = models.BooleanField(
-        default=True,
-        help_text="Randomize question order for students by default"
-    )
-    show_results_immediately = models.BooleanField(
-        default=False,
-        help_text="Show exam results immediately after submission"
-    )
     
     exam_start_date = models.DateTimeField(
         null=True, blank=True,
         help_text="Official start date for exams. Upcoming exams become visible on student dashboard from this date."
+    )
+    
+    exam_end_date = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Official end date for exams. After this date, exams are hidden from the student dashboard."
     )
     
     # ── Metadata ───────────────────────────────────────
@@ -731,11 +722,9 @@ class ExamConfiguration(models.Model):
         return timezone.now() > self.question_submission_deadline
     
     @property
-    def is_vetting_deadline_passed(self):
+    def is_exam_period_over(self):
+        """Check if exam period has officially ended"""
+        if not self.exam_end_date:
+            return False
         from django.utils import timezone
-        return timezone.now() > self.exam_vetting_deadline
-    
-    @property
-    def is_approval_deadline_passed(self):
-        from django.utils import timezone
-        return timezone.now() > self.exam_approval_deadline
+        return timezone.now() > self.exam_end_date

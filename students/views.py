@@ -789,8 +789,10 @@ def student_dashboard(request):
     
     # Get upcoming scheduled exams and release status
     can_view_exams = True
-    if exam_config and exam_config.exam_start_date:
-        if now < exam_config.exam_start_date:
+    if exam_config:
+        if exam_config.exam_start_date and now < exam_config.exam_start_date:
+            can_view_exams = False
+        elif exam_config.exam_end_date and now > exam_config.exam_end_date:
             can_view_exams = False
     
     if can_view_exams:
@@ -852,6 +854,8 @@ def student_dashboard(request):
         'upcoming_exams': upcoming_exams,
         'can_view_exams': can_view_exams,
         'exam_start_date': exam_config.exam_start_date if exam_config else None,
+        'exam_end_date': exam_config.exam_end_date if exam_config else None,
+        'is_exam_period_over': exam_config.is_exam_period_over if exam_config else False,
         # Stats
         'total_subjects': total_subjects,
         'total_exams_available': total_exams_available,

@@ -10,6 +10,7 @@ urlpatterns = [
     path('config/create/', views.exam_configuration_create, name='exam_config_create'),
     path('config/<int:pk>/', views.exam_configuration_detail, name='exam_config_detail'),
     path('config/<int:pk>/edit/', views.exam_configuration_edit, name='exam_config_edit'),
+    path('config/<int:pk>/delete/', views.exam_configuration_delete, name='exam_config_delete'),
 
     # ── Teacher Exam Management (Simplified Workflow) ─
     path('teacher/', views.teacher_exam_list, name='teacher_exam_list'),

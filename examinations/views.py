@@ -192,6 +192,22 @@ def exam_configuration_detail(request, pk):
     })
 
 
+@login_required
+@principal_or_vice_principal_required
+@require_POST
+def exam_configuration_delete(request, pk):
+    """Delete exam configuration"""
+    config = get_object_or_404(ExamConfiguration, pk=pk)
+    session_name = str(config.session)
+    term_name = str(config.term)
+    config.delete()
+    messages.success(
+        request, 
+        f'Exam configuration for {session_name} - {term_name} has been deleted.'
+    )
+    return redirect('examinations:exam_config_list')
+
+
 # ── EXAM MANAGEMENT ───────────────────────────────────────────
 
 @login_required

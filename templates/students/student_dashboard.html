@@ -927,8 +927,13 @@
         <div class="empty-state">
             <div class="empty-state-icon">⏳</div>
             <p class="empty-state-text">
-                The exam schedule for this term has not been released yet. <br>
-                It will be visible starting <strong>{{ exam_start_date|date:"F d, Y \a\t h:i A" }}</strong>.
+                {% if is_exam_period_over %}
+                    The examination period for this term has officially ended. <br>
+                    Exams are no longer visible. Contact the school admin for result inquiries.
+                {% else %}
+                    The exam schedule for this term has not been released yet. <br>
+                    It will be visible starting <strong>{{ exam_start_date|date:"F d, Y \a\t h:i A" }}</strong>.
+                {% endif %}
             </p>
         </div>
     </div>

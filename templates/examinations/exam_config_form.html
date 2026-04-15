@@ -327,33 +327,22 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="id_exam_vetting_deadline">Exam Vetting Deadline *</label>
-              {{ form.exam_vetting_deadline }}
-              <p class="help-text">Examiner must vet questions by this date</p>
-              {% if form.exam_vetting_deadline.errors %}
-                <span class="error-message">{{ form.exam_vetting_deadline.errors.0 }}</span>
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="id_exam_approval_deadline">Admin Approval Deadline *</label>
-              {{ form.exam_approval_deadline }}
-              <p class="help-text">Admin must approve exam by this date</p>
-              {% if form.exam_approval_deadline.errors %}
-                <span class="error-message">{{ form.exam_approval_deadline.errors.0 }}</span>
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
               <label for="id_exam_start_date">Exam Start Date *</label>
               {{ form.exam_start_date }}
               <p class="help-text">Official start date for exams. Upcoming exams become visible on student dashboard from this date.</p>
               {% if form.exam_start_date.errors %}
                 <span class="error-message">{{ form.exam_start_date.errors.0 }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="id_exam_end_date">Exam End Date (Deadline)</label>
+              {{ form.exam_end_date }}
+              <p class="help-text">After this date, exams are hidden from the student dashboard. Leave blank if no deadline is needed.</p>
+              {% if form.exam_end_date.errors %}
+                <span class="error-message">{{ form.exam_end_date.errors.0 }}</span>
               {% endif %}
             </div>
           </div>
@@ -374,22 +363,15 @@
             </div>
           </div>
 
-          <div class="checkbox-group">
-            <input type="checkbox" id="id_randomize_questions_by_default" 
-                   name="randomize_questions_by_default" value="on"
-                   {% if form.randomize_questions_by_default.value %}checked{% endif %}>
-            <label for="id_randomize_questions_by_default" style="margin: 0; font-weight: 500; color: #374151;">
-              Randomize question order by default for all exams
-            </label>
-          </div>
-
-          <div class="checkbox-group">
-            <input type="checkbox" id="id_show_results_immediately" 
-                   name="show_results_immediately" value="on"
-                   {% if form.show_results_immediately.value %}checked{% endif %}>
-            <label for="id_show_results_immediately" style="margin: 0; font-weight: 500; color: #374151;">
-              Show exam results immediately after submission
-            </label>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="id_default_exam_duration_minutes">Default Exam Duration (minutes) *</label>
+              {{ form.default_exam_duration_minutes }}
+              <p class="help-text">Default time students have to complete exam</p>
+              {% if form.default_exam_duration_minutes.errors %}
+                <span class="error-message">{{ form.default_exam_duration_minutes.errors.0 }}</span>
+              {% endif %}
+            </div>
           </div>
         </div>
 

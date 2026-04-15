@@ -324,9 +324,7 @@ class ExamConfigurationForm(forms.ModelForm):
             'session', 'term', 'total_marks',
             'ca1_marks_percentage', 'ca2_marks_percentage', 
             'obj_marks_percentage', 'theory_marks_percentage',
-            'question_submission_deadline', 'exam_vetting_deadline',
-            'exam_approval_deadline', 'exam_start_date', 'default_exam_duration_minutes',
-            'randomize_questions_by_default', 'show_results_immediately'
+            'question_submission_deadline', 'exam_start_date', 'exam_end_date', 'default_exam_duration_minutes'
         ]
         widgets = {
             'session': forms.Select(attrs={'class': 'form-input'}),
@@ -363,15 +361,11 @@ class ExamConfigurationForm(forms.ModelForm):
                 'type': 'datetime-local',
                 'class': 'form-input'
             }),
-            'exam_vetting_deadline': forms.DateTimeInput(attrs={
-                'type': 'datetime-local',
-                'class': 'form-input'
-            }),
-            'exam_approval_deadline': forms.DateTimeInput(attrs={
-                'type': 'datetime-local',
-                'class': 'form-input'
-            }),
             'exam_start_date': forms.DateTimeInput(attrs={
+                'type': 'datetime-local',
+                'class': 'form-input'
+            }),
+            'exam_end_date': forms.DateTimeInput(attrs={
                 'type': 'datetime-local',
                 'class': 'form-input'
             }),
@@ -379,12 +373,6 @@ class ExamConfigurationForm(forms.ModelForm):
             # CBT Settings
             'default_exam_duration_minutes': forms.NumberInput(attrs={
                 'class': 'form-input', 'min': 5, 'placeholder': '60'
-            }),
-            'randomize_questions_by_default': forms.CheckboxInput(attrs={
-                'class': 'form-checkbox'
-            }),
-            'show_results_immediately': forms.CheckboxInput(attrs={
-                'class': 'form-checkbox'
             }),
         }
     

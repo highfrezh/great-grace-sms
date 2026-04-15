@@ -4,7 +4,7 @@
 {% block page_title %}Exam Configuration{% endblock %}
 
 {% block content %}
-<div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+<div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8" x-data="{ actionModal: { show: false, url: '', name: '' } }">
   <div class="max-w-6xl mx-auto">
 
     <!-- Header -->
@@ -53,7 +53,7 @@
 
         <!-- Action Buttons -->
         <div class="flex gap-2">
-          <button type="submit" class="flex-1 btn-primary py-2 text-sm" style="background: #851A10;">
+          <button type="submit" class="flex-1 btn-primary py-2 text-sm text-white" style="background: #851A10;">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display:inline-block;">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
             </svg>
@@ -130,28 +130,6 @@
           {% endif %}
         </div>
         <div>
-          <p class="text-xs text-gray-600 uppercase font-semibold">Exam Vetting</p>
-          <p class="text-sm font-semibold text-gray-900 mt-1">
-            {{ current_config.exam_vetting_deadline|date:"M d, Y H:i" }}
-          </p>
-          {% if current_config.is_vetting_deadline_passed %}
-            <span class="inline-block mt-1 px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">
-              PASSED
-            </span>
-          {% endif %}
-        </div>
-        <div>
-          <p class="text-xs text-gray-600 uppercase font-semibold">Admin Approval</p>
-          <p class="text-sm font-semibold text-gray-900 mt-1">
-            {{ current_config.exam_approval_deadline|date:"M d, Y H:i" }}
-          </p>
-          {% if current_config.is_approval_deadline_passed %}
-            <span class="inline-block mt-1 px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">
-              PASSED
-            </span>
-          {% endif %}
-        </div>
-        <div>
           <p class="text-xs text-orange-600 uppercase font-semibold">🚀 Exam Start Date</p>
           <p class="text-sm font-semibold text-gray-900 mt-1">
             {% if current_config.exam_start_date %}
@@ -169,6 +147,27 @@
             {% else %}
               <span class="inline-block mt-1 px-2 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-800">
                 SCHEDULED
+              </span>
+            {% endif %}
+          {% endif %}
+        </div>
+        <div>
+          <p class="text-xs text-red-600 uppercase font-semibold">🛑 Exam End Date</p>
+          <p class="text-sm font-semibold text-gray-900 mt-1">
+            {% if current_config.exam_end_date %}
+              {{ current_config.exam_end_date|date:"M d, Y H:i" }}
+            {% else %}
+              Not Set
+            {% endif %}
+          </p>
+          {% if current_config.exam_end_date %}
+            {% if current_config.is_exam_period_over %}
+              <span class="inline-block mt-1 px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">
+                ENDED
+              </span>
+            {% else %}
+              <span class="inline-block mt-1 px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800">
+                IN PROGRESS
               </span>
             {% endif %}
           {% endif %}
@@ -230,9 +229,8 @@
                 <td class="px-6 py-4 text-xs text-gray-600">
                   <div class="space-y-1">
                     <p>📝 Q-Submit: {{ config.question_submission_deadline|date:"M d, Y" }}</p>
-                    <p>✓ Vetting: {{ config.exam_vetting_deadline|date:"M d, Y" }}</p>
-                    <p>✅ Approve: {{ config.exam_approval_deadline|date:"M d, Y" }}</p>
                     <p class="text-orange-600 font-semibold">🚀 Start: {{ config.exam_start_date|date:"M d, Y"|default:"Not Set" }}</p>
+                    <p class="text-red-600 font-semibold">🛑 End: {{ config.exam_end_date|date:"M d, Y"|default:"Not Set" }}</p>
                   </div>
                 </td>
 
@@ -268,6 +266,18 @@
                               d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                       </svg>
                     </a>
+
+                    <!-- Delete -->
+                    <button type="button" 
+                            @click="actionModal = { show: true, url: '{% url 'examinations:exam_config_delete' config.pk %}', name: '{{ config.session|escapejs }} - {{ config.term|escapejs }}' }"
+                            class="flex items-center justify-center w-8 h-8 rounded-lg
+                                   bg-red-50 hover:bg-red-100 transition text-red-600"
+                            title="Delete">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -294,6 +304,60 @@
       {% endif %}
     </div>
 
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div x-show="actionModal.show"
+       x-cloak
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-[999] flex items-center justify-center p-4"
+       style="background:rgba(0,0,0,0.5);"
+       @keydown.escape.window="actionModal.show = false">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+         @click.outside="actionModal.show = false"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100">
+      
+      <div class="flex items-center justify-center w-14 h-14 rounded-full bg-red-100 mx-auto mb-4">
+        <svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </div>
+      
+      <h3 class="text-lg font-bold text-gray-800 text-center mb-2">Delete Configuration</h3>
+      <p class="text-sm text-gray-500 text-center mb-1">Are you sure you want to permanently delete</p>
+      <p class="text-sm font-semibold text-center mb-6 text-red-600" x-text="actionModal.name"></p>
+      
+      <div class="bg-red-50 p-4 rounded-xl border border-red-100 mb-6 text-center">
+        <p class="text-xs text-red-600">
+          ⚠️ This action cannot be undone. All exam timing and marking settings for this term will be lost.
+        </p>
+      </div>
+      
+      <div class="flex items-center gap-3">
+        <button @click="actionModal.show = false"
+                class="flex-1 px-4 py-2.5 text-sm font-medium rounded-xl
+                       border-2 border-gray-200 text-gray-600
+                       hover:bg-gray-50 transition">
+          Cancel
+        </button>
+        <form :action="actionModal.url" method="POST" class="flex-1">
+          {% csrf_token %}
+          <button type="submit"
+                  class="w-full px-4 py-2.5 text-white text-sm font-medium rounded-xl transition shadow-lg"
+                  style="background:#DC2626;">
+            Yes, Delete
+          </button>
+        </form>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
