@@ -540,6 +540,17 @@ def attendance_mark(request, pk=None):
         except ValueError:
             attendance_date = today
 
+        # Boundary check - must be within current term and not in future
+        if attendance_date < current_term.start_date:
+            messages.error(request, f'Attendance cannot be marked before the term start date: {current_term.start_date.strftime("%d %B %Y")}')
+            return redirect('students:attendance_mark', pk=class_arm.pk)
+        
+        if attendance_date > today:
+            messages.error(request, 'Attendance cannot be marked for future dates.')
+            return redirect('students:attendance_mark', pk=class_arm.pk)
+
+        from results.models import ReportCard
+        
         for student in students:
             status = request.POST.get(f'status_{student.id}', 'PRESENT')
             Attendance.objects.update_or_create(
@@ -553,6 +564,16 @@ def attendance_mark(request, pk=None):
                     'marked_by': request.user,
                 }
             )
+            
+            # Auto-sync report card
+            rc = ReportCard.objects.filter(
+                student=student, 
+                session=current_session, 
+                term=current_term
+            ).first()
+            if rc:
+                rc.sync_attendance()
+
         messages.success(
             request,
             f'Attendance saved for '
@@ -603,16 +624,12 @@ def attendance_mark(request, pk=None):
         )
         present = records.filter(status='PRESENT').count()
         absent = records.filter(status='ABSENT').count()
-        late = records.filter(status='LATE').count()
-        excused = records.filter(status='EXCUSED').count()
-        total = present + absent + late + excused
-        percentage = round((present + late) / total * 100) if total > 0 else 0
+        total = present + absent
+        percentage = round(present / total * 100) if total > 0 else 0
         student_stats.append({
             'student': student,
             'present': present,
             'absent': absent,
-            'late': late,
-            'excused': excused,
             'percentage': percentage,
         })
 
@@ -638,7 +655,6 @@ def attendance_mark(request, pk=None):
                          f"{entry['marked_by__last_name']}",
             'present': day_records.filter(status='PRESENT').count(),
             'absent': day_records.filter(status='ABSENT').count(),
-            'late': day_records.filter(status='LATE').count(),
         })
 
     # Status choices for template
@@ -647,10 +663,6 @@ def attendance_mark(request, pk=None):
          'bg-green-100 text-green-700 hover:bg-green-200'),
         ('ABSENT', 'Absent',
          'bg-red-100 text-red-700 hover:bg-red-200'),
-        ('LATE', 'Late',
-         'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'),
-        ('EXCUSED', 'Excused',
-         'bg-blue-100 text-blue-700 hover:bg-blue-200'),
     ]
 
     return render(request, 'students/attendance_mark.html', {

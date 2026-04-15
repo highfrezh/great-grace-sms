@@ -44,6 +44,33 @@ class ReportCard(models.Model):
             exam__term=self.term
         ).select_related('exam__subject').order_by('exam__subject__name')
 
+    def sync_attendance(self):
+        """
+        Synchronize attendance data from primary records.
+        attendance_total = total days attendance was marked for this class in this term.
+        attendance_present = total days this student was marked PRESENT.
+        """
+        from students.models import Attendance
+        
+        # Total days the school opened (days teacher marked attendance for this class arm)
+        unique_dates = Attendance.objects.filter(
+            class_arm=self.class_arm,
+            session=self.session,
+            term=self.term
+        ).values('date').distinct().count()
+        
+        # Days this specific student was present
+        present_count = Attendance.objects.filter(
+            student=self.student,
+            session=self.session,
+            term=self.term,
+            status='PRESENT'
+        ).count()
+        
+        self.attendance_total = unique_dates
+        self.attendance_present = present_count
+        self.save()
+
 class StudentDomainRating(models.Model):
     """Ratings for Affective and Psychomotor domains"""
     

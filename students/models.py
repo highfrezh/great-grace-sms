@@ -160,8 +160,6 @@ class Attendance(models.Model):
     class Status(models.TextChoices):
         PRESENT = 'PRESENT', 'Present'
         ABSENT = 'ABSENT', 'Absent'
-        LATE = 'LATE', 'Late'
-        EXCUSED = 'EXCUSED', 'Excused'
     
     student = models.ForeignKey(
         Student,
