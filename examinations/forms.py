@@ -21,7 +21,8 @@ class ExamForm(forms.ModelForm):
         model = Exam
         fields = [
             'title', 'subject', 'teacher', 'session', 'term',
-            'duration_minutes', 'theory_attachment', 'randomize_questions'
+            'duration_minutes', 'theory_attachment', 'randomize_questions',
+            'show_results_immediately'
         ]
         widgets = {
             'title': forms.TextInput(attrs={
@@ -40,6 +41,9 @@ class ExamForm(forms.ModelForm):
                 'accept': '.pdf,.docx,.doc'
             }),
             'randomize_questions': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 m-0 rounded border-gray-300'
+            }),
+            'show_results_immediately': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 m-0 rounded border-gray-300'
             }),
         }
@@ -76,7 +80,8 @@ class TeacherExamForm(forms.ModelForm):
         model = Exam
         fields = [
             'title', 'subject', 'session', 'term',
-            'duration_minutes', 'theory_attachment', 'randomize_questions'
+            'duration_minutes', 'theory_attachment', 'randomize_questions',
+            'show_results_immediately'
         ]
         widgets = {
             'title': forms.TextInput(attrs={
@@ -94,6 +99,9 @@ class TeacherExamForm(forms.ModelForm):
                 'accept': '.pdf,.docx,.doc'
             }),
             'randomize_questions': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 m-0 rounded border-gray-300'
+            }),
+            'show_results_immediately': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 m-0 rounded border-gray-300'
             }),
         }

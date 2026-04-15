@@ -429,11 +429,18 @@
         </div>
       </div>
       <div class="section-content" id="advancedContent" style="display: block;">
-        <label for="id_randomize_questions" class="flex items-center gap-3 cursor-pointer select-none group">
+        <label for="id_randomize_questions" class="flex items-center gap-3 cursor-pointer select-none group mb-4">
           <div class="flex items-center justify-center">
             {{ form.randomize_questions }}
           </div>
-          <span class="text-sm font-medium text-gray-700 group-hover:text-[#851A10] transition-colors">Shuffle questions for each student</span>
+          <span class="text-sm font-medium text-gray-700 group-hover:text-[#851A10] transition-colors">Shuffle objective questions for each student</span>
+        </label>
+
+        <label for="id_show_results_immediately" class="flex items-center gap-3 cursor-pointer select-none group">
+          <div class="flex items-center justify-center">
+            {{ form.show_results_immediately }}
+          </div>
+          <span class="text-sm font-medium text-gray-700 group-hover:text-[#851A10] transition-colors">Show score and report to student immediately after submission</span>
         </label>
       </div>
 

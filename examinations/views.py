@@ -1038,7 +1038,11 @@ def exam_submission_report(request, pk):
     else:
         final_score = (correct_count / total_questions * max_obj_marks) if total_questions > 0 else 0
 
+    # If results are hidden, we pass a flag to the template
+    results_hidden = not exam.show_results_immediately
+
     return render(request, 'examinations/exam_report.html', {
+        'results_hidden': results_hidden,
         'exam': exam,
         'submission': submission,
         'total_questions': total_questions,

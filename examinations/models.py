@@ -52,6 +52,11 @@ class Exam(models.Model):
         help_text="Shuffle question order for each student taking the exam"
     )
 
+    show_results_immediately = models.BooleanField(
+        default=True,
+        help_text="Show score and detailed report to student immediately after submission"
+    )
+
     # ── Publication & Approval Status ────────────────────────────
     class ExamStatus(models.TextChoices):
         DRAFT = 'DRAFT', 'Draft (Editing)'
