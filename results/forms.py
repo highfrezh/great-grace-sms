@@ -18,3 +18,14 @@ class DomainRatingForm(forms.ModelForm):
         widgets = {
             'rating': forms.Select(attrs={'class': 'form-input'}),
         }
+class PrincipalReportCardForm(forms.ModelForm):
+    class Meta:
+        model = ReportCard
+        fields = ['principal_comment']
+        widgets = {
+            'principal_comment': forms.Textarea(attrs={
+                'class': 'form-input', 
+                'rows': 4, 
+                'placeholder': 'Enter official principal/vice-principal remark...'
+            }),
+        }

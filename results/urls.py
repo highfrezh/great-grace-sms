@@ -12,5 +12,6 @@ urlpatterns = [
     path('all-results/', views.all_student_results, name='all_student_results'),
     path('releases/', views.manage_releases, name='manage_releases'),
     path('releases/toggle/', views.toggle_release, name='toggle_release'),
+    path('card/<int:pk>/admin-update/', views.admin_update_report_card, name='admin_update_report_card'),
     path('my-results/', views.student_report_card_list, name='student_report_card_list'),
 ]

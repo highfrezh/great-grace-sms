@@ -22,33 +22,54 @@
     @media print {
         body {
             background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Hide everything by default */
+        body * {
+            visibility: hidden;
+        }
+
+        /* Show only the report card and its content */
+        .report-card-wrapper,
+        .report-card-wrapper * {
+            visibility: visible;
+        }
+
+        /* Position the card at the top-left for the print layout */
+        .report-card-wrapper {
+            visibility: visible;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100% !important;
+            max-width: none !important;
+            box-shadow: none !important;
+            border: none !important;
             padding: 0 !important;
             margin: 0 !important;
         }
 
-        .report-card-wrapper {
-            box-shadow: none;
-            border: none;
-            margin: 0;
-            width: 100%;
-            max-width: none;
-            padding: 1.5rem;
-            border-radius: 0;
+        /* Preserve background colors and graphics */
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
         }
 
-        .btn-print-hide,
-        .no-print {
-            display: none !important;
-        }
-
-        .school-logo {
-            border: 1px solid #ddd;
-        }
-
+        /* Performance Table Tweaks for Printing */
         .performance-table th {
             background: #f1f5f9 !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+        }
+
+        /* Hide buttons definitively */
+        .btn-print-hide,
+        .no-print,
+        nav,
+        header,
+        footer {
+            display: none !important;
         }
     }
 
@@ -321,7 +342,8 @@
 
 {% block content %}
 <div class="max-w-5xl mx-auto py-6 px-4">
-    <!-- Print Button -->
+    <!-- Print Button (Hidden for Class Teachers unless Admin) -->
+    {% if is_admin or not is_class_teacher %}
     <div class="flex justify-end mb-4 btn-print-hide no-print">
         <button onclick="window.print()" class="btn-primary flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -331,20 +353,22 @@
             Print / Download PDF
         </button>
     </div>
+    {% endif %}
 
     <!-- Report Card -->
     <div class="report-card-wrapper">
         <!-- School Header -->
         <div class="school-header">
             <div class="school-logo">
-                <img src="{% static 'images/logo.png' %}" alt="Great Grace School Logo" style="width:100%; height:100%; object-fit:contain;">
+                <img src="{% static 'images/logo.png' %}" alt="Great Grace School Logo"
+                    style="width:100%; height:100%; object-fit:contain;">
             </div>
             <h1 class="school-name">Great Grace Private School</h1>
             <p class="school-address">!3, Harmony Street, Onihale, Ifo, Ogun State</p>
             <p class="school-address">E-mail: greatgraceint2@gmail.com</p>
             <div
                 class="inline-block px-4 py-1.5 bg-[#851A10] text-white rounded-lg text-xs font-bold uppercase tracking-widest mt-4 shadow-sm">
-                Student Terminal Report Card
+                Student's Report Card
             </div>
         </div>
 
@@ -469,6 +493,40 @@
             </div>
         </div>
 
+        <!-- Rating Key Legend -->
+        <div
+            class="mb-8 py-3 px-4 bg-gray-50 rounded-lg border border-gray-100 flex flex-wrap justify-center gap-x-12 gap-y-4">
+            <span class="text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider">Rating Key:</span>
+            <div class="flex items-center gap-2">
+                <span
+                    class="w-5 h-5 flex items-center justify-center rounded text-[0.65rem] font-bold text-[#851A10]">5</span>
+                <span class="text-[0.65rem] font-semibold text-gray-600">Excellent</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span
+                    class="w-5 h-5 flex items-center justify-center rounded text-[0.65rem] font-bold text-[#851A10]">4</span>
+                <span class="text-[0.65rem] font-semibold text-gray-600">Very Good</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span
+                    class="w-5 h-5 flex items-center justify-center rounded text-[0.65rem] font-bold text-[#851A10]">
+                    3</span>
+                <span class="text-[0.65rem] font-semibold text-gray-600">Good</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span
+                    class="w-5 h-5 flex items-center justify-center rounded text-[0.65rem] font-bold text-[#851A10]">
+                    2</span>
+                <span class="text-[0.65rem] font-semibold text-gray-600">Fair</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span
+                    class="w-5 h-5 flex items-center justify-center rounded text-[0.65rem] font-bold text-[#851A10]">
+                    1</span>
+                <span class="text-[0.65rem] font-semibold text-gray-600">Poor</span>
+            </div>
+        </div>
+
         <!-- Attendance Summary -->
         <div class="grid grid-cols-2 gap-6 mb-5">
             <div class="info-item">
@@ -490,10 +548,6 @@
         <!-- Teacher's Comment -->
         <div class="comment-box">
             <span class="comment-title">
-                <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                </svg>
                 Class Teacher's Comment
             </span>
             <p class="comment-text">"{{ rc.teacher_comment|default:"No comment provided." }}"</p>
@@ -502,23 +556,9 @@
         <!-- Principal's Comment -->
         <div class="comment-box" style="border-left-color: #6B7280; background: white; border: 1px solid #F3F4F6;">
             <span class="comment-title" style="color: #6B7280;">
-                <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
                 Principal's Comment
             </span>
             <p class="comment-text">"{{ rc.principal_comment|default:"Good performance. Keep it up." }}"</p>
-        </div>
-
-        <!-- Signatures -->
-        <div class="footer-grid">
-            <div class="signature-line">
-                Class Teacher's Signature
-            </div>
-            <div class="signature-line">
-                Principal's Signature & Stamp
-            </div>
         </div>
 
         <!-- Date -->
