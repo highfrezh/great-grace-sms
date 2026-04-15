@@ -140,6 +140,17 @@
           {% endif %}
         </div>
       </div>
+
+      <div class="mt-5 pb-6 border-b border-gray-100">
+        <label class="form-label">Passport Photo</label>
+        <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+          {{ student_form.passport_photo }}
+          <p class="form-hint mt-2">Max 2MB (JPG, PNG)</p>
+        </div>
+        {% if student_form.passport_photo.errors %}
+          <p class="form-error">{{ student_form.passport_photo.errors.0 }}</p>
+        {% endif %}
+      </div>
       
       <div class="two-col-grid mt-5">
         <div>

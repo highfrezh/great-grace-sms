@@ -40,6 +40,29 @@ class User(AbstractUser):
     )
     is_first_login = models.BooleanField(default=True)
 
+    @property
+    def get_avatar_url(self):
+        """
+        Returns the best available avatar for the user:
+        1. Student passport photo
+        2. Staff profile picture
+        3. User profile picture
+        4. None (fallback to initials in UI)
+        """
+        # Check StaffProfile
+        if hasattr(self, 'staff_profile') and self.staff_profile.profile_picture:
+            return self.staff_profile.profile_picture.url
+        
+        # Check Student Profile
+        if hasattr(self, 'student_profile') and self.student_profile.passport_photo:
+            return self.student_profile.passport_photo.url
+            
+        # Check User profile picture
+        if self.profile_picture:
+            return self.profile_picture.url
+            
+        return None
+
     def __str__(self):
         return f"{self.get_full_name() or self.username}"
 

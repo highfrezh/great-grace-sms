@@ -12,7 +12,7 @@ class StudentForm(forms.ModelForm):
         fields = [
             'first_name', 'last_name', 'other_names',
             'date_of_birth', 'gender',
-            'address', 'allergies', 'medical_conditions',
+            'address', 'passport_photo', 'allergies', 'medical_conditions',
             'is_active'
         ]
         widgets = {

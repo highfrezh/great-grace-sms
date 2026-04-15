@@ -48,6 +48,11 @@ class Student(models.Model):
     gender = models.CharField(max_length=1, choices=Gender.choices)    
     address = models.TextField(blank=True)    
     allergies = models.TextField(blank=True)
+    passport_photo = models.ImageField(
+        upload_to='students/passports/',
+        null=True,
+        blank=True
+    )
     medical_conditions = models.TextField(blank=True)
     
     is_active = models.BooleanField(default=True)

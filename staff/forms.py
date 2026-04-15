@@ -141,3 +141,17 @@ class StaffProfileForm(forms.ModelForm):
                 'class': 'form-input'
             }),
         }
+
+
+class StaffSelfUpdateForm(forms.ModelForm):
+    """Form for staff to update their own limited profile info"""
+    class Meta:
+        model = StaffProfile
+        fields = ['profile_picture', 'address']
+        widgets = {
+            'profile_picture': forms.FileInput(attrs={'class': 'form-input', 'accept': 'image/*'}),
+            'address': forms.Textarea(attrs={
+                'rows': 2, 'class': 'form-input',
+                'placeholder': 'Home address'
+            }),
+        }

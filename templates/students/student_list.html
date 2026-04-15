@@ -173,8 +173,8 @@
             </td>
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
-                {% if student.profile_picture %}
-                  <img src="{{ student.profile_picture.url }}" 
+                {% if student.passport_photo %}
+                  <img src="{{ student.passport_photo.url }}" 
                        class="w-8 h-8 rounded-full object-cover shrink-0">
                 {% else %}
                   <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"

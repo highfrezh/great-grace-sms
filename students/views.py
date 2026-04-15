@@ -93,7 +93,7 @@ def student_list(request):
 @transaction.atomic
 def student_create(request):
     """Create new student with optional enrollment and guardian"""
-    student_form = StudentForm(request.POST or None)
+    student_form = StudentForm(request.POST or None, request.FILES or None)
     enrollment_form = StudentEnrollmentForm(request.POST or None, prefix='enrollment')
     guardian_form = GuardianForm(request.POST or None, prefix='guardian')
     
@@ -168,7 +168,7 @@ def student_edit(request, pk):
     if not guardian:
         guardian = student.guardians.first()
     
-    student_form = StudentForm(request.POST or None, instance=student)
+    student_form = StudentForm(request.POST or None, request.FILES or None, instance=student)
     guardian_form = GuardianForm(request.POST or None, instance=guardian, prefix='guardian')
     
     current_enrollment = student.get_current_enrollment()

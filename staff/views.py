@@ -6,7 +6,7 @@ from django.db import transaction
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from accounts.decorators import admin_staff_required
 from .models import StaffProfile
-from .forms import StaffUserForm, StaffProfileForm
+from .forms import StaffUserForm, StaffProfileForm, StaffSelfUpdateForm
 
 User = get_user_model()
 
@@ -221,14 +221,22 @@ def staff_reset_password(request, pk):
 
 @login_required
 def my_profile(request):
-    """View for a staff member to see their own profile."""
+    """View and update staff personal profile"""
     try:
         profile = request.user.staff_profile
     except StaffProfile.DoesNotExist:
-        messages.error(request, "You do not have a staff profile.")
+        messages.error(request, "Staff profile not found.")
         return redirect('accounts:dashboard')
+        
+    form = StaffSelfUpdateForm(request.POST or None, request.FILES or None, instance=profile)
+    
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, "Profile updated successfully.")
+        return redirect('staff:my_profile')
         
     return render(request, 'staff/my_profile.html', {
         'profile': profile,
+        'form': form,
         'page_title': 'My Profile'
     })
