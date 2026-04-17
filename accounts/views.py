@@ -106,19 +106,32 @@ def dashboard_view(request):
         ).select_related('subject', 'class_arm')
 
         subject_ids = set(assignments.values_list('subject_id', flat=True).distinct())
-        class_ids = set(assignments.values_list('class_arm_id', flat=True).distinct())
+        assigned_class_ids = set(assignments.values_list('class_arm_id', flat=True).distinct())
 
         # Add managed classes (if Class Teacher) to the class IDs list
         managed_classes = ClassArm.objects.filter(class_teacher=user, session=current_session)
-        for c in managed_classes:
-            class_ids.add(c.id)
+        managed_class_ids = set(managed_classes.values_list('id', flat=True))
+        
+        all_class_ids = assigned_class_ids.union(managed_class_ids)
 
-        # 2. Total Students (across all assigned and managed classes)
-        total_students = StudentEnrollment.objects.filter(
-            class_arm_id__in=class_ids,
+        # Managed students (only in the class they are Class Teacher of)
+        managed_students = StudentEnrollment.objects.filter(
+            class_arm_id__in=managed_class_ids,
             session=current_session,
             is_active=True
         ).values('student_id').distinct().count()
+
+        # 2. Total Students 
+        if user.is_class_teacher:
+            # If they are a class teacher, 'Total Students' stat refers strictly to their class
+            total_students = managed_students
+        else:
+            # If they are strictly a subject teacher, it's the students across all their assigned classes
+            total_students = StudentEnrollment.objects.filter(
+                class_arm_id__in=assigned_class_ids,
+                session=current_session,
+                is_active=True
+            ).values('student_id').distinct().count()
 
         # 3. Exam Stats
         teacher_exams = Exam.objects.filter(
@@ -137,7 +150,6 @@ def dashboard_view(request):
         attendance_marked_today = False
         managed_class_names = ""
         if user.is_class_teacher:
-            managed_classes = ClassArm.objects.filter(class_teacher=user, session=current_session)
             if managed_classes.exists():
                 managed_class_names = ", ".join([str(c) for c in managed_classes])
                 attendance_marked_today = Attendance.objects.filter(
@@ -150,8 +162,9 @@ def dashboard_view(request):
             'current_session': current_session,
             'current_term': current_term,
             'assigned_subjects_count': len(subject_ids),
-            'assigned_classes_count': len(class_ids),
+            'assigned_classes_count': len(assigned_class_ids),
             'total_students_count': total_students,
+            'managed_students_count': managed_students,
             'exam_stats': exam_stats,
             'attendance_marked_today': attendance_marked_today,
             'managed_class_names': managed_class_names,

@@ -973,9 +973,10 @@
                             Ended
                         </button>
                     {% else %}
-                        <a href="{% url 'examinations:exam_take' exam.pk %}" class="take-exam-btn" style="width: 100%; text-align: center;">
+                        <button @click="$dispatch('open-pin-modal', { pk: '{{ exam.pk }}', title: '{{ exam.title|escapejs }}', subject: '{{ exam.subject.name|escapejs }}' })" 
+                                class="take-exam-btn" style="width: 100%; text-align: center;">
                             Start Exam →
-                        </a>
+                        </button>
                     {% endif %}
                 </div>
             </div>
@@ -1150,7 +1151,6 @@
                 {% endif %}
 
             </p>
-
         </div>
 
     </div>
@@ -1159,7 +1159,133 @@
 
 </div>
 
+<!-- PIN Verification Modal -->
+<div x-data="{ 
+    showVerifyModal: false, 
+    selectedExamPk: null, 
+    selectedExamTitle: '',
+    selectedSubjectName: '',
+    pinValue: '',
+    errorMessage: '',
+    isLoading: false,
+    openModal(pk, title, subject) {
+        this.selectedExamPk = pk;
+        this.selectedExamTitle = title;
+        this.selectedSubjectName = subject;
+        this.pinValue = '';
+        this.errorMessage = '';
+        this.showVerifyModal = true;
+    },
+    submitPin() {
+        this.isLoading = true;
+        this.errorMessage = '';
+        
+        let formData = new FormData();
+        formData.append('pin', this.pinValue);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        fetch(`/examinations/${this.selectedExamPk}/verify-pin/`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = data.redirect_url;
+            } else {
+                this.errorMessage = data.message;
+                this.isLoading = false;
+            }
+        })
+        .catch(error => {
+            this.errorMessage = 'A network error occurred. Please try again.';
+            this.isLoading = false;
+        });
+    }
+}" @open-pin-modal.window="openModal($event.detail.pk, $event.detail.title, $event.detail.subject)">
+    
+    <div x-show="showVerifyModal" 
+         x-cloak
+         class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100">
+        
+        <div class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden transform border border-white/20"
+             @click.outside="if(!isLoading) showVerifyModal = false"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 scale-90 translate-y-10"
+             x-transition:enter-end="opacity-100 scale-100 translate-y-0">
+            
+            <!-- Modal Header -->
+            <div class="p-8 pb-4 text-center">
+                <div class="w-20 h-20 bg-[#851A10]/10 rounded-3xl flex items-center justify-center mx-auto mb-6 text-[#851A10] shadow-inner">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-3xl font-black text-gray-900 leading-tight">Enter Exam PIN</h2>
+                <div class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-2xl border border-gray-100">
+                    <span class="text-sm font-bold text-gray-600" x-text="selectedSubjectName"></span>
+                    <span class="w-1.5 h-1.5 bg-[#851A10] rounded-full"></span>
+                    <span class="text-xs font-black text-[#851A10] uppercase tracking-wider" x-text="selectedExamTitle"></span>
+                </div>
+            </div>
 
+            <!-- Form -->
+            <form @submit.prevent="submitPin" class="p-8 pt-4 space-y-6">
+                {% csrf_token %}
+                
+                <!-- Error Banner -->
+                <div x-show="errorMessage" x-cloak
+                    class="p-4 rounded-2xl bg-red-50 text-red-700 border border-red-100 text-sm font-bold flex items-center gap-3 shadow-inner">
+                    <svg class="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span x-text="errorMessage"></span>
+                </div>
+
+                <div class="relative">
+                    <input type="text" name="pin" x-model="pinValue" required maxlength="10" autofocus :disabled="isLoading"
+                        class="block w-full px-4 py-6 text-4xl font-mono tracking-[0.6em] text-center text-gray-900 bg-gray-50 border-3 border-transparent rounded-[1.5rem] focus:border-[#851A10] focus:bg-white focus:ring-0 transition-all placeholder:text-gray-200 placeholder:tracking-normal disabled:opacity-50"
+                        placeholder="••••••">
+                </div>
+
+                <div class="text-center">
+                    <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">
+                        Shared in the exam hall
+                    </p>
+                </div>
+
+                <div class="flex flex-col gap-4">
+                    <button type="submit" :disabled="isLoading"
+                        class="group relative w-full flex items-center justify-center px-8 py-5 bg-[#851A10] text-white text-xl font-black rounded-2xl shadow-2xl shadow-[#851A10]/30 hover:bg-[#6d160b] transition-all transform active:scale-95 disabled:opacity-75 disabled:active:scale-100">
+                        <span x-show="!isLoading" class="flex items-center">
+                            Unlock & Start
+                            <svg class="w-6 h-6 ml-3 transition-transform group-hover:translate-x-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                            </svg>
+                        </span>
+                        <span x-show="isLoading" class="flex items-center">
+                            <svg class="animate-spin -ml-1 mr-3 h-6 w-6 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Verifying...
+                        </span>
+                    </button>
+                    
+                    <button type="button" @click="showVerifyModal = false" :disabled="isLoading"
+                        class="text-sm text-gray-500 font-black uppercase tracking-widest hover:text-gray-900 transition-colors py-2 block text-center disabled:opacity-50">
+                        Close
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
-

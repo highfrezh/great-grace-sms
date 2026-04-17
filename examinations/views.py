@@ -17,7 +17,7 @@ from staff.models import StaffProfile
 from .models import (
     Exam, ObjectiveQuestion, TheoryQuestion, ExamSubmission,
     StudentAnswer, TheoryScore, ExamResult, ExamDeadlinePenalty,
-    ExamConfiguration, MalpracticeViolation
+    ExamConfiguration, MalpracticeViolation, DailyExamPIN
 )
 from .forms import (
     ExamForm, TeacherExamForm, QuestionForm, TheoryQuestionForm,
@@ -701,6 +701,10 @@ def exam_take(request, pk):
     # Already submitted
     if submission.is_complete:
         return redirect('examinations:exam_result_student', pk=pk)
+
+    # PIN Verification check
+    if not submission.pin_verified:
+        return redirect('examinations:verify_exam_pin', pk=pk)
 
     # Calculate remaining time on resume (account for elapsed time with 5-min grace period)
     if not created:
@@ -2095,6 +2099,7 @@ def examiner_dashboard(request):
         'selected_subject_id': selected_subject_id,
         'selected_subject': selected_subject,
         'selected_status': selected_status,
+        'today_pin': DailyExamPIN.objects.filter(date=timezone.now().date()).first(),
     }
     return render(request, 'examinations/examiner_dashboard.html', context)
 
@@ -2503,9 +2508,128 @@ def examiner_all_exams(request):
         'term_filter': term_filter,
         'subject_filter': subject_filter,
         'class_arm_filter': class_arm_filter,
-        'status_filter': status_filter,
+                'status_filter': status_filter,
         'current_session': current_session,
         'current_term': current_term,
     }
     
     return render(request, 'examinations/examiner_all_exams.html', context)
+
+
+@login_required
+@principal_or_vice_principal_required
+def set_daily_pin(request):
+    """View for Principal/VP to set today's exam access PIN and expiry time, typically via Modal"""
+    today = timezone.now().date()
+    target_date_str = request.GET.get('date', today.isoformat())
+    try:
+        target_date = timezone.datetime.fromisoformat(target_date_str).date()
+    except (ValueError, TypeError):
+        target_date = today
+    
+    daily_pin, created = DailyExamPIN.objects.get_or_create(
+        date=target_date,
+        defaults={
+            'pin': str(random.randint(100000, 999999)),
+            # Default to 4 hours from now for validity
+            'valid_until': timezone.now() + timezone.timedelta(hours=4),
+            'created_by': request.user
+        }
+    )
+    
+    if request.method == 'POST':
+        pin = request.POST.get('pin')
+        valid_until_str = request.POST.get('valid_until')
+        
+        if pin and valid_until_str:
+            try:
+                # Parse datetime-local string (YYYY-MM-DDTHH:MM)
+                valid_until = timezone.make_aware(timezone.datetime.fromisoformat(valid_until_str))
+                
+                daily_pin.pin = pin
+                daily_pin.valid_until = valid_until
+                daily_pin.created_by = request.user
+                daily_pin.save()
+                
+                messages.success(request, f"Daily Exam PIN for {target_date} set to {pin}, valid until {valid_until.strftime('%I:%M %p')}.")
+            except ValueError:
+                messages.error(request, "Invalid date/time format.")
+        else:
+            messages.error(request, "Both PIN and validity time are required.")
+            
+        return redirect('examinations:examiner_dashboard')
+
+    return render(request, 'examinations/daily_pin_form.html', {
+        'daily_pin': daily_pin,
+        'target_date': target_date,
+        'page_title': f"Set Daily Exam PIN — {target_date.strftime('%b %d, %Y')}"
+    })
+
+
+@login_required
+def verify_exam_pin(request, pk):
+    """View for students to verify the daily PIN for a specific exam attempt"""
+    exam = get_object_or_404(Exam, pk=pk, status=Exam.ExamStatus.APPROVED)
+    
+    # Get or create submission
+    try:
+        student = request.user.student_profile
+    except Exception:
+        messages.error(request, "Student profile not found.")
+        return redirect('accounts:dashboard')
+        
+    submission, created = ExamSubmission.objects.get_or_create(
+        exam=exam,
+        student=student,
+        defaults={
+            'status': ExamSubmission.SubmissionStatus.IN_PROGRESS,
+            'time_remaining_seconds': exam.duration_minutes * 60
+        }
+    )
+    
+    if submission.pin_verified:
+        return redirect('examinations:exam_take', pk=pk)
+        
+    if request.method == 'POST':
+        is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+        entered_pin = request.POST.get('pin')
+        today = timezone.now().date()
+        
+        daily_pin = DailyExamPIN.objects.filter(date=today).first()
+        
+        error_msg = None
+        if not daily_pin:
+            error_msg = "Today's Exam PIN has not been set yet. Please contact your invigilator."
+        elif daily_pin.is_expired:
+            error_msg = "The Exam PIN for today has expired. You can no longer start new exams."
+        elif daily_pin.pin != entered_pin:
+            error_msg = "Incorrect PIN. Please check the PIN on the board and try again."
+            
+        if error_msg:
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': error_msg})
+            messages.error(request, error_msg)
+            return redirect('students:student_dashboard')
+            
+        else:
+            # Success
+            submission.pin_verified = True
+            # Log IP at the moment of verification
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip = x_forwarded_for.split(',')[0]
+            else:
+                ip = request.META.get('REMOTE_ADDR')
+            submission.client_ip = ip
+            submission.save()
+            
+            if is_ajax:
+                return JsonResponse({
+                    'success': True, 
+                    'redirect_url': reverse('examinations:exam_take', kwargs={'pk': pk})
+                })
+                
+            messages.success(request, "PIN verified successfully. You may now start your exam.")
+            return redirect('examinations:exam_take', pk=pk)
+            
+    return redirect('students:student_dashboard')

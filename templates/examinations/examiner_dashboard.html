@@ -170,6 +170,133 @@
   </div>
 </div>
 
+<!-- Daily PIN Section (Principal/VP Only) -->
+{% if user.is_principal or user.is_vice_principal %}
+<div class="mb-6" x-data="{ 
+    showPinModal: false,
+    generatePin() {
+        return Math.floor(100000 + Math.random() * 900000);
+    }
+}">
+    <div class="bg-white rounded-xl border-2 border-primary/10 shadow-sm overflow-hidden transform transition-all hover:shadow-md">
+        <div class="flex flex-col md:flex-row items-center justify-between p-6 gap-6">
+            <div class="flex items-center gap-5">
+                <div class="w-14 h-14 rounded-2xl flex items-center justify-center border transition-all"
+                    style="background-color: rgba(133, 26, 16, 0.1); color: #851A10; border-color: rgba(133, 26, 16, 0.2);">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900 leading-tight">Daily Exam Access PIN</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">Control access to the CBT hall for today's examinations.</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-6 bg-gray-50/50 rounded-2xl px-6 py-4 border border-gray-100">
+                {% if today_pin %}
+                    <div class="text-center">
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Today's Code</p>
+                        <p class="text-2xl font-black text-primary font-mono tracking-wider">{{ today_pin.pin }}</p>
+                    </div>
+                    <div class="h-10 w-px bg-gray-200"></div>
+                    <div>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Valid Until</p>
+                        <p class="text-sm font-bold {% if today_pin.is_expired %}text-red-500{% else %}text-gray-700{% endif %}">
+                        {{ today_pin.valid_until|date:"M j, h:i A" }}
+                        {% if today_pin.is_expired %}<span class="text-xs ml-1 bg-red-100 px-1.5 py-0.5 rounded">Expired</span>{% endif %}
+                    </p>
+                    </div>
+                {% else %}
+                    <div class="flex items-center gap-2 text-amber-600">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                        <span class="text-sm font-bold">No PIN set for today</span>
+                    </div>
+                {% endif %}
+
+                <button @click="showPinModal = true"
+                    class="p-3 text-white text-sm font-bold rounded-xl shadow-lg transition-all active:scale-[0.98]"
+                    style="background-color: #851A10; box-shadow: 0 10px 15px -3px rgba(133, 26, 16, 0.2);">
+                    {% if today_pin %}Update PIN{% else %}Generate PIN{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PIN Management Modal -->
+    <div x-show="showPinModal" 
+         x-cloak
+         class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100">
+        
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform"
+             @click.outside="showPinModal = false"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100">
+            
+            <div class="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <div>
+                    <h3 class="font-black text-gray-900 text-lg">Daily Exam Access PIN</h3>
+                    <p class="text-xs text-gray-500 font-medium">{{ timezone.now|date:"l, F j, Y" }}</p>
+                </div>
+                <button @click="showPinModal = false" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <form action="{% url 'examinations:set_daily_pin' %}" method="POST" class="p-8 space-y-6">
+                {% csrf_token %}
+                
+                <!-- PIN Input -->
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Access Code</label>
+                    <div class="relative" x-data="{ pinValue: '{{ today_pin.pin|default:'' }}' }">
+                        <input type="text" name="pin" x-model="pinValue" required maxlength="10"
+                            class="w-full px-4 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-primary focus:ring-0 text-2xl font-mono font-black tracking-widest text-center transition-all"
+                            placeholder="000000">
+                        <button type="button" @click="pinValue = generatePin()"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-gray-100 rounded-xl transition mt-6"
+                            style="color: #851A10;"
+                            title="Generate random PIN">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- expiry Input -->
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Valid Until</label>
+                    <input type="datetime-local" name="valid_until" required
+                        value="{{ today_pin.valid_until|date:'Y-m-d\TH:i' }}"
+                        class="w-full px-4 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:ring-0 font-bold text-gray-700 transition-all"
+                        style="border-color: #F3F4F6;">
+                    <p class="mt-2 text-[10px] text-gray-400 italic">Students cannot use this PIN to start new exams after this time.</p>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="button" @click="showPinModal = false" 
+                        class="flex-1 px-6 py-3.5 rounded-2xl border-2 border-gray-50 text-gray-500 font-bold hover:bg-gray-50 transition active:scale-[0.98]">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                        class="flex-1 px-6 py-3.5 rounded-2xl text-white font-black shadow-xl transition active:scale-[0.98]"
+                        style="background-color: #851A10; shadow-color: rgba(133, 26, 16, 0.2);">
+                        Save PIN
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Academic Period -->
 {% if current_session and current_term %}
 <div class="bg-gradient-to-r from-blue-50 to-white rounded-xl p-4 border border-blue-100 mb-6">

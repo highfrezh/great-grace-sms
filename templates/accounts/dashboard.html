@@ -44,7 +44,7 @@
     <div class="absolute -right-8 -top-8 w-48 h-48 bg-gray-50 rounded-full opacity-50 blur-3xl"></div>
   </div>
 
-  {% if assigned_subjects_count or assigned_classes_count %}
+  {% if assigned_subjects_count or assigned_classes_count or request.user.is_class_teacher %}
   <!-- Stats Grid -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
     <!-- Students -->
@@ -240,7 +240,7 @@
         <div class="space-y-4">
           <div class="flex justify-between items-center py-3 border-b border-blue-600/50">
             <span class="text-sm text-blue-200">Registered Students</span>
-            <span class="font-black text-lg">{{ total_students_count }}</span>
+            <span class="font-black text-lg">{{ managed_students_count }}</span>
           </div>
           <div class="flex justify-between items-center py-3 border-b border-blue-600/50 text-sm">
             <span class="text-blue-200">Today's Attendance</span>

@@ -368,6 +368,16 @@ class ExamSubmission(models.Model):
     auto_submitted_reason = models.CharField(
         max_length=100, blank=True
     )
+    
+    # ── Security & Auditing ───────────────────────────
+    client_ip = models.GenericIPAddressField(
+        null=True, blank=True,
+        help_text="IP address used for the last activity"
+    )
+    pin_verified = models.BooleanField(
+        default=False,
+        help_text="True if the student has successfully entered today's PIN for this subject"
+    )
 
     class Meta:
         unique_together = ['exam', 'student']
@@ -733,3 +743,38 @@ class ExamConfiguration(models.Model):
             return False
         from django.utils import timezone
         return timezone.now() > self.exam_end_date
+
+
+class DailyExamPIN(models.Model):
+    """
+    Unified school-wide PIN for a specific exam day.
+    Students must enter this PIN to unlock any exam on this date.
+    """
+    from django.utils import timezone
+    date = models.DateField(unique=True, default=timezone.now)
+    pin = models.CharField(max_length=10)
+    valid_until = models.DateTimeField(
+        help_text="After this time, the PIN is no longer valid for starting new exams"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='daily_pins_created'
+    )
+
+    class Meta:
+        ordering = ['-date']
+        verbose_name = "Daily Exam PIN"
+        verbose_name_plural = "Daily Exam PINs"
+
+    def __str__(self):
+        return f"PIN for {self.date}: {self.pin}"
+
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() > self.valid_until

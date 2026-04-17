@@ -58,6 +58,7 @@ urlpatterns = [
     path('<int:pk>/auto-submit/', views.exam_auto_submit, name='exam_auto_submit'),
     path('<int:pk>/result/', views.exam_result_student, name='exam_result_student'),
     path('<int:pk>/report/', views.exam_submission_report, name='exam_submission_report'),
+    path('<int:pk>/verify-pin/', views.verify_exam_pin, name='verify_exam_pin'),
 
     # ── Theory Score Entry (Teacher) ──────────────────
     path('<int:pk>/theory-scores/', views.theory_score_entry, name='theory_score_entry'),
@@ -83,5 +84,6 @@ urlpatterns = [
 
     # ── Examiner All Exams Management (Examiner/VP/Principal) ──
     path('examiner/all-exams/', views.examiner_all_exams, name='examiner_all_exams'),
+    path('daily-pin/set/', views.set_daily_pin, name='set_daily_pin'),
 
 ]
