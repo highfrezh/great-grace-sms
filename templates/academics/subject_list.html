@@ -78,13 +78,13 @@
         class="form-input search-input bg-gray-50 border-transparent focus:bg-white">
     </div>
 
-    <!-- Class Filter -->
+    <!-- Class Level Filter -->
     <div class="w-full md:w-48 hover:shadow-sm transition-shadow">
-      <select name="class_arm" class="form-input bg-gray-50 border-transparent focus:bg-white focus:border-[#851A10]">
-        <option value="">All Classes</option>
-        {% for ca in class_arms %}
-        <option value="{{ ca.pk }}" {% if request.GET.class_arm == ca.pk|stringformat:"s" %}selected{% endif %}>
-          {{ ca.full_name }}
+      <select name="class_level" class="form-input bg-gray-50 border-transparent focus:bg-white focus:border-[#851A10]">
+        <option value="">All Levels</option>
+        {% for level in class_levels %}
+        <option value="{{ level.pk }}" {% if request.GET.class_level == level.pk|stringformat:"s" %}selected{% endif %}>
+          {{ level.name }}
         </option>
         {% endfor %}
       </select>
@@ -110,7 +110,7 @@
         Filter
       </button>
 
-      {% if request.GET.query or request.GET.class_arm or request.GET.status %}
+      {% if request.GET.query or request.GET.class_level or request.GET.status %}
       <a href="{% url 'academics:subject_list' %}"
         class="h-[42px] w-[42px] flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all border border-gray-100"
         title="Clear Filters">
@@ -127,104 +127,137 @@
   <table class="w-full text-sm">
     <thead>
       <tr style="background:#635E57;">
-        <th class="text-left px-6 py-4 text-white font-semibold">Subject Name</th>
-        <th class="text-left px-6 py-4 text-white font-semibold">Class</th>
-        <th class="text-left px-6 py-4 text-white font-semibold">Description</th>
-        <th class="text-left px-6 py-4 text-white font-semibold">Status</th>
-        <th class="text-right px-6 py-4 text-white font-semibold">Actions</th>
+        <th class="text-left px-6 py-4 text-white font-semibold w-1/4">Class</th>
+        <th class="text-left px-6 py-4 text-white font-semibold">Subject Offerings</th>
+        <th class="text-center px-6 py-4 text-white font-semibold w-24">Total</th>
       </tr>
     </thead>
     <tbody class="divide-y divide-gray-100">
-      {% for subject in subjects %}
-      <tr class="hover:bg-gray-50 transition">
-        <td class="px-6 py-4 font-semibold" style="color:#635E57;">
-          {{ subject.name }}
+      {% for item in class_list %}
+      <tr class="hover:bg-gray-50/50 transition border-b border-gray-50 last:border-0">
+        <!-- Class Info -->
+        <td class="px-6 py-5 align-top">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center
+                        text-white text-sm font-bold shrink-0 shadow-sm"
+                 style="background: linear-gradient(135deg, #635E57 0%, #7A756D 100%);">
+              {{ item.level.name|first|upper }}{{ item.arm|first|upper }}
+            </div>
+            <div class="min-w-0">
+              <span class="block text-sm font-bold text-gray-800 truncate">
+                {{ item.level.name }} {{ item.arm }}
+              </span>
+              <span class="block text-xs text-gray-500 font-medium truncate">
+                {{ item.level.section }}
+              </span>
+            </div>
+          </div>
         </td>
-        <td class="px-6 py-4">
-          <div class="flex flex-wrap gap-2">
-            {% for class_arm_subject in subject.class_arms.all %}
-            <span class="px-3 py-1 text-xs font-bold rounded-lg
-                           bg-blue-100 text-blue-700 tracking-wide">
-              {{ class_arm_subject.class_arm }}
-            </span>
-            {% empty %}
-            <span class="text-gray-400">—</span>
+
+        <!-- Subjects Grid -->
+        <td class="px-6 py-5">
+          <div class="flex flex-wrap gap-3">
+            {% for offering in item.subjects %}
+            <div class="group relative flex items-center gap-3 px-4 py-2 rounded-xl border border-gray-200 
+                        bg-white hover:border-[#851A10] hover:shadow-sm transition-all duration-200">
+              
+              <!-- Status Indicator Dot -->
+              <div class="w-2 h-2 rounded-full {% if offering.subject.is_active %}bg-green-500{% else %}bg-red-400{% endif %}"
+                   title="{% if offering.subject.is_active %}Active{% else %}Inactive{% endif %}"></div>
+
+              <div class="flex flex-col">
+                <span class="text-[0.85rem] font-bold text-gray-800 leading-tight">
+                  {{ offering.subject.name }}
+                </span>
+                {% if offering.subject.code %}
+                <span class="text-[0.7rem] font-medium text-gray-400">
+                  {{ offering.subject.code }}
+                </span>
+                {% endif %}
+              </div>
+
+              <!-- Inline Actions -->
+              <div class="flex items-center gap-1.5 ml-1 pl-3 border-l border-gray-100">
+                <!-- Edit -->
+                <div class="tooltip">
+                  <a href="{% url 'academics:subject_edit' offering.subject.pk %}" 
+                     class="flex items-center justify-center w-6 h-6 rounded-lg
+                            bg-orange-50 text-[#851A10] hover:bg-orange-100 transition-all duration-200">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                  </a>
+                  <span class="tooltip-text">Edit</span>
+                </div>
+
+                <!-- Toggle -->
+                <div class="tooltip">
+                  <a href="{% url 'academics:subject_toggle' offering.subject.pk %}" 
+                     class="flex items-center justify-center w-6 h-6 rounded-lg transition-all duration-200
+                            {% if offering.subject.is_active %}bg-yellow-50 text-yellow-600 hover:bg-yellow-100
+                            {% else %}bg-green-50 text-green-600 hover:bg-green-100{% endif %}">
+                    {% if offering.subject.is_active %}
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                    {% else %}
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    {% endif %}
+                  </a>
+                  <span class="tooltip-text">
+                    {% if offering.subject.is_active %}Deactivate{% else %}Activate{% endif %}
+                  </span>
+                </div>
+
+                <!-- Delete -->
+                <div class="tooltip">
+                  <button type="button" 
+                          @click="
+                            deleteModal.show = true;
+                            deleteModal.url = '{% url 'academics:subject_delete' offering.subject.pk %}';
+                            deleteModal.name = '{{ offering.subject.name|escapejs }}';
+                          "
+                          class="flex items-center justify-center w-6 h-6 rounded-lg
+                                 bg-red-50 text-red-600 hover:bg-red-100 transition-all duration-200">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                  </button>
+                  <span class="tooltip-text">Delete</span>
+                </div>
+              </div>
+            </div>
             {% endfor %}
           </div>
         </td>
-        <td class="px-6 py-4 text-gray-500 max-w-xs truncate">
-          {{ subject.description|default:"—" }}
-        </td>
-        <td class="px-6 py-4">
-          {% if subject.is_active %}
-          <span class="px-3 py-1 text-xs font-semibold rounded-full
-                           bg-green-100 text-green-700">Active</span>
-          {% else %}
-          <span class="px-3 py-1 text-xs font-semibold rounded-full
-                           bg-red-100 text-red-500">Inactive</span>
-          {% endif %}
-        </td>
-        <td class="px-6 py-4">
-          <div class="flex items-center justify-end gap-2">
 
-            <!-- Edit -->
-            <div class="tooltip">
-              <a href="{% url 'academics:subject_edit' subject.pk %}" class="flex items-center justify-center w-8 h-8 rounded-lg
-                          bg-orange-50 hover:bg-orange-100 transition" style="color:#851A10;">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5
-                             m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </a>
-              <span class="tooltip-text">Edit</span>
-            </div>
-
-            <!-- Toggle Active -->
-            <div class="tooltip">
-              <a href="{% url 'academics:subject_toggle' subject.pk %}" class="flex items-center justify-center w-8 h-8 rounded-lg transition
-                          {% if subject.is_active %}bg-yellow-50 hover:bg-yellow-100 text-yellow-600
-                          {% else %}bg-green-50 hover:bg-green-100 text-green-600{% endif %}">
-                {% if subject.is_active %}
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0
-                               015.636 5.636m12.728 12.728L5.636 5.636" />
-                </svg>
-                {% else %}
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {% endif %}
-              </a>
-              <span class="tooltip-text">
-                {% if subject.is_active %}Deactivate{% else %}Activate{% endif %}
-              </span>
-            </div>
-
-            <!-- Delete -->
-            <div class="tooltip">
-              <button type="button" @click="
-                          deleteModal.show = true;
-                          deleteModal.url = '{% url 'academics:subject_delete' subject.pk %}';
-                          deleteModal.name = '{{ subject.name|escapejs }}';
-                        " class="flex items-center justify-center w-8 h-8 rounded-lg
-                               bg-red-50 hover:bg-red-100 transition text-red-500">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858
-                             L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-              <span class="tooltip-text">Delete</span>
-            </div>
-
-          </div>
+        <!-- Count -->
+        <td class="px-6 py-5 text-center align-top">
+          <span class="inline-flex items-center justify-center w-8 h-8 rounded-full 
+                       bg-gray-100 text-gray-600 font-bold text-xs ring-4 ring-white">
+            {{ item.count }}
+          </span>
         </td>
       </tr>
       {% empty %}
       <tr>
-        <td colspan="5" class="px-6 py-12 text-center text-gray-400">
-          No subjects found matching your filters.
-          <a href="{% url 'academics:subject_list' %}" class="font-medium" style="color:#851A10;">Clear filters</a>
+        <td colspan="3" class="px-6 py-20 text-center">
+          <div class="max-w-xs mx-auto">
+            <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+            </div>
+            <p class="text-gray-500 font-medium mb-1">No matches found.</p>
+            <p class="text-sm text-gray-400 mb-6">Try adjusting your filters or clear the search.</p>
+            <a href="{% url 'academics:subject_list' %}"
+               class="px-5 py-2 text-gray-600 text-sm font-bold rounded-xl border-2 border-gray-100 hover:bg-gray-50 transition">
+              Clear Filters
+            </a>
+          </div>
         </td>
       </tr>
       {% endfor %}

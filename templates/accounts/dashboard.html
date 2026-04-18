@@ -138,10 +138,21 @@
                 <td class="px-6 py-4 font-bold text-gray-900">{{ assignment.subject.name }}</td>
                 <td class="px-6 py-4">
                   <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-bold uppercase tracking-tight">
-                    {{ assignment.class_arm.full_name }}
+                    {% if assignment.class_arm %}
+                      {{ assignment.class_arm.full_name }}
+                    {% else %}
+                      {{ assignment.class_level.name }} {{ assignment.arm_name }}
+                    {% endif %}
                   </span>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-600 font-medium">{{ assignment.class_arm.student_count }} students</td>
+                <td class="px-6 py-4 text-sm text-gray-600 font-medium">
+                  {% if assignment.class_arm %}
+                    {{ assignment.class_arm.student_count }}
+                  {% else %}
+                    0
+                  {% endif %} 
+                  students
+                </td>
                 <td class="px-6 py-4 text-right">
                   <a href="{% url 'examinations:teacher_exam_list' %}" class="text-xs font-extrabold text-blue-600 hover:text-blue-800 transition-colors">Manage Exams →</a>
                 </td>
@@ -251,14 +262,14 @@
             {% endif %}
           </div>
         </div>
-        <!-- <div class="flex gap-2">
-          <a href="{% url 'students:student_list' %}" class="inline-block mt-6 px-5 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold transition-all">
-            View Class List
+        <div class="flex gap-2">
+          <a href="{% url 'students:student_list' %}" class="inline-block mt-6 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold transition-all text-center">
+            View Class
           </a>
-          <a href="{% url 'results:report_card_management' %}" class="inline-block mt-6 px-5 py-2 bg-[#851A10] border border-[#851A10] rounded-xl text-xs font-bold shadow-lg transition-all">
-            Manage Results
+          <a href="{% url 'results:staff_performance_insights' %}" class="inline-block mt-6 px-4 py-2 bg-[#851A10] hover:bg-red-900 border border-[#851A10] rounded-xl text-xs font-bold shadow-lg transition-all text-center">
+            Performance Insights
           </a>
-        </div> -->
+        </div>
       </div>
       {% endif %}
     </div>

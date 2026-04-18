@@ -251,7 +251,7 @@
     <div class="school-header">
         <img src="{% static 'images/logo.png' %}" alt="Great Grace School Logo" style="height:80px; width:auto; object-fit:contain; margin-bottom:0.75rem;">
         <h1 class="school-name">Great Grace Private School</h1>
-        <p class="school-address">!3, Harmony Street, Onihale, Ifo, Ogun State</p>
+        <p class="school-address">13, Harmony Street, Onihale, Ifo, Ogun State</p>
         <p class="school-address">E-mail: greatgraceint2@gmail.com</p>
         <div class="transcript-title">Official Academic Transcript</div>
     </div>
@@ -316,7 +316,6 @@
         <div class="summary-box">
             <span>Term Total: {{ term_data.report_card.total_score|floatformat:0 }}</span>
             <span>Average: {{ term_data.report_card.average|floatformat:1 }}%</span>
-            <span>Position: {{ term_data.report_card.position|default:"—" }}</span>
         </div>
     </div>
     {% empty %}

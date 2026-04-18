@@ -173,23 +173,27 @@ class ClassArmSubject(models.Model):
     e.g. Mathematics in JSS1A, Biology in JSS1B
     Allows customization per class arm
     """
-    class_arm = models.ForeignKey(
-        ClassArm,
+    # Non-nullable after migration
+    class_level = models.ForeignKey(
+        'ClassLevel',
         on_delete=models.CASCADE,
-        related_name='subjects'
+        related_name='arm_subjects'
+    )
+    arm_name = models.CharField(
+        max_length=10,
+        help_text="e.g. A, B, Science"
     )
     subject = models.ForeignKey(
         Subject,
         on_delete=models.CASCADE,
-        related_name='class_arms'
+        related_name='arm_offerings'
     )
-    is_compulsory = models.BooleanField(default=True)
 
     class Meta:
-        unique_together = ['class_arm', 'subject']
+        unique_together = ['class_level', 'arm_name', 'subject']
 
     def __str__(self):
-        return f"{self.subject.name} — {self.class_arm}"
+        return f"{self.subject.name} — {self.class_level.name} {self.arm_name}"
 
 
 class ClassSubject(models.Model):
@@ -219,8 +223,8 @@ class ClassSubject(models.Model):
 
 class SubjectTeacherAssignment(models.Model):
     """
-    Which teacher teaches which subject in which class arm
-    for a specific session and term
+    Which teacher teaches which subject in which class level and arm.
+    Assignments are permanent and not tied to a specific session or term.
     """
     teacher = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -232,24 +236,18 @@ class SubjectTeacherAssignment(models.Model):
         on_delete=models.CASCADE,
         related_name='teacher_assignments'
     )
-    class_arm = models.ForeignKey(
-        ClassArm,
+    class_level = models.ForeignKey(
+        'ClassLevel',
         on_delete=models.CASCADE,
         related_name='teacher_assignments'
     )
-    session = models.ForeignKey(
-        AcademicSession,
-        on_delete=models.CASCADE,
-        related_name='teacher_assignments'
-    )
-    term = models.ForeignKey(
-        Term,
-        on_delete=models.CASCADE,
-        related_name='teacher_assignments'
+    arm_name = models.CharField(
+        max_length=10,
+        help_text="e.g. A, B, Science"
     )
 
     class Meta:
-        unique_together = ['subject', 'class_arm', 'session', 'term']
+        unique_together = ['subject', 'class_level', 'arm_name']
 
     def __str__(self):
-        return f"{self.teacher} — {self.subject} — {self.class_arm}"
+        return f"{self.teacher} — {self.subject} — {self.class_level.name} {self.arm_name}"

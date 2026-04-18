@@ -738,13 +738,13 @@ def student_dashboard(request):
     
     class_arm = current_enrollment.class_arm if current_enrollment else None
     
-    # Get subjects for current class/term
+    # Get subjects for current class
     subjects_data = []
-    if class_arm and current_term:
-        # Get all assignments, deduplicate by subject in Python (SQLite doesn't support DISTINCT ON)
+    if class_arm:
+        # Get all assignments, deduplicate by subject in Python
         assignments_list = SubjectTeacherAssignment.objects.filter(
-            class_arm=class_arm,
-            term=current_term
+            class_level=class_arm.level,
+            arm_name=class_arm.name
         ).select_related('subject', 'teacher')
         
         # Deduplicate: keep first assignment per subject
@@ -933,24 +933,11 @@ def my_student_profile(request, student_id):
         messages.error(request, "You are not the class teacher for this student in the current session.")
         return redirect('students:my_students_list')
         
-    from results.models import ReportCard
-    from examinations.models import ExamResult
-    
-    report_card = ReportCard.objects.filter(
-        student=student, session=current_session, term=current_term
-    ).first()
-    
-    exam_results = ExamResult.objects.filter(
-        student=student, exam__session=current_session, exam__term=current_term
-    ).select_related('exam__subject')
-    
     context = {
         'student': student,
         'enrollment': enrollment,
-        'report_card': report_card,
-        'exam_results': exam_results,
         'current_term': current_term,
-        'page_title': f"{student.full_name} | Profile"
+        'page_title': f"{student.full_name} | Profile",
     }
     return render(request, 'students/my_student_profile.html', context)
 

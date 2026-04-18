@@ -5,111 +5,184 @@
 
 {% block content %}
 
-<div class="flex items-center justify-between mb-6">
+<div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
   <div>
-    <p class="text-sm text-gray-500">Assign teachers to subjects per class for the current term</p>
-    {% if current_session and current_term %}
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-medium mt-2"
-           style="background:#FFF5F3;color:#851A10;border:1px solid #FECACA;">
-        {{ current_session.name }} — {{ current_term.get_name_display }}
-      </div>
-    {% else %}
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-medium mt-2 bg-yellow-100 text-yellow-700">
-        ⚠️ No current session/term set
-      </div>
-    {% endif %}
+    <p class="text-sm text-gray-500">Manage permanent subject-teacher assignments. These assignments persist across sessions.</p>
   </div>
-  <a href="{% url 'academics:assignment_create' %}"
-     class="flex items-center gap-2 px-4 py-2.5 text-white text-sm
-            font-semibold rounded-lg hover:opacity-90 transition"
-     style="background:#851A10;">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-    </svg>
-    New Assignment
-  </a>
+  
+  <div class="flex items-center gap-3 w-full md:w-auto">
+    <form method="get" class="flex-1 md:w-72">
+      <div class="relative group w-full">
+        <input type="text" name="q" value="{{ query }}" placeholder="Search teacher, subject..." 
+               class="w-full pl-11 pr-4 py-2.5 text-sm border-2 border-gray-100 rounded-xl focus:border-[#851A10] outline-none transition-all bg-gray-50 focus:bg-white shadow-sm font-medium">
+      </div>
+    </form>
+
+    <a href="{% url 'academics:assignment_create' %}"
+       class="flex items-center gap-2 px-6 py-2.5 text-white text-sm
+              font-bold rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-200 shrink-0"
+       style="background: linear-gradient(135deg, #851A10 0%, #A52318 100%);">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      New Assignment
+    </a>
+  </div>
+  
 </div>
 
 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
   <table class="w-full text-sm">
     <thead>
       <tr style="background:#635E57;">
-        <th class="text-left px-6 py-4 text-white font-semibold">Class</th>
-        <th class="text-left px-6 py-4 text-white font-semibold">Subject</th>
-        <th class="text-left px-6 py-4 text-white font-semibold">Teacher</th>
-        <th class="text-left px-6 py-4 text-white font-semibold">Term</th>
-        <th class="text-left px-6 py-4 text-white font-semibold">Actions</th>
+        <th class="text-left px-6 py-4 text-white font-semibold w-1/4">Teacher</th>
+        <th class="text-left px-6 py-4 text-white font-semibold">Assigned Subjects & Classes</th>
+        <th class="text-center px-6 py-4 text-white font-semibold w-24">Load</th>
       </tr>
     </thead>
     <tbody class="divide-y divide-gray-100">
-      {% for assignment in assignments %}
-        <tr class="hover:bg-gray-50 transition">
-          <td class="px-6 py-4 font-semibold" style="color:#635E57;">
-            {{ assignment.class_arm.full_name }}
-          </td>
-          <td class="px-6 py-4 text-gray-700">
-            {{ assignment.subject.name }}
-          </td>
-          <td class="px-6 py-4">
-            <div class="flex items-center gap-2">
-              <div class="w-7 h-7 rounded-full flex items-center justify-center
-                          text-white text-xs font-bold shrink-0"
-                   style="background:#851A10;">
-                {{ assignment.teacher.first_name|first|upper }}{{ assignment.teacher.last_name|first|upper }}
+      {% for item in page_obj %}
+        <tr class="hover:bg-gray-50/50 transition border-b border-gray-50 last:border-0">
+          <!-- Teacher Info -->
+          <td class="px-6 py-5 align-top">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center
+                          text-white text-sm font-bold shrink-0 shadow-sm"
+                   style="background: linear-gradient(135deg, #851A10 0%, #A52318 100%);">
+                {{ item.teacher.first_name|first|upper }}{{ item.teacher.last_name|first|upper }}
               </div>
-              <span class="text-gray-700">{{ assignment.teacher.get_full_name }}</span>
-            </div>
-          </td>
-          <td class="px-6 py-4 text-gray-600">
-            {{ assignment.term.get_name_display }}
-          </td>
-          <td class="px-6 py-4">
-            <div class="flex items-center gap-2">
-              <!-- Edit -->
-              <div class="tooltip">
-                <a href="{% url 'academics:assignment_edit' assignment.pk %}"
-                   class="flex items-center justify-center w-8 h-8 rounded-lg
-                          bg-blue-50 hover:bg-blue-100 transition text-blue-600">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                  </svg>
-                </a>
-                <span class="tooltip-text">Edit</span>
-              </div>
-              <!-- Delete -->
-              <div class="tooltip">
-                <button type="button"
-                        @click="
-                          deleteModal.show = true;
-                          deleteModal.url = '{% url 'academics:assignment_delete' assignment.pk %}';
-                          deleteModal.name = '{{ assignment.subject.name|escapejs }} — {{ assignment.class_arm.full_name|escapejs }}';
-                        "
-                        class="flex items-center justify-center w-8 h-8 rounded-lg
-                               bg-red-50 hover:bg-red-100 transition text-red-500">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858
-                             L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                  </svg>
-                </button>
-                <span class="tooltip-text">Remove</span>
+              <div class="min-w-0">
+                <span class="block text-sm font-bold text-gray-800 truncate">
+                  {{ item.teacher.get_full_name }}
+                </span>
+                <span class="block text-xs text-gray-500 font-medium truncate">
+                  {{ item.teacher.staff_profile.staff_id|default:"Staff" }}
+                </span>
               </div>
             </div>
+          </td>
+
+          <!-- Assignments Grid -->
+          <td class="">
+            <div class="flex flex-wrap gap-3.5">
+              {% for assignment in item.assignments %}
+                <div class="group relative flex items-center gap-4 p-3 rounded-xl border border-gray-200 
+                            bg-white hover:border-[#851A10] hover:shadow-sm transition-all duration-200">
+                  <div class="flex flex-col">
+                    <span class="text-[0.85rem] font-bold text-gray-800 leading-tight">
+                      {{ assignment.subject.name }}
+                    </span>
+                    <span class="text-[0.7rem] font-medium text-gray-500 mt-0.5">
+                      {{ assignment.class_level.name }} {{ assignment.arm_name }}
+                    </span>
+                  </div>
+
+                  <!-- Inline Actions -->
+                  <div class="flex items-center gap-2 ml-1 pl-3 border-l border-gray-100">
+                    <div class="tooltip">
+                      <a href="{% url 'academics:assignment_edit' assignment.pk %}"
+                         class="flex items-center justify-center w-6 h-6 rounded-lg
+                                bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all duration-200"
+                         title="Edit">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                      </a>
+                      <span class="tooltip-text">Edit</span>
+                    </div>
+
+                    <div class="tooltip">
+                      <button type="button"
+                              @click="
+                                deleteModal.show = true;
+                                deleteModal.url = '{% url 'academics:assignment_delete' assignment.pk %}';
+                                deleteModal.name = '{{ assignment.subject.name|escapejs }} — {{ assignment.class_level.name|escapejs }} {{ assignment.arm_name|escapejs }} ({{ item.teacher.get_full_name|escapejs }})';
+                              "
+                              class="flex items-center justify-center w-6 h-6 rounded-lg
+                                     bg-red-50 text-red-600 hover:bg-red-100 transition-all duration-200"
+                              title="Remove">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                      </button>
+                      <span class="tooltip-text">Remove</span>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </td>
+
+          <!-- Load Count -->
+          <td class="px-6 py-5 text-center align-top">
+            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full 
+                         bg-gray-100 text-gray-600 font-bold text-xs ring-4 ring-white">
+              {{ item.count }}
+            </span>
           </td>
         </tr>
       {% empty %}
         <tr>
-          <td colspan="5" class="px-6 py-12 text-center text-gray-400">
-            No assignments yet for this term.
-            <a href="{% url 'academics:assignment_create' %}"
-               class="font-medium" style="color:#851A10;">Create one</a>
+          <td colspan="3" class="px-6 py-20 text-center">
+            <div class="max-w-xs mx-auto">
+              <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+              </div>
+              <p class="text-gray-500 font-medium mb-1">No matches found.</p>
+              <p class="text-sm text-gray-400 mb-6">Try adjusting your search terms or clear the filter.</p>
+              <a href="{% url 'academics:assignment_list' %}"
+                 class="px-5 py-2 text-gray-600 text-sm font-bold rounded-xl border-2 border-gray-100 hover:bg-gray-50 transition">
+                Clear Search
+              </a>
+            </div>
           </td>
         </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+
+<!-- Pagination Footer -->
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 px-2">
+  <p class="text-sm text-gray-500 font-medium order-2 md:order-1">
+    Showing <span class="text-gray-900">{{ page_obj.start_index }}</span> to <span class="text-gray-900">{{ page_obj.end_index }}</span> of <span class="text-gray-900">{{ page_obj.paginator.count }}</span> teachers
+  </p>
+  
+  <nav class="flex items-center gap-1 order-1 md:order-2">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" 
+         class="h-10 px-4 flex items-center justify-center text-sm font-bold text-gray-600 bg-white border-2 border-gray-100 rounded-xl hover:border-[#851A10] hover:text-[#851A10] transition-all">
+        Previous
+      </a>
+    {% endif %}
+
+    {% for i in page_obj.paginator.page_range %}
+      {% if page_obj.number == i %}
+        <span class="h-10 w-10 flex items-center justify-center text-sm font-bold text-white bg-[#851A10] rounded-xl shadow-md">
+          {{ i }}
+        </span>
+      {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+        <a href="?page={{ i }}{% if query %}&q={{ query }}{% endif %}" 
+           class="h-10 w-10 flex items-center justify-center text-sm font-bold text-gray-500 bg-white border-2 border-gray-100 rounded-xl hover:border-[#851A10] hover:text-[#851A10] transition-all">
+          {{ i }}
+        </a>
+      {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}" 
+         class="h-10 px-4 flex items-center justify-center text-sm font-bold text-gray-600 bg-white border-2 border-gray-100 rounded-xl hover:border-[#851A10] hover:text-[#851A10] transition-all">
+        Next
+      </a>
+    {% endif %}
+  </nav>
+</div>
+{% endif %}
 
 {% endblock %}
 

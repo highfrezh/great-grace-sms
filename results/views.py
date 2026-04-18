@@ -3,13 +3,15 @@ from django.shortcuts import render, redirect, get_object_or_404
 
 from django.urls import reverse
 
+from django.http import JsonResponse
+
 from django.contrib.auth.decorators import login_required
 
 from django.contrib import messages
 
 from django.db import transaction
 
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Avg
 
 from django.core.paginator import Paginator
 
@@ -19,7 +21,7 @@ from academics.models import AcademicSession, Term, ClassArm
 
 from students.models import Student, StudentEnrollment
 
-from examinations.models import ExamResult
+from examinations.models import ExamResult, Exam
 
 from django.views.decorators.http import require_POST
 
@@ -112,7 +114,10 @@ def report_card_management(request):
                         attribute_name=attr
 
                     )
-
+        
+        # Automatically update averages whenever the dashboard is viewed
+        rc.recalculate_totals()
+        
         report_cards.append(rc)
 
     return render(request, 'results/report_card_management.html', {
@@ -274,46 +279,11 @@ def generate_class_report_cards(request):
     with transaction.atomic():
 
         # 1. Update individual totals and averages
-
         for rc in report_cards:
-
-            # Aggregate all ExamResults for this student in this term
-
-            results = ExamResult.objects.filter(
-
-                student=rc.student,
-
-                exam__session=session,
-
-                exam__term=term
-
-            )
-
-            total = results.aggregate(Sum('total_score'))['total_score__sum'] or 0
-
-            count = results.count()
-
-            avg = float(total) / count if count > 0 else 0
-
-            rc.total_score = total
-
-            rc.average = avg
-
+            rc.recalculate_totals()
             rc.save()
 
-        # 2. Calculate positions
-
-        # Order report cards by total score descending
-
-        sorted_rcs = report_cards.order_by('-total_score')
-
-        for i, rc in enumerate(sorted_rcs):
-
-            rc.position = i + 1
-
-            rc.save()
-
-    messages.success(request, f"Termly positions and averages calculated for {class_arm.full_name}")
+    messages.success(request, f"Termly averages calculated for {class_arm.full_name}")
 
     return redirect('results:report_card_management')
 
@@ -367,6 +337,24 @@ def view_report_card(request, pk):
 
         return redirect('accounts:dashboard')
 
+    # Sessional Performance Summary Data
+    session_reports = ReportCard.objects.filter(
+        student=report_card.student,
+        session=report_card.session
+    ).select_related('term')
+    
+    term_summary = {
+        'FIRST': None,
+        'SECOND': None,
+        'THIRD': None
+    }
+    term_averages = []
+    for sr in session_reports:
+        term_summary[sr.term.name] = float(sr.average)
+        term_averages.append(float(sr.average))
+    
+    cumulative_avg = sum(term_averages) / len(term_averages) if term_averages else 0
+
     return render(request, 'results/report_card_view.html', {
 
         'rc': report_card,
@@ -380,6 +368,10 @@ def view_report_card(request, pk):
         'is_admin': is_admin,
 
         'is_class_teacher': is_class_teacher,
+
+        'term_summary': term_summary,
+
+        'cumulative_avg': round(cumulative_avg, 2),
 
     })
 
@@ -456,6 +448,15 @@ def all_student_results(request):
     term_id = request.GET.get('term', '')
 
     class_arm_id = request.GET.get('class_arm', '')
+
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
+
+    # Default to current session/term if not specified
+    if not session_id and current_session:
+        session_id = str(current_session.id)
+    if not term_id and current_term:
+        term_id = str(current_term.id)
 
     # Base Queryset
 
@@ -791,21 +792,17 @@ def student_report_card_list(request):
 
         published_cards = published_cards.filter(term_id=term_id)
 
-    available_sessions = AcademicSession.objects.filter(
+    available_sessions = AcademicSession.objects.all().order_by('-start_date')
 
-        reportcard__student=student,
+    available_terms_base = Term.objects.all()
 
-        reportcard__is_published=True
+    if session_id:
 
-    ).distinct().order_by('-start_date')
+        available_terms = available_terms_base.filter(session_id=session_id).order_by('id')
 
-    available_terms = Term.objects.filter(
+    else:
 
-        reportcard__student=student,
-
-        reportcard__is_published=True
-
-    ).distinct().order_by('id')
+        available_terms = available_terms_base.order_by('id')
 
     return render(request, 'results/student_results_list.html', {
 
@@ -856,3 +853,387 @@ def admin_update_report_card(request, pk):
         'form': form,
         'page_title': f"Official Remark — {student.full_name}"
     })
+
+
+# ── Performance Analytics APIs ──────────────────────────────────────
+
+from .analytics import get_student_radar_data, get_student_trend_data, get_class_insight_data, get_school_insight_data
+
+@login_required
+def student_performance_summary_api(request, session_id):
+    """
+    Consolidated API for the new student insights dashboard.
+    Returns:
+    - subjects: [{name, ca1, ca2, theory, obj, total, total_percentage, grade, class_average_percentage, position}]
+    - trend: [{term_name, average}]
+    """
+    user = request.user
+    if not (user.is_student or user.is_staff):
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    
+    student = user.student_profile if user.is_student else None
+    if not student:
+        return JsonResponse({'error': 'Student profile not found'}, status=404)
+
+    try:
+        term_id = int(request.GET.get('term_id')) if request.GET.get('term_id') else None
+    except (ValueError, TypeError):
+        term_id = None
+
+    # Find all terms in this session that have been published for this student
+    published_term_ids = ReportCard.objects.filter(
+        student=student,
+        session_id=session_id,
+        is_published=True
+    ).values_list('term_id', flat=True)
+
+    # 1. Per-term subject detail (only if the term is officially published)
+    subjects_data = []
+    if term_id and term_id in published_term_ids:
+        # Results are visible only if the term is published
+        results_qs = ExamResult.objects.filter(
+            student=student,
+            exam__session_id=session_id,
+            exam__term_id=term_id,
+        ).select_related('exam__subject', 'exam')
+
+        for res in results_qs:
+            avg_data = ExamResult.objects.filter(
+                exam=res.exam
+            ).aggregate(avg_score=Avg('total_score'))
+            class_avg = float(avg_data['avg_score'] or 0)
+            class_avg_pct = round(
+                (class_avg / float(res.exam.total_marks)) * 100, 1
+            ) if res.exam.total_marks > 0 else 0
+
+            subjects_data.append({
+                'name': res.exam.subject.name,
+                'ca1': float(res.ca1_score),
+                'ca2': float(res.ca2_score),
+                'theory': float(res.theory_score),
+                'obj': float(res.obj_score),
+                'total': float(res.total_score),
+                'total_percentage': float(res.percentage),
+                'grade': res.grade,
+                'class_average_percentage': class_avg_pct
+            })
+
+    # 2. Cross-term subject comparison (always full session, ignores term filter)
+    all_terms = Term.objects.filter(session_id=session_id)
+    subject_map = {}  # {subject_id: {id, name, term1, term2, term3}}
+
+    term_mapping = {
+        Term.TermName.FIRST: 'term1',
+        Term.TermName.SECOND: 'term2',
+        Term.TermName.THIRD: 'term3',
+    }
+
+    for term in all_terms:
+        # Only include term comparison data if the term has been published
+        if term.id not in published_term_ids:
+            continue
+
+        term_key = term_mapping.get(term.name)
+        if not term_key:
+            continue
+
+        term_results = ExamResult.objects.filter(
+            student=student,
+            exam__session_id=session_id,
+            exam__term_id=term.id,
+        ).select_related('exam__subject')
+
+        for res in term_results:
+            subj = res.exam.subject
+            if subj.id not in subject_map:
+                subject_map[subj.id] = {'id': subj.id, 'name': subj.name,
+                                         'term1': None, 'term2': None, 'term3': None}
+            subject_map[subj.id][term_key] = round(float(res.percentage), 1)
+
+    subject_term_data = []
+    for subj_id, s in subject_map.items():
+        scores = [v for v in [s['term1'], s['term2'], s['term3']] if v is not None]
+        session_avg = round(sum(scores) / len(scores), 1) if scores else 0
+        non_null = [s[f'term{i+1}'] for i in range(3) if s.get(f'term{i+1}') is not None]
+        trend = round(non_null[-1] - non_null[0], 1) if len(non_null) >= 2 else 0
+        subject_term_data.append({
+            'id': subj_id, 'name': s['name'],
+            'term1': s['term1'], 'term2': s['term2'], 'term3': s['term3'],
+            'session_avg': session_avg, 'trend': trend,
+        })
+
+    # 3. Dynamic Trend Data (calculates from ReportCard for history, ensuring latest)
+    # First, ensure current term report card is fresh for the insights view
+    current_rc = ReportCard.objects.filter(
+        student=student, session_id=session_id, term_id=term_id
+    ).first() if term_id else None
+    
+    if current_rc:
+        current_rc.recalculate_totals()
+
+    trend_data = []
+    report_cards = ReportCard.objects.filter(
+        student=student,
+        session_id=session_id,
+        is_published=True
+    ).select_related('term').order_by('term__name')
+    
+    for rc in report_cards:
+        # Sync each card if it has 0 average but results exist
+        if rc.average == 0:
+            rc.recalculate_totals()
+            
+        trend_data.append({
+            'term_name': rc.term.get_name_display(),
+            'average': float(rc.average)
+        })
+
+    return JsonResponse({
+        'success': True,
+        'subjects': subjects_data,
+        'subject_term_data': subject_term_data,
+        'trend': trend_data
+    })
+
+
+@login_required
+def class_performance_summary_api(request, class_arm_id):
+    """
+    Comprehensive class analytics for the staff dashboard.
+    Returns stats, student list, subject performance, and grade distribution.
+    """
+    user = request.user
+    class_arm = get_object_or_404(ClassArm, pk=class_arm_id)
+    
+    # Permission check: Admin Staff (Principal/VP) or the specific Class Teacher
+    if not (user.is_admin_staff or class_arm.class_teacher == user):
+        return JsonResponse({'error': 'Unauthorized: Only Class Teachers or Admins can view class performance insights.'}, status=403)
+    
+    session_id = request.GET.get('session_id')
+    try:
+        term_id = int(request.GET.get('term_id')) if request.GET.get('term_id') else None
+    except (ValueError, TypeError):
+        term_id = None
+    
+    if not session_id or not term_id:
+        current_session = AcademicSession.get_current()
+        current_term = Term.get_current()
+        session_id = session_id or (current_session.id if current_session else None)
+        term_id = term_id or (current_term.id if current_term else None)
+
+    # 1. Base Data: Published Report Cards OR Approved Exams
+    # For stats, we rely on report cards if available, but for live stats, we check both
+    report_cards = ReportCard.objects.filter(
+        class_arm_id=class_arm_id,
+        session_id=session_id,
+        term_id=term_id,
+        is_published=True
+    ).select_related('student').order_by('-average')
+
+    if not report_cards.exists():
+        return JsonResponse({'success': True, 'hasData': False, 'stats': {}, 'students': [], 'subjects': [], 'subjectPerformance': [], 'gradeDistribution': {}})
+
+    # 2. Stats Calculation
+    total_students = StudentEnrollment.objects.filter(class_arm_id=class_arm_id, session_id=session_id, is_active=True).count()
+    overall_avg = report_cards.aggregate(avg=Avg('average'))['avg'] or 0
+    passed_count = report_cards.filter(average__gte=50).count()
+    pass_rate = round((passed_count / total_students) * 100, 1) if total_students > 0 else 0
+    
+    top_rc = report_cards.first()
+    bottom_rc = report_cards.last()
+
+    def get_grade(avg):
+        avg = float(avg)
+        if avg >= 70: return 'A'
+        elif avg >= 60: return 'B'
+        elif avg >= 50: return 'C'
+        elif avg >= 45: return 'D'
+        else: return 'F'
+
+    # 3. Student List & Trend
+    students_data = []
+    grade_counts = {'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0}
+    
+    # Get current term object to find previous term by name
+    term_obj = get_object_or_404(Term, pk=term_id)
+    
+    # Previous term for trend (ordered by name alphabetically works for FIRST, SECOND, THIRD)
+    prev_term = Term.objects.filter(
+        session_id=session_id, 
+        name__lt=term_obj.name
+    ).order_by('-name').first()
+
+    for rc in report_cards:
+        grade = get_grade(rc.average)
+        grade_counts[grade] += 1
+        
+        # Calculate trend
+        trend = 0
+        if prev_term:
+            prev_rc = ReportCard.objects.filter(student=rc.student, session_id=session_id, term=prev_term, is_published=True).first()
+            if prev_rc:
+                trend = float(rc.average) - float(prev_rc.average)
+        
+        students_data.append({
+            'id': rc.student.id,
+            'name': rc.student.full_name,
+            'average': float(rc.average),
+            'grade': grade,
+            'trend': round(trend, 1),
+            'total': float(rc.total_score),
+            'subjects_count': ExamResult.objects.filter(
+                student=rc.student,
+                exam__session_id=session_id,
+                exam__term_id=term_id
+            ).count()
+        })
+
+    # 4. Subject Performance
+    subject_performance = []
+    # Results are visible if explicitly published OR if the exam is approved
+    exam_results = ExamResult.objects.filter(
+        Q(is_published=True) | Q(exam__status=Exam.ExamStatus.APPROVED),
+        student__enrollments__class_arm_id=class_arm_id,
+        student__enrollments__session_id=session_id,
+        student__enrollments__is_active=True,
+        exam__session_id=session_id,
+        exam__term_id=term_id
+    ).values('exam__subject__id', 'exam__subject__name').annotate(
+        avg_score=Avg('percentage')
+    ).order_by('-avg_score')
+
+    unique_subjects = []
+    for res in exam_results:
+        subject_performance.append({
+            'id': res['exam__subject__id'],
+            'name': res['exam__subject__name'],
+            'average': round(float(res['avg_score']), 1)
+        })
+        unique_subjects.append({
+            'id': res['exam__subject__id'],
+            'name': res['exam__subject__name']
+        })
+
+    return JsonResponse({
+        'success': True,
+        'hasData': True,
+        'stats': {
+            'totalStudents': total_students,
+            'classAverage': round(float(overall_avg), 1),
+            'passRate': pass_rate,
+            'topStudent': {'name': top_rc.student.full_name, 'score': float(top_rc.average)},
+            'bottomStudent': {'name': bottom_rc.student.full_name, 'score': float(bottom_rc.average)}
+        },
+        'students': students_data,
+        'subjects': unique_subjects,
+        'subjectPerformance': subject_performance,
+        'gradeDistribution': grade_counts
+    })
+
+
+@login_required
+def student_performance_api(request, session_id, term_id, student_id):
+    """API for Student Radar Chart and Line Graph"""
+    # Verify permission: Must be the student, their parent, or staff
+    user = request.user
+    if user.is_student and user.student_profile.id != student_id:
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+        
+    student_enrollment = get_object_or_404(
+        StudentEnrollment, 
+        student_id=student_id, 
+        session_id=session_id, 
+        is_active=True
+    )
+    class_arm_id = student_enrollment.class_arm_id
+
+    try:
+        radar_data = get_student_radar_data(student_id, session_id, term_id, class_arm_id)
+        trend_data = get_student_trend_data(student_id, session_id)
+        return JsonResponse({
+            'success': True,
+            'radar': radar_data,
+            'trend': trend_data
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@teaching_staff_required
+def class_performance_api(request, session_id, term_id, class_arm_id):
+    """API for Teacher Insight Data"""
+    # Verify permission: Must be the class teacher or admin
+    class_arm = get_object_or_404(ClassArm, id=class_arm_id)
+    if not (request.user.is_admin_staff or class_arm.class_teacher == request.user):
+        return JsonResponse({'error': 'Unauthorized. Must be Class Teacher or Admin.'}, status=403)
+        
+    try:
+        data = get_class_insight_data(class_arm_id, session_id, term_id)
+        return JsonResponse({'success': True, 'data': data})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@admin_staff_required
+def school_performance_api(request, session_id, term_id):
+    """API for Principal Insight Data"""
+    try:
+        data = get_school_insight_data(session_id, term_id)
+        return JsonResponse({'success': True, 'data': data})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+@teaching_staff_required
+def staff_performance_insights(request):
+    """View to return the HTML template container for the analytics SPA"""
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
+    
+    context = {
+        'current_session': current_session,
+        'current_term': current_term,
+        'page_title': 'Performance Insights',
+        'sessions': AcademicSession.objects.all().order_by('-start_date'),
+        'terms': Term.objects.filter(session=current_session).order_by('id'),
+    }
+
+    if request.user.is_admin_staff:
+        # Pass all class arms so the principal can drill down into any of them
+        class_arms = ClassArm.objects.filter(session=current_session).order_by('level__order', 'name')
+    else:
+        # For non-admin teaching staff, only show classes they manage as Class Teacher
+        class_arms = ClassArm.objects.filter(class_teacher=request.user, session=current_session).order_by('level__order', 'name')
+        
+    context['class_arms'] = class_arms
+    
+    # Pre-select the first available class
+    managed_class = class_arms.first()
+    if managed_class:
+        context['default_class_id'] = managed_class.id
+        context['default_class_name'] = managed_class.full_name
+            
+    return render(request, 'results/insights_staff.html', context)
+
+@login_required
+def student_performance_insights(request):
+    """View to return the HTML template container for the Student analytics SPA"""
+    if not request.user.is_student:
+        return redirect('accounts:dashboard')
+        
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
+    student = request.user.student_profile
+    
+    context = {
+        'current_session': current_session,
+        'current_term': current_term,
+        'student': student,
+        'page_title': 'My Academic Insights',
+        'sessions': AcademicSession.objects.all().order_by('-start_date'),
+        'terms': Term.objects.filter(session=current_session).order_by('id'),
+    }
+    
+    return render(request, 'results/insights_student.html', context)

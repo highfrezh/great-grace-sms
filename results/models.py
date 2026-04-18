@@ -1,5 +1,6 @@
 
 from django.db import models
+from django.db.models import Sum, Avg
 from django.conf import settings
 from students.models import Student
 from academics.models import AcademicSession, Term, ClassArm
@@ -14,7 +15,6 @@ class ReportCard(models.Model):
     # Metadata
     total_score = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     average = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    position = models.PositiveIntegerField(null=True, blank=True)
     
     # Comments & Attendance
     attendance_present = models.PositiveIntegerField(default=0)
@@ -69,6 +69,29 @@ class ReportCard(models.Model):
         
         self.attendance_total = unique_dates
         self.attendance_present = present_count
+        self.save()
+
+    def recalculate_totals(self):
+        """Update total_score and average directly from published/approved subject results"""
+        from examinations.models import ExamResult, Exam
+        
+        # Results are visible if explicitly published OR if the exam is approved
+        VISIBILITY_FILTER = models.Q(is_published=True) | models.Q(exam__status=Exam.ExamStatus.APPROVED)
+        
+        results = ExamResult.objects.filter(
+            VISIBILITY_FILTER,
+            student=self.student,
+            exam__session=self.session,
+            exam__term=self.term
+        )
+        
+        aggs = results.aggregate(
+            total=Sum('total_score'),
+            avg_pct=Avg('percentage')
+        )
+        
+        self.total_score = aggs['total'] or 0
+        self.average = aggs['avg_pct'] or 0
         self.save()
 
 class StudentDomainRating(models.Model):

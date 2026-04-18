@@ -19,17 +19,46 @@
 </div>
 
 <!-- Current Session Badge -->
-{% if current_session %}
-  <div class="mb-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
-       style="background:#FFF5F3; color:#851A10; border:1px solid #FECACA;">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5
-               a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-    </svg>
-    Current Session: {{ current_session.name }}
-  </div>
-{% endif %}
+<div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+  {% if current_session %}
+    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
+         style="background:#FFF5F3; color:#851A10; border:1px solid #FECACA;">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5
+                 a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+      Current Session: {{ current_session.name }}
+    </div>
+  {% else %}
+    <div></div>
+  {% endif %}
+
+  <!-- Filter -->
+  <form method="GET" class="flex items-center gap-3">
+    <div class="relative group">
+      <select name="session" 
+              onchange="this.form.submit()"
+              class="appearance-none pl-4 pr-10 py-2 rounded-xl border-gray-200 text-sm 
+                     focus:ring-2 focus:ring-[#851A10] focus:border-transparent transition-all duration-200
+                     cursor-pointer bg-white hover:border-gray-300 min-w-[200px] shadow-sm">
+        <option value="">All Academic Sessions</option>
+        {% for s in available_sessions %}
+          <option value="{{ s.id }}" {% if selected_session == s.id|stringformat:"s" %}selected{% endif %}>
+            {{ s.name }}{% if s.is_current %} (Current){% endif %}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    {% if selected_session %}
+      <a href="{% url 'academics:term_list' %}" 
+         class="px-3 py-2 text-xs font-semibold text-gray-500 hover:text-red-600 transition-colors">
+        Clear
+      </a>
+    {% endif %}
+  </form>
+</div>
 
 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
   <table class="w-full text-sm">
@@ -45,7 +74,7 @@
       </tr>
     </thead>
     <tbody class="divide-y divide-gray-100">
-      {% for term in terms %}
+      {% for term in page_obj %}
         <tr class="hover:bg-gray-50 transition">
           <td class="px-6 py-4 font-semibold" style="color:#635E57;">
             {{ term.get_name_display }}
@@ -158,14 +187,52 @@
       {% empty %}
         <tr>
           <td colspan="7" class="px-6 py-12 text-center text-gray-400">
-            No terms yet.
-            <a href="{% url 'academics:term_create' %}"
-               class="font-medium" style="color:#851A10;">Create one</a>
+            No terms found matching your criteria.
           </td>
         </tr>
       {% endfor %}
     </tbody>
   </table>
+
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+    <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+      <div class="text-xs text-gray-500">
+        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} terms
+      </div>
+      <div class="flex items-center gap-2">
+        {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}{% if selected_session %}&session={{ selected_session }}{% endif %}"
+             class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 
+                    text-gray-600 bg-white hover:bg-gray-50 transition">
+            Previous
+          </a>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+            <span class="px-3 py-1.5 text-xs font-bold rounded-lg bg-[#851A10] text-white shadow-sm">
+              {{ num }}
+            </span>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <a href="?page={{ num }}{% if selected_session %}&session={{ selected_session }}{% endif %}"
+               class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 
+                      text-gray-600 bg-white hover:bg-gray-50 transition">
+              {{ num }}
+            </a>
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}{% if selected_session %}&session={{ selected_session }}{% endif %}"
+             class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 
+                    text-gray-600 bg-white hover:bg-gray-50 transition">
+            Next
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
 </div>
 
 {% endblock %}

@@ -1,0 +1,399 @@
+{% extends 'base.html' %}
+
+{% block title %}Performance Insights — Staff Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: white;
+        border-radius: 1rem;
+        border: 1px solid #F3F4F6;
+        padding: 1rem;
+        transition: all 0.2s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .grade-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
+    
+    .grade-A { background: #DCFCE7; color: #166534; }
+    .grade-B { background: #DBEAFE; color: #1E40AF; }
+    .grade-C { background: #FEF3C7; color: #92400E; }
+    .grade-D { background: #FEE2E2; color: #991B1B; }
+    .grade-F { background: #FEE2E2; color: #DC2626; }
+    
+    .heatmap-cell {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .heatmap-cell:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .performance-meter {
+        height: 8px;
+        background: #E5E7EB;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .performance-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.5s ease;
+    }
+    
+    .fill-excellent { background: linear-gradient(90deg, #059669, #10B981); }
+    .fill-good { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
+    .fill-average { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+    .fill-poor { background: linear-gradient(90deg, #DC2626, #EF4444); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-6 px-4"
+     x-data="analyticsDashboard()" x-init="initData()">
+
+    <!-- Header -->
+    <div class="mb-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-1 h-8 rounded-full" style="background:#851A10;"></div>
+                    <h1 class="text-2xl font-bold" style="color:#635E57;">Academic Analytics</h1>
+                </div>
+                <p class="text-sm text-gray-500 ml-4">
+                    School-wide performance and class insights
+                </p>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- Session Selector -->
+                <select x-model="selectedSessionId" @change="fetchData()" 
+                        class="px-3 py-2 border border-gray-200 rounded-xl text-xs font-bold uppercase tracking-wider focus:border-[#851A10] outline-none bg-gray-50">
+                    {% for session in sessions %}
+                        <option value="{{ session.id }}">{{ session.name }}</option>
+                    {% endfor %}
+                </select>
+
+                <!-- Term Selector -->
+                <select x-model="selectedTermId" @change="fetchData()" 
+                        class="px-3 py-2 border border-gray-200 rounded-xl text-xs font-bold uppercase tracking-wider focus:border-[#851A10] outline-none bg-gray-50">
+                    {% for term in terms %}
+                        <option value="{{ term.id }}">{{ term.get_name_display }}</option>
+                    {% endfor %}
+                </select>
+
+                <!-- Class Selector -->
+                <select x-model="selectedClassId" @change="fetchData()" 
+                        class="px-3 py-2 border border-gray-200 rounded-xl text-xs font-bold uppercase tracking-wider focus:border-[#851A10] outline-none bg-gray-50">
+                    <option value="">Select Class...</option>
+                    {% for arm in class_arms %}
+                        <option value="{{ arm.id }}">{{ arm.full_name }}</option>
+                    {% endfor %}
+                </select>
+                
+                <button @click="fetchData" class="p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition">
+                    <svg class="w-5 h-5 text-gray-600" :class="{'animate-spin': loading}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div x-show="loading" class="text-center py-20" x-cloak>
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#851A10]"></div>
+        <p class="mt-4 text-gray-500">Loading analytics data...</p>
+    </div>
+    
+    <!-- Error State -->
+    <div x-show="error" class="bg-red-50 text-red-700 p-4 rounded-xl border border-red-200 mb-6" x-cloak>
+        <span x-text="error"></span>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div x-show="!loading && hasData && selectedClassId" x-cloak>
+        
+        <!-- Quick Stats Row -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div class="stat-card">
+                <p class="text-xs text-gray-500">Total Students</p>
+                <p class="text-2xl font-bold" style="color:#635E57;" x-text="stats.totalStudents">0</p>
+            </div>
+            <div class="stat-card">
+                <p class="text-xs text-gray-500">Class Average</p>
+                <p class="text-2xl font-bold text-blue-600" x-text="stats.classAverage + '%'">0%</p>
+            </div>
+            <div class="stat-card">
+                <p class="text-xs text-gray-500">Pass Rate</p>
+                <p class="text-2xl font-bold text-green-600" x-text="stats.passRate + '%'">0%</p>
+            </div>
+            <div class="stat-card">
+                <p class="text-xs text-gray-500">Top Student</p>
+                <p class="text-sm font-bold truncate" x-text="stats.topStudent.name">-</p>
+                <p class="text-xs text-green-600" x-text="stats.topStudent.score + '%'">-</p>
+            </div>
+            <div class="stat-card">
+                <p class="text-xs text-gray-500">Needs Support</p>
+                <p class="text-sm font-bold truncate" x-text="stats.bottomStudent.name">-</p>
+                <p class="text-xs text-red-600" x-text="stats.bottomStudent.score + '%'">-</p>
+            </div>
+        </div>
+
+        <!-- Main Charts Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            
+            <!-- Subject Performance Bar Chart -->
+            <div class="bg-white p-6 rounded-xl border border-gray-100">
+                <h3 class="text-sm font-bold text-gray-800 mb-4">Subject Performance</h3>
+                <div class="h-80">
+                    <canvas id="subjectBarChart"></canvas>
+                </div>
+                <p class="text-xs text-gray-500 text-center mt-4">Average score per subject</p>
+            </div>
+
+            <!-- Grade Distribution -->
+            <div class="bg-white p-6 rounded-xl border border-gray-100">
+                <h3 class="text-sm font-bold text-gray-800 mb-4">Grade Distribution</h3>
+                <div class="h-80">
+                    <canvas id="gradeDistributionChart"></canvas>
+                </div>
+                <p class="text-xs text-gray-500 text-center mt-4">Student performance breakdown</p>
+            </div>
+        </div>
+
+        <!-- Student Performance Table -->
+        <div class="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="text-sm font-bold text-gray-800">Student Performance</h3>
+                <input type="text" x-model="studentSearch" @input="filterStudents" placeholder="Search student..." 
+                       class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:border-[#851A10] outline-none">
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-500">#</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-500">Student Name</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">Average</th>
+                             <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">Grade</th>
+                             <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">Trend</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <template x-for="(student, idx) in filteredStudents" :key="student.id">
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 text-gray-500" x-text="idx + 1"></td>
+                                <td class="px-6 py-4 font-semibold text-gray-800" x-text="student.name"></td>
+                                <td class="px-6 py-4 text-center font-bold" :class="student.average >= 70 ? 'text-green-600' : (student.average >= 50 ? 'text-blue-600' : 'text-red-600')" x-text="student.average + '%'"></td>
+                                 <td class="px-6 py-4 text-center">
+                                     <span class="grade-badge" :class="'grade-' + student.grade.charAt(0)" x-text="student.grade"></span>
+                                 </td>
+                                 <td class="px-6 py-4 text-center">
+                                     <span x-show="student.trend > 0" class="text-green-600">↑</span>
+                                     <span x-show="student.trend < 0" class="text-red-600">↓</span>
+                                     <span x-show="student.trend === 0" class="text-gray-400">→</span>
+                                     <span class="text-xs ml-1" x-text="Math.abs(student.trend) + '%'"></span>
+                                 </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+            <div class="px-6 py-3 border-t border-gray-100 text-xs text-gray-500" x-text="'Showing ' + filteredStudents.length + ' of ' + students.length + ' students'"></div>
+        </div>
+
+        <!-- Intervention Alert Section -->
+        <div x-show="studentsNeedingSupport.length > 0" class="bg-red-50 rounded-xl p-4 border border-red-200">
+            <div class="flex items-center gap-3 mb-3">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                </svg>
+                <h3 class="font-bold text-red-800">Students Requiring Intervention</h3>
+            </div>
+            <p class="text-sm text-red-700 mb-3">These students are performing below 50% and may need additional support:</p>
+            <div class="flex flex-wrap gap-2">
+                <template x-for="student in studentsNeedingSupport" :key="student.id">
+                    <span class="px-3 py-1 bg-white rounded-lg text-sm font-medium text-red-700 border border-red-200" x-text="student.name"></span>
+                </template>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Empty State -->
+    <div x-show="!loading && !hasData && !error" class="text-center py-20" x-cloak>
+        <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <span class="text-4xl">📊</span>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">No Data Available</h3>
+        <p class="text-gray-500">Select a class to view performance analytics.</p>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+function analyticsDashboard() {
+    return {
+        selectedSessionId: '{{ current_session.id }}',
+        selectedTermId: '{{ current_term.id }}',
+        selectedClassId: '{{ default_class_id|default_if_none:"" }}',
+        selectedSubject: '',
+        
+        loading: false,
+        error: '',
+        hasData: false,
+        
+        stats: {
+            totalStudents: 0,
+            classAverage: 0,
+            passRate: 0,
+            topStudent: { name: '-', score: 0 },
+            bottomStudent: { name: '-', score: 0 }
+        },
+        
+        students: [],
+        filteredStudents: [],
+        studentsNeedingSupport: [],
+        subjects: [],
+        studentSearch: '',
+        
+        charts: {},
+        
+        initData() {
+            if (this.selectedClassId) {
+                this.fetchData();
+            }
+        },
+        
+        fetchData() {
+            if (!this.selectedClassId) {
+                this.hasData = false;
+                return;
+            }
+            
+            this.loading = true;
+            this.error = '';
+            
+            fetch(`/results/api/performance/class/${this.selectedClassId}/?session_id=${this.selectedSessionId}&term_id=${this.selectedTermId}`)
+                .then(res => res.json())
+                .then(data => {
+                    this.loading = false;
+                    if (data.success) {
+                        this.hasData = true;
+                        this.stats = data.stats;
+                        this.students = data.students;
+                        this.subjects = data.subjects;
+                        this.filteredStudents = [...this.students];
+                        this.studentsNeedingSupport = this.students.filter(s => s.average < 50);
+                        
+                        setTimeout(() => {
+                            this.renderBarChart(data.subjectPerformance);
+                            this.renderGradeChart(data.gradeDistribution);
+                        }, 100);
+                    } else {
+                        throw new Error(data.error);
+                    }
+                })
+                .catch(err => {
+                    this.loading = false;
+                    this.error = err.message;
+                    this.hasData = false;
+                });
+        },
+        
+        filterStudents() {
+            if (!this.studentSearch) {
+                this.filteredStudents = [...this.students];
+            } else {
+                const search = this.studentSearch.toLowerCase();
+                this.filteredStudents = this.students.filter(s => 
+                    s.name.toLowerCase().includes(search) || 
+                    s.admission_number?.toLowerCase().includes(search)
+                );
+            }
+        },
+        
+        filterData() {
+            if (this.selectedSubject) {
+                // Refresh data with subject filter
+                this.fetchData();
+            }
+        },
+        
+        exportData() {
+            window.location.href = `/results/api/performance/export/${this.selectedClassId}/?session_id=${this.selectedSessionId}&term_id=${this.selectedTermId}`;
+        },
+        
+        renderBarChart(subjectData) {
+            this.destroyChart('subjectBarChart');
+            const ctx = document.getElementById('subjectBarChart')?.getContext('2d');
+            if (ctx) {
+                this.charts.subjectBarChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: subjectData.map(s => s.name),
+                        datasets: [{
+                            label: 'Average Score (%)',
+                            data: subjectData.map(s => s.average),
+                            backgroundColor: subjectData.map(s => s.average >= 70 ? 'rgba(5, 150, 105, 0.7)' : (s.average >= 50 ? 'rgba(59, 130, 246, 0.7)' : 'rgba(220, 38, 38, 0.7)')),
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, max: 100, title: { display: true, text: 'Percentage (%)' } }
+                        },
+                        plugins: { legend: { position: 'top' } }
+                    }
+                });
+            }
+        },
+        
+        renderGradeChart(distribution) {
+            this.destroyChart('gradeDistributionChart');
+            const ctx = document.getElementById('gradeDistributionChart')?.getContext('2d');
+            if (ctx) {
+                this.charts.gradeDistributionChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['A (70-100%)', 'B (60-69%)', 'C (50-59%)', 'D (40-49%)', 'F (0-39%)'],
+                        datasets: [{
+                            data: [distribution.A || 0, distribution.B || 0, distribution.C || 0, distribution.D || 0, distribution.F || 0],
+                            backgroundColor: ['#059669', '#3B82F6', '#F59E0B', '#F97316', '#DC2626'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' } }
+                    }
+                });
+            }
+        },
+        
+        destroyChart(chartId) {
+            if (this.charts[chartId]) {
+                this.charts[chartId].destroy();
+                delete this.charts[chartId];
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

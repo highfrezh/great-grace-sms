@@ -1,0 +1,511 @@
+{% extends 'base.html' %}
+
+{% block title %}My Academic Insights{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: white;
+        border-radius: 1rem;
+        border: 1px solid #F3F4F6;
+        padding: 1rem;
+        transition: all 0.2s ease;
+    }
+    
+    .stat-card:hover {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .grade-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
+    
+    .grade-A { background: #DCFCE7; color: #166534; }
+    .grade-B { background: #DBEAFE; color: #1E40AF; }
+    .grade-C { background: #FEF3C7; color: #92400E; }
+    .grade-D { background: #FEE2E2; color: #991B1B; }
+    .grade-F { background: #FEE2E2; color: #DC2626; }
+    
+    .trend-up { color: #059669; }
+    .trend-down { color: #DC2626; }
+    .trend-stable { color: #F59E0B; }
+    
+    .score-improvement {
+        font-size: 0.7rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .subject-card {
+        background: white;
+        border-radius: 1rem;
+        border: 1px solid #F3F4F6;
+        padding: 1rem;
+        transition: all 0.2s ease;
+    }
+    
+    .subject-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-6 px-4"
+     x-data="studentAnalytics()" x-init="initData()">
+
+    <!-- Header with Filters -->
+    <div class="mb-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-1 h-8 rounded-full" style="background:#851A10;"></div>
+                    <h1 class="text-2xl font-bold" style="color:#635E57;">Academic Performance</h1>
+                </div>
+                <p class="text-sm text-gray-500 ml-4">{{ student.get_full_name }}</p>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- Session Selector -->
+                <select x-model="selectedSessionId" @change="fetchData()" 
+                        class="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium focus:border-[#851A10] outline-none">
+                    <option value="">Select Session</option>
+                    {% for session in sessions %}
+                        <option value="{{ session.id }}">{{ session.name }}</option>
+                    {% endfor %}
+                </select>
+                
+                <!-- Term Selector -->
+                <select x-model="selectedTermId" @change="fetchData()" 
+                        class="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium focus:border-[#851A10] outline-none">
+                    <option value="">All Terms</option>
+                    {% for term in terms %}
+                        <option value="{{ term.id }}">{{ term.get_name_display }}</option>
+                    {% endfor %}
+                </select>
+                
+                <button @click="fetchData" class="p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition">
+                    <svg class="w-5 h-5 text-gray-600" :class="{'animate-spin': loading}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div x-show="loading" class="text-center py-20" x-cloak>
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#851A10]"></div>
+        <p class="mt-4 text-gray-500">Loading your academic data...</p>
+    </div>
+    
+    <!-- Error State -->
+    <div x-show="error" class="bg-red-50 text-red-700 p-4 rounded-xl border border-red-200 mb-6" x-cloak>
+        <span x-text="error"></span>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div x-show="!loading && hasData" x-cloak>
+        
+        <!-- Summary Stats Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="stat-card">
+                <p class="text-xs text-gray-500">Overall Average</p>
+                <p class="text-2xl font-bold" style="color:#635E57;" x-text="overallAverage + '%'">0%</p>
+                <p class="text-xs" :class="trendClass" x-text="trendText"></p>
+            </div>
+            <div class="stat-card">
+                <p class="text-xs text-gray-500">Best Subject</p>
+                <p class="text-lg font-bold text-green-600" x-text="bestSubject.name">-</p>
+                <p class="text-xs text-gray-500" x-text="bestSubject.score + '%'">-</p>
+            </div>
+            <div class="stat-card">
+                <p class="text-xs text-gray-500">Area for Improvement</p>
+                <p class="text-lg font-bold text-red-600" x-text="worstSubject.name">-</p>
+                <p class="text-xs text-gray-500" x-text="worstSubject.score + '%'">-</p>
+            </div>
+            <div class="stat-card">
+                <p class="text-xs text-gray-500">Subjects Taken</p>
+                <p class="text-2xl font-bold text-blue-600" x-text="subjectCount">0</p>
+            </div>
+        </div>
+
+        <!-- Main Charts Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            
+            <!-- Bar Chart: Subject Performance (single-term only) -->
+            <div class="bg-white p-6 rounded-xl border border-gray-100" x-show="selectedTermId">
+                <h3 class="text-sm font-bold text-gray-800 mb-4">Subject Performance</h3>
+                <div class="h-80">
+                    <canvas id="subjectBarChart"></canvas>
+                </div>
+                <p class="text-xs text-gray-500 text-center mt-4">Your scores compared to class average</p>
+            </div>
+
+            <!-- Session Multi-Bar Chart: Subject Performance by Term -->
+            <div class="bg-white p-6 rounded-xl border border-gray-100" x-show="!selectedTermId">
+                <h3 class="text-sm font-bold text-gray-800 mb-4">Subject Performance by Term</h3>
+                <div class="h-80">
+                    <canvas id="subjectTermChart"></canvas>
+                </div>
+                <p class="text-xs text-gray-500 text-center mt-4">Your performance in each subject across all terms</p>
+            </div>
+
+            <!-- Line Chart: Term-over-Term Progress -->
+            <div class="bg-white p-6 rounded-xl border border-gray-100">
+                <h3 class="text-sm font-bold text-gray-800 mb-4">Academic Progress</h3>
+                <div class="h-80">
+                    <canvas id="termTrendChart"></canvas>
+                </div>
+                <p class="text-xs text-gray-500 text-center mt-4">Performance trend across terms</p>
+            </div>
+        </div>
+
+          <!-- Subject Performance by Term - Detailed Table -->
+        <div class="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
+            <div class="px-6 py-4 border-b border-gray-100">
+                <h3 class="text-sm font-bold text-gray-800">Subject Performance by Term</h3>
+                <p class="text-xs text-gray-500">Track your progress in each subject across the session</p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-500">Subject</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">1st Term</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">2nd Term</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">3rd Term</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">Session Avg</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">Trend</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <template x-for="subject in subjectTermData" :key="subject.id">
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 font-semibold text-gray-800" x-text="subject.name"></td>
+                                <td class="px-6 py-4 text-center">
+                                    <span x-show="subject.term1" x-text="subject.term1 + '%'" :class="subject.term1 >= 70 ? 'text-green-600 font-bold' : (subject.term1 >= 50 ? 'text-blue-600' : 'text-red-600')"></span>
+                                    <span x-show="!subject.term1" class="text-gray-400">-</span>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <span x-show="subject.term2" x-text="subject.term2 + '%'" :class="subject.term2 >= 70 ? 'text-green-600 font-bold' : (subject.term2 >= 50 ? 'text-blue-600' : 'text-red-600')"></span>
+                                    <span x-show="!subject.term2" class="text-gray-400">-</span>
+                                 </td>
+                                <td class="px-6 py-4 text-center">
+                                    <span x-show="subject.term3" x-text="subject.term3 + '%'" :class="subject.term3 >= 70 ? 'text-green-600 font-bold' : (subject.term3 >= 50 ? 'text-blue-600' : 'text-red-600')"></span>
+                                    <span x-show="!subject.term3" class="text-gray-400">-</span>
+                                 </td>
+                                <td class="px-6 py-4 text-center font-bold" :class="subject.session_avg >= 70 ? 'text-green-600' : (subject.session_avg >= 50 ? 'text-blue-600' : 'text-red-600')" x-text="subject.session_avg + '%'"></td>
+                                <td class="px-6 py-4 text-center">
+                                    <span x-show="subject.trend > 0" class="trend-up score-improvement">
+                                        ↑ +<span x-text="subject.trend"></span>%
+                                    </span>
+                                    <span x-show="subject.trend < 0" class="trend-down score-improvement">
+                                        ↓ <span x-text="Math.abs(subject.trend)"></span>%
+                                    </span>
+                                    <span x-show="subject.trend === 0" class="trend-stable score-improvement">
+                                        → Stable
+                                    </span>
+                                 </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Empty State -->
+    <div x-show="!loading && !hasData && !error" class="text-center py-20" x-cloak>
+        <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <span class="text-4xl">📊</span>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">No Data Available</h3>
+        <p class="text-gray-500">Select a session and term to view your academic performance.</p>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+function studentAnalytics() {
+    return {
+        selectedSessionId: '{{ current_session.id|default:"" }}',
+        selectedTermId: '',
+        
+        loading: false,
+        error: '',
+        hasData: false,
+        
+        overallAverage: 0,
+        trendText: '',
+        trendClass: '',
+        bestSubject: { name: '-', score: 0 },
+        worstSubject: { name: '-', score: 100 },
+        subjectCount: 0,
+        subjectTableRows: '',
+        subjectTermData: [],
+        
+        charts: {},
+        
+        initData() {
+            if (this.selectedSessionId) {
+                this.fetchData();
+            }
+        },
+        
+        fetchData() {
+            if (!this.selectedSessionId) {
+                this.error = 'Please select a session to view your results.';
+                return;
+            }
+            
+            this.loading = true;
+            this.error = '';
+            
+            let url = `/results/api/student-performance/${this.selectedSessionId}/`;
+            if (this.selectedTermId) {
+                url += `?term_id=${this.selectedTermId}`;
+            }
+            
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    this.loading = false;
+                    if (data.success) {
+                        const hasAnyData = (data.subjects && data.subjects.length > 0)
+                                        || (data.subject_term_data && data.subject_term_data.length > 0);
+                        if (hasAnyData) {
+                            this.hasData = true;
+                            this.processData(data);
+                            setTimeout(() => {
+                                this.renderCharts(data);
+                            }, 100);
+                        } else {
+                            this.hasData = false;
+                            this.error = 'No results found for the selected period.';
+                        }
+                    } else {
+                        throw new Error(data.error || 'Failed to load data');
+                    }
+                })
+                .catch(err => {
+                    this.loading = false;
+                    this.error = err.message;
+                    this.hasData = false;
+                });
+        },
+        
+        processData(data) {
+            // Populate cross-term table (always)
+            this.subjectTermData = data.subject_term_data || [];
+
+            // Calculate overall averages and best/worst subject
+            // If in "All terms" mode, data.subjects is empty, so we use subjectTermData
+            const statsSource = data.subjects.length > 0 ? data.subjects : this.subjectTermData.map(s => ({
+                name: s.name,
+                total_percentage: s.session_avg
+            }));
+
+            let total = 0;
+            let best = { name: '-', score: 0 };
+            let worst = { name: '-', score: 100 };
+            
+            statsSource.forEach(subj => {
+                const score = subj.total_percentage !== undefined ? subj.total_percentage : subj.session_average;
+                total += score;
+                if (score > best.score) best = { name: subj.name, score };
+                if (score < worst.score) worst = { name: subj.name, score };
+            });
+            
+            this.overallAverage = statsSource.length > 0 ? (total / statsSource.length).toFixed(1) : 0;
+            this.bestSubject = best;
+            this.worstSubject = worst;
+            this.subjectCount = statsSource.length;
+            
+            // Calculate trend
+            if (data.trend && data.trend.length >= 2) {
+                const first = data.trend[0].average;
+                const last = data.trend[data.trend.length - 1].average;
+                const diff = last - first;
+                if (diff > 2) {
+                    this.trendText = `↑ +${diff.toFixed(1)}% from last term`;
+                    this.trendClass = 'trend-up';
+                } else if (diff < -2) {
+                    this.trendText = `↓ ${diff.toFixed(1)}% from last term`;
+                    this.trendClass = 'trend-down';
+                } else {
+                    this.trendText = '→ Stable performance';
+                    this.trendClass = 'trend-stable';
+                }
+            } else {
+                this.trendText = 'Complete more terms to see trend';
+                this.trendClass = '';
+            }
+            
+            // Build table rows HTML
+            let rowsHtml = '';
+            data.subjects.forEach(subj => {
+                const gradeClass = this.getGradeClass(subj.grade);
+                rowsHtml += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 font-semibold text-gray-800">${subj.name}</td>
+                        <td class="px-6 py-4 text-center">${subj.ca1 || '-'}</td>
+                        <td class="px-6 py-4 text-center">${subj.ca2 || '-'}</td>
+                        <td class="px-6 py-4 text-center">${subj.theory || '-'}</td>
+                        <td class="px-6 py-4 text-center">${subj.obj || '-'}</td>
+                        <td class="px-6 py-4 text-center font-bold">${subj.total || '-'}</td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="grade-badge ${gradeClass}">${subj.grade || '-'}</span>
+                        </td>
+                        <td class="px-6 py-4 text-center">${subj.class_average || '-'}%</td>
+                    </tr>
+                `;
+            });
+            this.subjectTableRows = rowsHtml;
+        },
+        
+        getGradeClass(grade) {
+            if (!grade) return '';
+            const firstChar = grade.charAt(0).toUpperCase();
+            return `grade-${firstChar}`;
+        },
+        
+        renderCharts(data) {
+            // 1. Session Multi-Bar Chart (All Terms mode)
+            this.destroyChart('subjectTermChart');
+            if (!this.selectedTermId && this.subjectTermData.length > 0) {
+                const termCtx = document.getElementById('subjectTermChart')?.getContext('2d');
+                if (termCtx) {
+                    const datasets = [];
+                    const colors = ['#851A10', '#F59E0B', '#3B82F6'];
+                    
+                    ['term1', 'term2', 'term3'].forEach((term, idx) => {
+                        const termData = this.subjectTermData.map(s => s[term] || 0);
+                        if (termData.some(v => v > 0)) {
+                            datasets.push({
+                                label: `${idx + 1}${idx === 0 ? 'st' : idx === 1 ? 'nd' : 'rd'} Term`,
+                                data: termData,
+                                backgroundColor: colors[idx],
+                                borderRadius: 8
+                            });
+                        }
+                    });
+
+                    this.charts.subjectTermChart = new Chart(termCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: this.subjectTermData.map(s => s.name),
+                            datasets: datasets
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 100,
+                                    title: { display: true, text: 'Percentage (%)' }
+                                }
+                            },
+                            plugins: {
+                                legend: { position: 'top' }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // 2. Single Term Bar Chart
+            this.destroyChart('subjectBarChart');
+            const barCtx = document.getElementById('subjectBarChart')?.getContext('2d');
+            if (barCtx) {
+                this.charts.subjectBarChart = new Chart(barCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.subjects.map(s => s.name),
+                        datasets: [
+                            {
+                                label: 'Your Score',
+                                data: data.subjects.map(s => s.total_percentage),
+                                backgroundColor: 'rgba(133, 26, 16, 0.7)',
+                                borderRadius: 8
+                            },
+                            {
+                                label: 'Class Average',
+                                data: data.subjects.map(s => s.class_average_percentage || 0),
+                                backgroundColor: 'rgba(156, 163, 175, 0.5)',
+                                borderRadius: 8
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                title: { display: true, text: 'Percentage (%)' }
+                            }
+                        },
+                        plugins: {
+                            legend: { position: 'top' }
+                        }
+                    }
+                });
+            }
+            
+            // Term Trend Chart
+            if (data.trend && data.trend.length > 0) {
+                this.destroyChart('termTrendChart');
+                const lineCtx = document.getElementById('termTrendChart')?.getContext('2d');
+                if (lineCtx) {
+                    this.charts.termTrendChart = new Chart(lineCtx, {
+                        type: 'line',
+                        data: {
+                            labels: data.trend.map(t => t.term_name),
+                            datasets: [{
+                                label: 'Your Average',
+                                data: data.trend.map(t => t.average),
+                                borderColor: '#851A10',
+                                backgroundColor: 'rgba(133, 26, 16, 0.1)',
+                                fill: true,
+                                tension: 0.4,
+                                pointBackgroundColor: '#851A10',
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2,
+                                pointRadius: 6
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 100,
+                                    title: { display: true, text: 'Average Score (%)' }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        },
+        
+        destroyChart(chartId) {
+            if (this.charts[chartId]) {
+                this.charts[chartId].destroy();
+                delete this.charts[chartId];
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

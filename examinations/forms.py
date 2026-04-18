@@ -57,14 +57,31 @@ class ExamForm(forms.ModelForm):
         self.fields['session'].initial = current_session
         self.fields['term'].initial = current_term
         
-        # Filter to only teaching staff
-        self.fields['teacher'].queryset = StaffProfile.objects.filter(
-            user__roles__name__in=['SUBJECT_TEACHER', 'CLASS_TEACHER', 'VICE_PRINCIPAL', 'PRINCIPAL']
-        ).distinct()
-        
         # Set class_arms initial value if editing
         if self.instance.pk:
             self.fields['class_arms'].initial = self.instance.class_arms.all()
+        
+        # If user is a teacher, restrict subject and class_arms
+        user = kwargs.get('user')
+        if user and not (user.is_admin_staff or user.is_superuser):
+            from academics.models import SubjectTeacherAssignment
+            assignments = SubjectTeacherAssignment.objects.filter(teacher=user)
+            
+            # Filter subjects
+            assigned_subject_ids = assignments.values_list('subject_id', flat=True).distinct()
+            self.fields['subject'].queryset = Subject.objects.filter(id__in=assigned_subject_ids)
+            
+            # Filter class_arms to only those in current session matching assignments
+            assigned_class_ids = set()
+            for assignment in assignments:
+                matching_arms = ClassArm.objects.filter(
+                    session=current_session,
+                    level=assignment.class_level,
+                    name=assignment.arm_name
+                ).values_list('id', flat=True)
+                assigned_class_ids.update(matching_arms)
+            
+            self.fields['class_arms'].queryset = ClassArm.objects.filter(id__in=assigned_class_ids)
     
     def save(self, commit=True):
         exam = super().save(commit=commit)
@@ -127,19 +144,20 @@ class TeacherExamForm(forms.ModelForm):
         
         # Filter subject based on teacher's assignments
         if teacher:
-            # Get teacher's assignments for the current session and term
+            # Get teacher's permanent assignments
             from academics.models import SubjectTeacherAssignment
             assignments = SubjectTeacherAssignment.objects.filter(
                 teacher=teacher,
-                session=current_session,
-                term=current_term
             ).select_related('subject')
             
             # Get unique subjects assigned to teacher
             assigned_subject_ids = assignments.values_list('subject', flat=True).distinct()
             
+            # Filter class_arms based on these assignments for current session
+            # Note: TeacherExamForm doesn't explicitly define class_arms field, but we add it if needed
+            # or it's handled in Meta.fields (Wait, I should check if I should add it to Meta.fields)
+            
             # Identify subjects for which the teacher has already created an exam in this session/term
-            # Use teacher's staff profile for filtering since Exam.teacher is StaffProfile
             try:
                 staff_profile = StaffProfile.objects.get(user=teacher)
                 existing_exam_subject_ids = Exam.objects.filter(
@@ -150,14 +168,12 @@ class TeacherExamForm(forms.ModelForm):
             except StaffProfile.DoesNotExist:
                 existing_exam_subject_ids = []
 
-            # Filter subjects: assigned to teacher AND no exam exists for this session/term yet
-            # Only apply this exclusion for NEW exams (initial creation)
+            # Filter subjects
             if not self.instance.pk:
                 self.fields['subject'].queryset = Subject.objects.filter(
                     id__in=assigned_subject_ids
                 ).exclude(id__in=existing_exam_subject_ids)
             else:
-                # For editing, include the current subject but still limit to assigned ones
                 self.fields['subject'].queryset = Subject.objects.filter(id__in=assigned_subject_ids)
         
         # Disable fields if exam is in a published state (not DRAFT)

@@ -98,15 +98,25 @@ def dashboard_view(request):
         # Get staff profile
         staff_profile = StaffProfile.objects.filter(user=user).first()
 
-        # 1. Assigned Subjects & Classes
+        # 1. Assigned Subjects & Classes (Contextualized to Current Session)
         assignments = SubjectTeacherAssignment.objects.filter(
             teacher=user,
-            session=current_session,
-            term=current_term
-        ).select_related('subject', 'class_arm')
+        ).select_related('subject', 'class_level')
 
         subject_ids = set(assignments.values_list('subject_id', flat=True).distinct())
-        assigned_class_ids = set(assignments.values_list('class_arm_id', flat=True).distinct())
+        
+        # Map permanent assignments (Level + Arm Name) to session-specific ClassArms
+        class_arms_map = {
+            (ca.level_id, ca.name): ca
+            for ca in ClassArm.objects.filter(session=current_session).select_related('level')
+        }
+
+        assigned_class_ids = set()
+        for assignment in assignments:
+            # Attach the session-specific ClassArm object to the assignment
+            assignment.class_arm = class_arms_map.get((assignment.class_level_id, assignment.arm_name))
+            if assignment.class_arm:
+                assigned_class_ids.add(assignment.class_arm.id)
 
         # Add managed classes (if Class Teacher) to the class IDs list
         managed_classes = ClassArm.objects.filter(class_teacher=user, session=current_session)

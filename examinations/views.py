@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction, IntegrityError
+from django.db.models import Q
 from accounts.decorators import (
     admin_staff_required, teaching_staff_required, examiner_required,
     subject_teacher_required
@@ -1113,23 +1114,44 @@ def teacher_exam_list(request):
     # Base queryset
     all_teacher_exams = Exam.objects.filter(teacher=staff_profile)
     
-    # Get unique filter options from the teacher's actual data
-    available_sessions = AcademicSession.objects.filter(
-        id__in=all_teacher_exams.values_list('session_id', flat=True)
-    ).distinct().order_by('-start_date')
-    
-    available_subjects = Subject.objects.filter(
-        id__in=all_teacher_exams.values_list('subject_id', flat=True)
-    ).distinct().order_by('name')
-    
-    available_terms = Term.objects.filter(
-        id__in=all_teacher_exams.values_list('term_id', flat=True)
-    ).distinct().order_by('name')
+    # Get current session & term for defaults and display
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
     
     # Apply Filters from GET parameters
     session_id = request.GET.get('session')
     term_id = request.GET.get('term')
     subject_id = request.GET.get('subject')
+
+    # Default to current session and term if no filters are applied (first load)
+    # We check if keys are in request.GET to allow explicit "All" (empty string) selection
+    if 'session' not in request.GET and 'term' not in request.GET:
+        if current_session:
+            session_id = str(current_session.id)
+        if current_term:
+            term_id = str(current_term.id)
+
+    # Get unique filter options from the teacher's actual data
+    # Show all sessions so user can filter by any period
+    available_sessions = AcademicSession.objects.all().order_by('-start_date')
+    
+    # Show all subjects assigned to this teacher (permanent refactor)
+    from academics.models import SubjectTeacherAssignment
+    assigned_subject_ids = SubjectTeacherAssignment.objects.filter(
+        teacher=request.user
+    ).values_list('subject_id', flat=True).distinct()
+    
+    available_subjects = Subject.objects.filter(
+        id__in=assigned_subject_ids
+    ).distinct().order_by('name')
+    
+    # Chained Filtering: Show all terms (filtered by session if selected)
+    available_terms_base = Term.objects.all()
+    
+    if session_id:
+        available_terms = available_terms_base.filter(session_id=session_id).order_by('name')
+    else:
+        available_terms = available_terms_base.order_by('name')
     
     filtered_exams = all_teacher_exams.select_related(
         'subject', 'session', 'term'
@@ -1141,9 +1163,6 @@ def teacher_exam_list(request):
         filtered_exams = filtered_exams.filter(term_id=term_id)
     if subject_id:
         filtered_exams = filtered_exams.filter(subject_id=subject_id)
-    
-    current_session = AcademicSession.get_current()
-    current_term = Term.get_current()
     
     # Get configuration for deadline countdown
     config = None
@@ -1212,7 +1231,7 @@ def teacher_exam_create(request):
     # Get teacher's assigned subjects/classes
     assignments = SubjectTeacherAssignment.objects.filter(
         teacher=request.user
-    ).select_related('subject', 'class_arm')
+    ).select_related('subject', 'class_level')
     
     form = TeacherExamForm(request.POST or None, teacher=request.user)
     
@@ -1228,13 +1247,23 @@ def teacher_exam_create(request):
                 theory_attachment = form.cleaned_data.get('theory_attachment')
                 randomize_questions = form.cleaned_data.get('randomize_questions', True)
                 
-                # Get all class_arms for this subject from teacher's assignments
-                assignments = SubjectTeacherAssignment.objects.filter(
+                # Get all matching class_arms for this subject from teacher's permanent assignments
+                assignment_combos = SubjectTeacherAssignment.objects.filter(
                     teacher=request.user,
                     subject=subject
-                ).values_list('class_arm', flat=True).distinct()
+                ).values('class_level_id', 'arm_name')
                 
-                class_arms = ClassArm.objects.filter(id__in=assignments)
+                # Build a filter to find session-specific ClassArm objects
+                class_arm_filters = Q()
+                for combo in assignment_combos:
+                    class_arm_filters |= Q(level_id=combo['class_level_id'], name=combo['arm_name'])
+                
+                if assignment_combos.exists():
+                    class_arms = ClassArm.objects.filter(
+                        session=session
+                    ).filter(class_arm_filters).distinct()
+                else:
+                    class_arms = ClassArm.objects.none()
                 
                 if not class_arms.exists():
                     messages.error(request, f'No classes found for {subject}. Check your subject-class assignments.')
@@ -1308,10 +1337,13 @@ def get_available_subjects(request):
     current_term = Term.get_current()
     
     # Get teacher's assigned subjects for this class
-    from academics.models import SubjectTeacherAssignment
+    from academics.models import SubjectTeacherAssignment, ClassArm
+    class_arm = get_object_or_404(ClassArm, id=class_arm_id)
+    
     assignments = SubjectTeacherAssignment.objects.filter(
         teacher=request.user,
-        class_arm_id=class_arm_id
+        class_level=class_arm.level,
+        arm_name=class_arm.name
     ).select_related('subject')
     
     assigned_subject_ids = assignments.values_list('subject_id', flat=True).distinct()
@@ -1432,7 +1464,7 @@ def teacher_exam_publish(request, pk):
 @login_required
 @subject_teacher_required
 @require_POST
-def teacher_exam_delete(request, pk):
+def teacher_exam_delete(request, exam_pk):
     """Delete exam created by current teacher"""
     try:
         staff_profile = StaffProfile.objects.get(user=request.user)
@@ -1440,7 +1472,7 @@ def teacher_exam_delete(request, pk):
         messages.error(request, 'Staff profile not found.')
         return redirect('accounts:dashboard')
     
-    exam = get_object_or_404(Exam, pk=pk, teacher=staff_profile)
+    exam = get_object_or_404(Exam, pk=exam_pk, teacher=staff_profile)
     
     # Only allow deletion if exam is in DRAFT status
     if exam.status != Exam.ExamStatus.DRAFT:
@@ -1873,6 +1905,16 @@ def exam_results(request, pk):
     submissions = {s.student_id: s for s in ExamSubmission.objects.filter(exam=exam)}
     results = {r.student_id: r for r in ExamResult.objects.filter(exam=exam)}
     
+    # Map report card publication status for all students in these classes
+    report_card_published = {
+        rc.student_id: rc.is_published 
+        for rc in ReportCard.objects.filter(
+            session=exam.session, 
+            term=exam.term,
+            student_id__in=[e.student_id for e in enrollments]
+        )
+    }
+    
     # Compile performance data
     performance_data = []
     for enroll in enrollments:
@@ -1892,7 +1934,8 @@ def exam_results(request, pk):
             'class_arm': enroll.class_arm,
             'status': status,
             'submission': submission,
-            'result': result
+            'result': result,
+            'is_locked': (result and result.is_published) or report_card_published.get(student.id, False)
         })
     
     # Stats for summary row
@@ -1923,8 +1966,24 @@ def exam_reset_submission(request, exam_pk, student_pk):
     student = get_object_or_404(Student, pk=student_pk)
     
     # Permission check: Teacher of the exam, examiner, or superuser
-    if not (request.user.is_superuser or request.user.is_examiner or exam.teacher.user == request.user):
+    if not (request.user.is_superuser or request.user.is_examiner or (exam.teacher and exam.teacher.user == request.user)):
         messages.error(request, "You are not authorized to reset this exam.")
+        return redirect('examinations:exam_results', pk=exam_pk)
+    
+    # Prevent reset if results are published
+    result = ExamResult.objects.filter(exam=exam, student=student).first()
+    if result and result.is_published:
+        messages.error(request, "Cannot reset an exam attempt that has already been published.")
+        return redirect('examinations:exam_results', pk=exam_pk)
+    
+    # Prevent reset if report card is published
+    report_card = ReportCard.objects.filter(
+        student=student,
+        session=exam.session,
+        term=exam.term
+    ).first()
+    if report_card and report_card.is_published:
+        messages.error(request, "Cannot reset an attempt once the official report card for this term has been published.")
         return redirect('examinations:exam_results', pk=exam_pk)
     
     # Delete submission and results
@@ -1966,27 +2025,36 @@ def exam_committee_required(view_func):
 @examiner_required
 def examiner_dashboard(request):
     """Show examiner dashboard with exams awaiting approval grouped by subject"""
+    # Get current session & term for defaults
     current_session = AcademicSession.get_current()
     current_term = Term.get_current()
     
     # Get filter parameters
+    session_id = request.GET.get('session')
+    term_id = request.GET.get('term')
     selected_subject_id = request.GET.get('subject_filter')
     selected_status = request.GET.get('status_filter')
     
-    # Base queryset - exams AWAITING_APPROVAL (for main display and stats)
-    awaiting_exams = Exam.objects.filter(
-        session=current_session,
-        term=current_term,
+    # Default to current session and term if no filters are applied (first load)
+    if 'session' not in request.GET and 'term' not in request.GET:
+        if current_session:
+            session_id = str(current_session.id)
+        if current_term:
+            term_id = str(current_term.id)
+
+    # Base queryset - exams matching period filters
+    all_exams_queryset = Exam.objects.all()
+    if session_id:
+        all_exams_queryset = all_exams_queryset.filter(session_id=session_id)
+    if term_id:
+        all_exams_queryset = all_exams_queryset.filter(term_id=term_id)
+
+    # Exams awaiting approval (main display)
+    awaiting_exams = all_exams_queryset.filter(
         status=Exam.ExamStatus.AWAITING_APPROVAL
     ).select_related('subject', 'teacher').prefetch_related('class_arms')
     
-    # Get all exams regardless of status for overall stats
-    all_exams_queryset = Exam.objects.filter(
-        session=current_session,
-        term=current_term
-    )
-    
-    # Calculate overall stats
+    # Calculate overall stats for the selected period
     total_exams = all_exams_queryset.count()
     awaiting_approval = awaiting_exams.count()
     approved_exams = all_exams_queryset.filter(status=Exam.ExamStatus.APPROVED).count()
@@ -2001,7 +2069,21 @@ def examiner_dashboard(request):
         exam__in=awaiting_exams
     ).count()
     
-    # Get all subjects that have exams awaiting approval
+    # Get all sessions for the filter
+    available_sessions = AcademicSession.objects.all().order_by('-start_date')
+    
+    # Chained filtering for terms
+    available_terms_base = Term.objects.all()
+    if session_id:
+        available_terms = available_terms_base.filter(session_id=session_id).order_by('name')
+    else:
+        available_terms = available_terms_base.order_by('name')
+
+    # Status for template highlighting
+    selected_session = AcademicSession.objects.filter(id=session_id).first() if session_id else None
+    selected_term = Term.objects.filter(id=term_id).first() if term_id else None
+
+    # Get all subjects that have exams awaiting approval in the selected period
     subjects = Subject.objects.filter(
         exams__in=awaiting_exams
     ).distinct().order_by('name')
@@ -2086,6 +2168,12 @@ def examiner_dashboard(request):
         'page_title': 'Exam Approval Dashboard',
         'current_session': current_session,
         'current_term': current_term,
+        'available_sessions': available_sessions,
+        'available_terms': available_terms,
+        'selected_session_id': session_id,
+        'selected_term_id': term_id,
+        'selected_session': selected_session,
+        'selected_term': selected_term,
         'subjects': subjects_with_stats,
         'all_subjects': all_subjects,
         'total_subjects': Subject.objects.count(),
@@ -2161,10 +2249,11 @@ def examiner_class_subjects(request, class_arm_id):
     subject_data = []
     for subject in subjects:
         subject_exams = exams.filter(subject=subject)
-        # Get all teachers for this subject-class combination
+        # Get all teachers for this subject-class combination (permanent assignments)
         teachers_assignments = SubjectTeacherAssignment.objects.filter(
             subject=subject,
-            class_arm=class_arm
+            class_level=class_arm.level,
+            arm_name=class_arm.name
         ).select_related('teacher')
         teachers = [assignment.teacher for assignment in teachers_assignments]
         

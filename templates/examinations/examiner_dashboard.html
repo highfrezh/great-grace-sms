@@ -297,68 +297,88 @@
 </div>
 {% endif %}
 
-<!-- Academic Period -->
-{% if current_session and current_term %}
-<div class="bg-gradient-to-r from-blue-50 to-white rounded-xl p-4 border border-blue-100 mb-6">
+<!-- Viewing Academic Period Indicator -->
+<div class="bg-gradient-to-r from-red-50 to-white rounded-xl p-4 border border-red-100 mb-6">
   <div class="flex items-center gap-3">
-    <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-      <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+      <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
       </svg>
     </div>
     <div>
-      <p class="text-xs text-gray-500">Current Academic Period</p>
-      <p class="text-sm font-semibold" style="color:#635E57;">{{ current_session.name }} • {{ current_term.get_name_display }}</p>
+      <p class="text-xs text-gray-500">Currently Viewing Records For</p>
+      <p class="text-sm font-semibold" style="color:#635E57;">
+        {% if selected_session %}{{ selected_session.name }}{% else %}All Sessions{% endif %} 
+        • 
+        {% if selected_term %}{{ selected_term.get_name_display }}{% else %}All Terms{% endif %}
+      </p>
     </div>
   </div>
 </div>
-{% endif %}
 
 <!-- Filter Section -->
 <div class="bg-white rounded-xl border border-gray-100 p-6 mb-6 shadow-sm">
   <div class="flex items-center gap-3 mb-4">
     <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C6.228 6.228 2 10.456 2 15.5c0 5.046 4.228 9.254 10 9.254s10-4.208 10-9.254C22 10.456 17.772 6.228 12 6.253z"/>
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
     </svg>
-    <h3 class="font-semibold text-gray-700">Filter by Subject</h3>
+    <h3 class="font-semibold text-gray-700">Filter Exams</h3>
   </div>
   
-  <form method="GET" class="flex flex-col gap-3">
-    <div class="flex flex-row gap-3">
-      <div class="flex-1 w-full">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Select Subject</label>
-        <select name="subject_filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#851A10]/10 focus:border-[#851A10]">
-          <option value="">All Subjects</option>
-          {% for subject in all_subjects %}
-            <option value="{{ subject.pk }}" {% if selected_subject_id|stringformat:"s" == subject.pk|stringformat:"s" %}selected{% endif %}>
-              {% if subject.class_arms %}
-                {{ subject.name }} ({% for ca in subject.class_arms %}{{ ca.level.name }} {{ ca.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
-              {% else %}
-                {{ subject.name }}
-              {% endif %}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-      
-      <div class="flex-1 w-full">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Exam Status</label>
-        <select name="status_filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#851A10]/10 focus:border-[#851A10]">
-          <option value="">All Status</option>
-          <option value="AWAITING_APPROVAL" {% if selected_status == 'AWAITING_APPROVAL' %}selected{% endif %}>⏳ Awaiting Approval</option>
-          <option value="APPROVED" {% if selected_status == 'APPROVED' %}selected{% endif %}>✓ Approved</option>
-          <option value="REJECTED" {% if selected_status == 'REJECTED' %}selected{% endif %}>✗ Rejected</option>
-        </select>
-      </div>
+  <form method="GET" class="flex flex-wrap items-end gap-3">
+    <!-- Period Filters -->
+    <div class="flex-1 min-w-[160px]">
+      <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Session</label>
+      <select name="session" onchange="this.form.submit()" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#851A10]/10 focus:border-[#851A10] transition cursor-pointer">
+        <option value="">All Sessions</option>
+        {% for s in available_sessions %}
+          <option value="{{ s.id }}" {% if s.id|stringformat:"s" == selected_session_id %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="flex-1 min-w-[140px]">
+      <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Term</label>
+      <select name="term" onchange="this.form.submit()" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#851A10]/10 focus:border-[#851A10] transition cursor-pointer">
+        <option value="">All Terms</option>
+        {% for t in available_terms %}
+          <option value="{{ t.id }}" {% if t.id|stringformat:"s" == selected_term_id %}selected{% endif %}>{{ t.get_name_display }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Content Filters -->
+    <div class="flex-1 min-w-[180px]">
+      <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Subject</label>
+      <select name="subject_filter" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#851A10]/10 focus:border-[#851A10] transition cursor-pointer">
+        <option value="">All Subjects</option>
+        {% for subject in all_subjects %}
+          <option value="{{ subject.pk }}" {% if selected_subject_id|stringformat:"s" == subject.pk|stringformat:"s" %}selected{% endif %}>
+            {{ subject.name }}
+          </option>
+        {% endfor %}
+      </select>
     </div>
     
-    <div class="flex gap-2 justify-center">
-      <button type="submit" class="px-4 py-2 bg-[#851A10] text-white rounded-lg text-xs font-medium hover:opacity-90 transition">
-        Apply Filter
+    <div class="flex-1 min-w-[160px]">
+      <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Status</label>
+      <select name="status_filter" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#851A10]/10 focus:border-[#851A10] transition cursor-pointer">
+        <option value="">All Status</option>
+        <option value="AWAITING_APPROVAL" {% if selected_status == 'AWAITING_APPROVAL' %}selected{% endif %}>⏳ Awaiting Approval</option>
+        <option value="APPROVED" {% if selected_status == 'APPROVED' %}selected{% endif %}>✓ Approved</option>
+        <option value="REJECTED" {% if selected_status == 'REJECTED' %}selected{% endif %}>✗ Rejected</option>
+      </select>
+    </div>
+    
+    <div class="flex items-center gap-2 pb-0.5 mt-6">
+      <button type="submit" class="px-6 py-2 bg-[#851A10] text-white rounded-lg text-xs font-bold hover:opacity-90 transition shadow-sm whitespace-nowrap">
+        Apply
       </button>
-      {% if selected_subject_id or selected_status %}
-        <a href="{% url 'examinations:examiner_dashboard' %}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition text-center">
-          Clear All
+      {% if selected_subject_id or selected_status or selected_session_id or selected_term_id %}
+        <a href="{% url 'examinations:examiner_dashboard' %}" class="px-3 py-2.5 bg-gray-100 text-gray-500 rounded-lg text-xs font-bold hover:bg-gray-200 transition text-center whitespace-nowrap" title="Clear Filters">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
         </a>
       {% endif %}
     </div>

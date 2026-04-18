@@ -4,6 +4,8 @@ from django.contrib import messages
 from django.http import JsonResponse
 from accounts.decorators import admin_staff_required
 from .models import AcademicSession, Term, ClassLevel, ClassArm, Subject, ClassArmSubject, SubjectTeacherAssignment
+from django.db.models import Q
+from django.core.paginator import Paginator
 from .forms import (
     AcademicSessionForm, TermForm, ClassLevelForm,
     ClassArmForm, SubjectForm, SubjectTeacherAssignmentForm,
@@ -85,14 +87,31 @@ def session_delete(request, pk):
 
 # ── TERMS ─────────────────────────────────────────────────────
 
+from django.core.paginator import Paginator
+
 @login_required
 @admin_staff_required
 def term_list(request):
     current_session = AcademicSession.get_current()
-    terms = Term.objects.select_related('session').all().order_by('-session__start_date', 'name')
+    selected_session_id = request.GET.get('session')
+    
+    terms_list = Term.objects.select_related('session').all().order_by('-session__start_date', 'name')
+    
+    if selected_session_id:
+        terms_list = terms_list.filter(session_id=selected_session_id)
+        
+    available_sessions = AcademicSession.objects.all().order_by('-start_date')
+    
+    paginator = Paginator(terms_list, 10)  # Show 10 terms per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     return render(request, 'academics/term_list.html', {
-        'terms': terms,
+        'page_obj': page_obj,
+        'terms': page_obj,  # Keep 'terms' for easy backward compatibility if needed, but we'll use page_obj
         'current_session': current_session,
+        'available_sessions': available_sessions,
+        'selected_session': selected_session_id,
         'page_title': 'Terms'
     })
 
@@ -240,38 +259,55 @@ def class_arm_edit(request, pk):
 @admin_staff_required
 def subject_list(request):
     form = SubjectSearchForm(request.GET or None)
-    subjects = Subject.objects.all().prefetch_related('class_arms__class_arm')
+    
+    # Base queryset for offerings
+    offerings = ClassArmSubject.objects.select_related(
+        'subject', 'class_level'
+    ).order_by('class_level__order', 'arm_name', 'subject__name')
     
     if form.is_valid():
         query = form.cleaned_data.get('query')
-        class_arm = form.cleaned_data.get('class_arm')
+        class_level_filter = form.cleaned_data.get('class_level')
         status = form.cleaned_data.get('status')
         
         if query:
-            from django.db.models import Q
-            subjects = subjects.filter(
-                Q(name__icontains=query) |
-                Q(code__icontains=query)
+            offerings = offerings.filter(
+                Q(subject__name__icontains=query) |
+                Q(subject__code__icontains=query)
             )
             
-        if class_arm:
-            subjects = subjects.filter(class_arms__class_arm=class_arm)
+        if class_level_filter:
+            offerings = offerings.filter(class_level=class_level_filter)
             
         if status:
             if status == 'active':
-                subjects = subjects.filter(is_active=True)
+                offerings = offerings.filter(subject__is_active=True)
             elif status == 'inactive':
-                subjects = subjects.filter(is_active=False)
+                offerings = offerings.filter(subject__is_active=False)
                 
-    subjects = subjects.distinct()
-    
-    current_session = AcademicSession.get_current()
-    class_arms = ClassArm.objects.filter(session=current_session).select_related('level').order_by('level__order', 'name') if current_session else ClassArm.objects.none()
+    # Group offerings by (class_level, arm_name)
+    from collections import defaultdict
+    class_groups = defaultdict(list)
+    for off in offerings:
+        key = (off.class_level, off.arm_name)
+        class_groups[key].append(off)
+        
+    # Convert to list of dicts for template
+    class_list = []
+    for (level, arm), items in class_groups.items():
+        class_list.append({
+            'level': level,
+            'arm': arm,
+            'subjects': items,
+            'count': len(items)
+        })
+        
+    class_levels = ClassLevel.objects.all().order_by('order')
     
     return render(request, 'academics/subject_list.html', {
-        'subjects': subjects,
+        'class_list': class_list,
         'form': form,
-        'class_arms': class_arms,
+        'class_levels': class_levels,
         'page_title': 'Subjects'
     })
 
@@ -373,19 +409,44 @@ from .forms import SubjectTeacherAssignmentForm
 @login_required
 @admin_staff_required
 def assignment_list(request):
-    current_session = AcademicSession.get_current()
-    current_term = Term.get_current()
-    assignments = SubjectTeacherAssignment.objects.filter(
-        session=current_session,
-        term=current_term
-    ).select_related(
-        'teacher', 'subject', 'class_arm', 'session', 'term'
-    ).order_by('class_arm__level__order', 'class_arm__name', 'subject__name')
+    query = request.GET.get('q', '').strip()
+    
+    assignments = SubjectTeacherAssignment.objects.select_related(
+        'teacher', 'subject', 'class_level'
+    ).order_by('teacher__first_name', 'teacher__last_name', 'class_level__order', 'subject__name')
+
+    if query:
+        assignments = assignments.filter(
+            Q(teacher__first_name__icontains=query) |
+            Q(teacher__last_name__icontains=query) |
+            Q(subject__name__icontains=query) |
+            Q(class_level__name__icontains=query) |
+            Q(arm_name__icontains=query)
+        ).distinct()
+
+    # Group assignments by teacher for a neater display
+    from collections import defaultdict
+    grouped_assignments = defaultdict(list)
+    for assignment in assignments:
+        grouped_assignments[assignment.teacher].append(assignment)
+
+    # Convert to list of dicts for easier template iteration
+    teacher_list = []
+    for teacher, teacher_assigns in grouped_assignments.items():
+        teacher_list.append({
+            'teacher': teacher,
+            'assignments': teacher_assigns,
+            'count': len(teacher_assigns)
+        })
+
+    # Paginate the grouped teacher list
+    paginator = Paginator(teacher_list, 15)  # 15 teachers per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
     return render(request, 'academics/assignment_list.html', {
-        'assignments': assignments,
-        'current_session': current_session,
-        'current_term': current_term,
+        'page_obj': page_obj,
+        'query': query,
         'page_title': 'Subject-Teacher Assignments'
     })
 
@@ -393,8 +454,6 @@ def assignment_list(request):
 @login_required
 @admin_staff_required
 def assignment_create(request):
-    current_session = AcademicSession.get_current()
-    current_term = Term.get_current()
     form = SubjectTeacherAssignmentForm(request.POST or None)
     if form.is_valid():
         try:
@@ -402,14 +461,11 @@ def assignment_create(request):
             messages.success(request, 'Assignment created successfully.')
             return redirect('academics:assignment_list')
         except IntegrityError:
-            messages.error(request, 'This teacher is already assigned to this subject in the selected class for the current session and term.')
+            messages.error(request, 'This subject is already assigned to a teacher in the selected class.')
     return render(request, 'academics/assignment_form.html', {
         'form': form,
         'page_title': 'Assign Subject Teacher',
         'back_url': 'academics:assignment_list',
-        'current_session': current_session,
-        'current_term': current_term,
-        'session_info': f'for {current_session} - {current_term}'
     })
 
 
@@ -429,9 +485,6 @@ def assignment_edit(request, pk):
         'form': form,
         'page_title': 'Edit Subject Teacher Assignment',
         'back_url': 'academics:assignment_list',
-        'current_session': assignment.session,
-        'current_term': assignment.term,
-        'session_info': f'for {assignment.session} - {assignment.term}'
     })
 
 
@@ -448,33 +501,29 @@ def assignment_delete(request, pk):
 @login_required
 @admin_staff_required
 def ajax_available_subjects(request):
-    """API endpoint to fetch subjects available for assignment in a class arm"""
+    """API endpoint to fetch subjects available for assignment in a class arm (Level + Arm)"""
     class_arm_id = request.GET.get('class_arm')
     assignment_id = request.GET.get('assignment_id')  # For editing
     
     if not class_arm_id:
         return JsonResponse({'error': 'Missing class_arm parameter'}, status=400)
     
-    current_session = AcademicSession.get_current()
-    current_term = Term.get_current()
-    
-    if not current_session or not current_term:
-        return JsonResponse({'error': 'No active session/term'}, status=400)
-    
     try:
-        # Get the class arm
+        # Get the class arm to extract Level and Arm
         class_arm = ClassArm.objects.get(pk=class_arm_id)
+        class_level = class_arm.level
+        arm_name = class_arm.name
         
-        # Get subjects available for this class arm (via ClassArmSubject relationship)
+        # Get subjects available for this class Level+Arm (via ClassArmSubject relationship)
         available_subjects_for_arm = ClassArmSubject.objects.filter(
-            class_arm=class_arm
+            class_level=class_level,
+            arm_name=arm_name
         ).values_list('subject_id', flat=True)
         
-        # Get subjects already assigned to ANY teacher in this class
+        # Get subjects already assigned to ANY teacher in this class Level+Arm
         assigned_subject_ids = SubjectTeacherAssignment.objects.filter(
-            class_arm_id=class_arm_id,
-            session=current_session,
-            term=current_term
+            class_level=class_level,
+            arm_name=arm_name
         ).values_list('subject_id', flat=True)
         
         # If editing, exclude the current assignment's subject from the exclusion list
@@ -485,10 +534,7 @@ def ajax_available_subjects(request):
             except SubjectTeacherAssignment.DoesNotExist:
                 pass
         
-        # Get subjects that are:
-        # 1. Available for this class arm
-        # 2. Not already assigned to any teacher
-        # 3. Active
+        # Get subjects that are active and available
         available_subjects = Subject.objects.filter(
             id__in=available_subjects_for_arm,
             is_active=True
@@ -502,5 +548,7 @@ def ajax_available_subjects(request):
         })
     except ClassArm.DoesNotExist:
         return JsonResponse({'error': 'Invalid class arm'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)

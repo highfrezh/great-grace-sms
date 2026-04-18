@@ -124,14 +124,10 @@ class ClassArmForm(forms.ModelForm):
 
 
 class SubjectForm(forms.ModelForm):
-    class_arms = forms.ModelMultipleChoiceField(
-        queryset=ClassArm.objects.all().select_related('level').order_by('level__order', 'name'),
-        widget=forms.SelectMultiple(attrs={'class': 'form-input', 'size': 8}),
-        required=True,
-        label="Classes",
-        help_text="Hold Ctrl/Cmd to select multiple classes"
-    )
-
+    # We'll use a simplified approach: just manage the subject itself here.
+    # The links to classes (ClassArmSubject) should be managed via a separate view or more advanced form.
+    # For now, I'll remove the session-bound class_arms selection to fix the breakage.
+    
     class Meta:
         model = Subject
         fields = ['name', 'description', 'is_active']
@@ -149,41 +145,21 @@ class SubjectForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Pre-populate class_arms field when editing
-        if self.instance and self.instance.pk:
-            # Get all ClassArmSubject entries for this subject
-            class_arms = ClassArmSubject.objects.filter(
-                subject=self.instance
-            ).values_list('class_arm_id', flat=True)
-            self.fields['class_arms'].initial = list(class_arms)
 
     def save(self, commit=True):
-        instance = super().save(commit=commit)
-        
-        if commit:
-            # Get selected class arms
-            class_arms = self.cleaned_data.get('class_arms', [])
-            
-            # Clear existing ClassArmSubject entries for this subject
-            ClassArmSubject.objects.filter(subject=instance).delete()
-            
-            # Create ClassArmSubject entries for all selected class arms
-            for class_arm in class_arms:
-                ClassArmSubject.objects.create(
-                    subject=instance,
-                    class_arm=class_arm,
-                    is_compulsory=True
-                )
-        
-        return instance
+        return super().save(commit=commit)
 
 
 class SubjectTeacherAssignmentForm(forms.ModelForm):
     class Meta:
         model = SubjectTeacherAssignment
-        fields = ['class_arm', 'subject', 'teacher']
+        fields = ['class_level', 'arm_name', 'subject', 'teacher']
         widgets = {
-            'class_arm': forms.Select(attrs={'class': 'form-input'}),
+            'class_level': forms.Select(attrs={'class': 'form-input'}),
+            'arm_name': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'e.g. A, B, or Science'
+            }),
             'subject': forms.Select(attrs={'class': 'form-input'}),
             'teacher': forms.Select(attrs={'class': 'form-input'}),
         }
@@ -198,104 +174,42 @@ class SubjectTeacherAssignmentForm(forms.ModelForm):
             ]
         ).distinct()
         
-        # Filter out subjects already assigned to this teacher for current session/term
-        self._filter_available_subjects()
+        # In a real app, we might want to filter subjects based on class_level
+        # but since subjects are now globally offered or per-level+arm, 
+        # we can just show all active subjects or provide a simpler filter.
+        self.fields['subject'].queryset = Subject.objects.filter(is_active=True).order_by('name')
 
     def _filter_available_subjects(self):
-        """Filter subjects based on class arm, excluding already assigned subjects"""
-        # Get cleaned data if form was submitted, otherwise use initial data or instance
-        class_arm = self.data.get('class_arm')
-        
-        # If not submitted, try to get from initial or instance
-        if not class_arm:
-            class_arm = self.initial.get('class_arm') or (self.instance.class_arm_id if self.instance and self.instance.pk else None)
-        
-        if not class_arm:
-            # No class_arm selected yet - show empty dropdown
-            self.fields['subject'].queryset = Subject.objects.none()
-            self.fields['subject'].empty_label = "Select Class first"
-            return
-        
-        # Get the class arm instance
-        try:
-            class_arm_instance = ClassArm.objects.get(pk=class_arm)
-        except (ClassArm.DoesNotExist, ValueError, TypeError):
-            self.fields['subject'].queryset = Subject.objects.none()
-            self.fields['subject'].empty_label = "Invalid class selected"
-            return
-        
-        # Get subjects available for this class arm (via ClassArmSubject relationship)
-        available_subjects_for_arm = ClassArmSubject.objects.filter(
-            class_arm=class_arm_instance
-        ).values_list('subject_id', flat=True)
-        
-        # Get ALREADY ASSIGNED subjects to ANY teacher in this class (not just current teacher)
-        current_session = AcademicSession.get_current()
-        current_term = Term.get_current()
-        
-        if current_session and current_term:
-            assigned_subject_ids = SubjectTeacherAssignment.objects.filter(
-                class_arm_id=class_arm,
-                session=current_session,
-                term=current_term
-            ).values_list('subject_id', flat=True)
-            
-            # If editing an existing assignment, include the current subject in available options
-            if self.instance and self.instance.pk:
-                assigned_subject_ids = [sid for sid in assigned_subject_ids if sid != self.instance.subject_id]
-        else:
-            assigned_subject_ids = []
-        
-        # Show only subjects that are:
-        # 1. Available for this class arm
-        # 2. Not already assigned to ANY teacher in this class
-        # 3. Active
-        self.fields['subject'].queryset = Subject.objects.filter(
-            id__in=available_subjects_for_arm,
-            is_active=True
-        ).exclude(
-            id__in=assigned_subject_ids
-        ).order_by('name')
+        """Deprecated: Logic should move to a more session-agnostic validation if needed"""
+        pass
 
     def clean(self):
         """Validate that subject isn't already assigned to another teacher in this class"""
         cleaned_data = super().clean()
         subject = cleaned_data.get('subject')
-        class_arm = cleaned_data.get('class_arm')
+        class_level = cleaned_data.get('class_level')
+        arm_name = cleaned_data.get('arm_name')
         
-        if subject and class_arm:
-            current_session = AcademicSession.get_current()
-            current_term = Term.get_current()
+        if subject and class_level and arm_name:
+            # Check if this subject is already assigned to another teacher in this class Level+Arm
+            existing_assignment = SubjectTeacherAssignment.objects.filter(
+                subject=subject,
+                class_level=class_level,
+                arm_name=arm_name
+            )
             
-            if current_session and current_term:
-                # Check if this subject is already assigned to another teacher in this class
-                existing_assignment = SubjectTeacherAssignment.objects.filter(
-                    subject=subject,
-                    class_arm=class_arm,
-                    session=current_session,
-                    term=current_term
+            # If editing, exclude the current assignment
+            if self.instance and self.instance.pk:
+                existing_assignment = existing_assignment.exclude(pk=self.instance.pk)
+            
+            if existing_assignment.exists():
+                teacher = existing_assignment.first().teacher
+                other_teacher = teacher.get_full_name() or teacher.username
+                raise forms.ValidationError(
+                    f"This subject is already assigned to {other_teacher} in {class_level} {arm_name}."
                 )
-                
-                # If editing, exclude the current assignment
-                if self.instance and self.instance.pk:
-                    existing_assignment = existing_assignment.exclude(pk=self.instance.pk)
-                
-                if existing_assignment.exists():
-                    other_teacher = existing_assignment.first().teacher.get_full_name() or existing_assignment.first().teacher.username
-                    raise forms.ValidationError(
-                        f"This subject is already assigned to {other_teacher} in this class for this session/term."
-                    )
         
         return cleaned_data
-
-    def save(self, commit=True):
-        """Auto-set session and term to current values"""
-        instance = super().save(commit=False)
-        instance.session = AcademicSession.get_current()
-        instance.term = Term.get_current()
-        if commit:
-            instance.save()
-        return instance
 
 
 class SubjectSearchForm(forms.Form):
@@ -316,10 +230,10 @@ class SubjectSearchForm(forms.Form):
             'style': 'padding-left: 2.5rem;'
         })
     )
-    class_arm = forms.ModelChoiceField(
-        queryset=ClassArm.objects.none(),
+    class_level = forms.ModelChoiceField(
+        queryset=ClassLevel.objects.all().order_by('order'),
         required=False,
-        empty_label="All Classes",
+        empty_label="All Levels",
         widget=forms.Select(attrs={'class': 'form-input'})
     )
     status = forms.ChoiceField(
@@ -330,9 +244,4 @@ class SubjectSearchForm(forms.Form):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Fetch class arms for the current session to populate the dropdown
-        current_session = AcademicSession.get_current()
-        if current_session:
-            self.fields['class_arm'].queryset = ClassArm.objects.filter(
-                session=current_session
-            ).select_related('level').order_by('level__order', 'name')
+        # Removed session-specific filtering logic as it's no longer needed for permanent mapping
