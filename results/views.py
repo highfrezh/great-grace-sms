@@ -1031,7 +1031,23 @@ def class_performance_summary_api(request, class_arm_id):
     ).select_related('student').order_by('-average')
 
     if not report_cards.exists():
-        return JsonResponse({'success': True, 'hasData': False, 'stats': {}, 'students': [], 'subjects': [], 'subjectPerformance': [], 'gradeDistribution': {}})
+        # Fallback for empty data
+        total_students = StudentEnrollment.objects.filter(class_arm_id=class_arm_id, session_id=session_id, is_active=True).count()
+        return JsonResponse({
+            'success': True, 
+            'hasData': False, 
+            'stats': {
+                'totalStudents': total_students,
+                'classAverage': 0,
+                'passRate': 0,
+                'topStudent': {'name': '-', 'score': 0},
+                'bottomStudent': {'name': '-', 'score': 0}
+            }, 
+            'students': [], 
+            'subjects': [], 
+            'subjectPerformance': [], 
+            'gradeDistribution': {'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0}
+        })
 
     # 2. Stats Calculation
     total_students = StudentEnrollment.objects.filter(class_arm_id=class_arm_id, session_id=session_id, is_active=True).count()

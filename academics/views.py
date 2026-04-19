@@ -94,11 +94,14 @@ from django.core.paginator import Paginator
 def term_list(request):
     current_session = AcademicSession.get_current()
     selected_session_id = request.GET.get('session')
-    
     terms_list = Term.objects.select_related('session').all().order_by('-session__start_date', 'name')
-    
+
     if selected_session_id:
         terms_list = terms_list.filter(session_id=selected_session_id)
+    elif selected_session_id is None and current_session:
+        # Default to current session ONLY on first load (when 'session' param is missing)
+        terms_list = terms_list.filter(session=current_session)
+        selected_session_id = str(current_session.id)
         
     available_sessions = AcademicSession.objects.all().order_by('-start_date')
     
@@ -207,14 +210,17 @@ def class_level_edit(request, pk):
 @admin_staff_required
 def class_arm_list(request):
     current_session = AcademicSession.get_current()
+    sessions = AcademicSession.objects.all().order_by('-start_date')
     class_arms = ClassArm.objects.filter(
         session=current_session
     ).select_related(
         'level', 'class_teacher', 'session'
     ) if current_session else ClassArm.objects.none()
+    
     return render(request, 'academics/class_arm_list.html', {
         'class_arms': class_arms,
         'current_session': current_session,
+        'sessions': sessions,
         'page_title': 'Classes'
     })
 
@@ -550,5 +556,60 @@ def ajax_available_subjects(request):
         return JsonResponse({'error': 'Invalid class arm'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@admin_staff_required
+def duplicate_classes(request):
+    """View to clone classes from one session to another."""
+    sessions = AcademicSession.objects.all().order_by('-start_date')
+    current_session = AcademicSession.get_current()
+
+    if request.method == 'POST':
+        from_session_id = request.POST.get('from_session')
+        to_session_id = request.POST.get('to_session')
+        copy_teachers = request.POST.get('copy_teachers') == 'on'
+
+        if from_session_id == to_session_id:
+            messages.error(request, 'Source and target sessions must be different.')
+            return redirect('academics:duplicate_classes')
+
+        from_session = get_object_or_404(AcademicSession, id=from_session_id)
+        to_session = get_object_or_404(AcademicSession, id=to_session_id)
+
+        source_classes = ClassArm.objects.filter(session=from_session)
+        created_count = 0
+        skipped_count = 0
+
+        for source_class in source_classes:
+            # Check if class already exists in target session
+            exists = ClassArm.objects.filter(
+                level=source_class.level,
+                name=source_class.name,
+                session=to_session
+            ).exists()
+
+            if not exists:
+                ClassArm.objects.create(
+                    level=source_class.level,
+                    name=source_class.name,
+                    session=to_session,
+                    capacity=source_class.capacity,
+                    class_teacher=source_class.class_teacher if copy_teachers else None
+                )
+                created_count += 1
+            else:
+                skipped_count += 1
+
+        if created_count > 0:
+            messages.success(request, f'Successfully created {created_count} classes in {to_session.name}.')
+        if skipped_count > 0:
+            messages.info(request, f'{skipped_count} classes were skipped because they already exist.')
+            
+        return redirect('academics:class_arm_list')
+
+    return render(request, 'academics/duplicate_classes.html', {
+        'sessions': sessions,
+        'current_session': current_session,
+        'page_title': 'Duplicate Classes'
+    })

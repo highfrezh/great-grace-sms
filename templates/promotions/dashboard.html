@@ -1,0 +1,341 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Student Promotions — Great Grace SMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .promo-card {
+        background: white;
+        border-radius: 1.5rem;
+        border: 1px solid #F3F4F6;
+        overflow: hidden;
+        transition: all 0.2s ease;
+    }
+    
+    .promo-header {
+        background: linear-gradient(135deg, #851A10 0%, #A52318 100%);
+        padding: 1.5rem 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .promo-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 200px;
+        height: 200px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+    }
+    
+    .promo-header::after {
+        content: '';
+        position: absolute;
+        bottom: -30%;
+        left: -10%;
+        width: 150px;
+        height: 150px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 50%;
+    }
+    
+    .promo-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 0.5rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .promo-subtitle {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.875rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .step-card {
+        background: white;
+        border-radius: 1rem;
+        padding: 1rem;
+        transition: all 0.2s ease;
+        height: 100%;
+    }
+    
+    .step-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .step-icon {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.75rem;
+    }
+    
+    .step-icon-red { background: #FEF2F2; color: #851A10; }
+    .step-icon-blue { background: #EFF6FF; color: #3B82F6; }
+    .step-icon-green { background: #F0FDF4; color: #059669; }
+    
+    .step-title {
+        font-size: 0.875rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .step-desc {
+        font-size: 0.75rem;
+        color: #6B7280;
+        line-height: 1.4;
+    }
+    
+    .form-select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background: #F9FAFB;
+        border: 1.5px solid #E5E7EB;
+        border-radius: 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+        transition: all 0.2s ease;
+        outline: none;
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 1.25rem;
+    }
+    
+    .form-select:focus {
+        border-color: #851A10;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(133, 26, 16, 0.1);
+    }
+    
+    .form-label {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #6B7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-hint {
+        font-size: 0.65rem;
+        color: #9CA3AF;
+        margin-top: 0.375rem;
+    }
+    
+    .alert-warning {
+        background: #FEF3C7;
+        border-left: 4px solid #F59E0B;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .alert-title {
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: #92400E;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+    }
+    
+    .alert-message {
+        font-size: 0.75rem;
+        color: #78350F;
+    }
+    
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.875rem 1.5rem;
+        background: linear-gradient(135deg, #851A10 0%, #A52318 100%);
+        color: white;
+        font-weight: 700;
+        font-size: 0.875rem;
+        border-radius: 0.75rem;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(133, 26, 16, 0.3);
+    }
+    
+    .btn-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    @media (max-width: 768px) {
+        .promo-header {
+            padding: 1.25rem;
+        }
+        
+        .promo-title {
+            font-size: 1.25rem;
+        }
+        
+        .info-grid {
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-6 px-4">
+    
+    <!-- Main Card -->
+    <div class="promo-card">
+        <!-- Header -->
+        <div class="promo-header">
+            <h1 class="promo-title">Student Promotion Tool</h1>
+            <p class="promo-subtitle">Advance students to the next session based on their cumulative performance</p>
+        </div>
+        
+        <!-- Body -->
+        <div class="p-6">
+            {% if not next_session %}
+            <div class="alert-warning">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div>
+                        <p class="alert-title">Attention Required</p>
+                        <p class="alert-message">
+                            No upcoming academic session found after <strong>{{ current_session.name }}</strong>. 
+                            Please create the next session in the Academics settings before proceeding.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <form method="POST" class="space-y-6">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Source Class -->
+                    <div class="space-y-2">
+                        <label class="form-label">
+                            1. Select Source Class
+                        </label>
+                        <select name="source_class" required class="form-select" {% if not next_session %}disabled{% endif %}>
+                            <option value="">-- Choose Class --</option>
+                            {% for arm in class_arms %}
+                                <option value="{{ arm.id }}">{{ arm.full_name }} ({{ arm.session.name }})</option>
+                            {% endfor %}
+                        </select>
+                        <p class="form-hint">Choose the class you want to promote students FROM</p>
+                    </div>
+
+                    <!-- Target Session -->
+                    <div class="space-y-2">
+                        <label class="form-label">
+                            2. Select Target Session
+                        </label>
+                        <select name="target_session" required class="form-select" {% if not next_session %}disabled{% endif %}>
+                            {% for session in sessions %}
+                                <option value="{{ session.id }}" {% if next_session and session.id == next_session.id %}selected{% endif %}>
+                                    {{ session.name }} {% if session.is_current %}(Current){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <p class="form-hint">Choose the academic session they are moving TO</p>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="pt-4 border-t border-gray-100 flex justify-end">
+                    <button type="submit" class="btn-primary" {% if not next_session %}disabled{% endif %}>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                        Generate Promotion Worksheet
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Steps Info Cards -->
+    <div class="info-grid">
+        <div class="step-card">
+            <div class="step-icon step-icon-red">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+            </div>
+            <h3 class="step-title" style="color:#851A10;">Step 1: Select Source</h3>
+            <p class="step-desc">Select the class from the current session that has finished their 3rd term.</p>
+        </div>
+        
+        <div class="step-card">
+            <div class="step-icon step-icon-blue">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <h3 class="step-title" style="color:#3B82F6;">Step 2: Review & Verify</h3>
+            <p class="step-desc">Review cumulative performance and verify promotion decisions for each student.</p>
+        </div>
+        
+        <div class="step-card">
+            <div class="step-icon step-icon-green">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+            </div>
+            <h3 class="step-title" style="color:#059669;">Step 3: Apply Promotion</h3>
+            <p class="step-desc">Apply in bulk to create new enrollments in the target session automatically.</p>
+        </div>
+    </div>
+    
+    <!-- Additional Info -->
+    <div class="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
+        <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div>
+                <p class="text-xs font-bold text-blue-800 uppercase tracking-wide">Important Note</p>
+                <p class="text-xs text-blue-700 mt-1">
+                    Students will be promoted based on their cumulative average across all three terms. 
+                    Those who fail to meet the promotion criteria will be flagged for review.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,387 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Promotion Worksheet — {{ source_class.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .worksheet-card {
+        background: white;
+        border-radius: 1rem;
+        border: 1px solid #F3F4F6;
+        overflow: hidden;
+    }
+    
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .breadcrumb-link {
+        color: #6B7280;
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+    
+    .breadcrumb-link:hover {
+        color: #851A10;
+    }
+    
+    .breadcrumb-current {
+        color: #851A10;
+        font-weight: 600;
+    }
+    
+    .stat-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.5rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
+    
+    .stat-promotable {
+        background: #DCFCE7;
+        color: #166534;
+    }
+    
+    .stat-graduate {
+        background: #DBEAFE;
+        color: #1E40AF;
+    }
+    
+    .stat-repeat {
+        background: #FEE2E2;
+        color: #991B1B;
+    }
+    
+    .student-avatar {
+        width: 2.5rem;
+        height: 2.5rem;
+        background: #FEF2F2;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.875rem;
+        color: #851A10;
+    }
+    
+    .form-select-sm {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        background: white;
+        border: 1.5px solid #E5E7EB;
+        border-radius: 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #374151;
+        transition: all 0.2s ease;
+        outline: none;
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        background-size: 1rem;
+    }
+    
+    .form-select-sm:focus {
+        border-color: #851A10;
+        box-shadow: 0 0 0 3px rgba(133, 26, 16, 0.1);
+    }
+    
+    .action-footer {
+        background: #F9FAFB;
+        border-radius: 1rem;
+        padding: 1rem 1.5rem;
+        border: 1px solid #E5E7EB;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+    
+    .btn-finalize {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.875rem 2rem;
+        background: linear-gradient(135deg, #851A10 0%, #A52318 100%);
+        color: white;
+        font-weight: 700;
+        font-size: 0.875rem;
+        border-radius: 0.75rem;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+        width: 100%;
+    }
+    
+    .btn-finalize:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(133, 26, 16, 0.3);
+    }
+    
+    .info-alert {
+        background: #EFF6FF;
+        border-left: 4px solid #3B82F6;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .score-high {
+        color: #059669;
+        font-weight: 800;
+    }
+    
+    .score-low {
+        color: #DC2626;
+        font-weight: 800;
+    }
+    
+    .warning-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.125rem 0.5rem;
+        background: #FEF3C7;
+        border-radius: 0.5rem;
+        font-size: 0.6rem;
+        font-weight: 700;
+        color: #92400E;
+    }
+    
+    @media (min-width: 768px) {
+        .action-footer {
+            flex-direction: row;
+        }
+        
+        .btn-finalize {
+            width: auto;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-6 px-4">
+    
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+            <div class="breadcrumb">
+                <a href="{% url 'promotions:promotion_dashboard' %}" class="breadcrumb-link">Promotions</a>
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <span class="breadcrumb-current">Worksheet</span>
+            </div>
+            <div class="flex items-center gap-3 mt-2">
+                <div class="w-1 h-8 rounded-full" style="background:#851A10;"></div>
+                <h1 class="text-2xl font-bold" style="color:#635E57;">Promotion Worksheet</h1>
+            </div>
+            <p class="text-sm text-gray-500 ml-4 mt-1">
+                Reviewing <span class="font-semibold" style="color:#851A10;">{{ source_class.full_name }}</span> ({{ source_class.session.name }}) 
+                → Moving to <span class="font-semibold text-blue-600">{{ target_session.name }}</span>
+            </p>
+        </div>
+        
+        <div class="flex gap-3">
+            <a href="{% url 'promotions:promotion_dashboard' %}" class="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+                Cancel
+            </a>
+            <button type="submit" form="promotionForm" class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#851A10] text-white text-sm font-bold rounded-xl hover:bg-[#6B140C] transition shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Finalize & Apply
+            </button>
+        </div>
+    </div>
+
+    <!-- Info Alert -->
+    <div class="info-alert">
+        <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div>
+                <p class="text-sm font-semibold text-blue-800">Pro-Tip</p>
+                <p class="text-xs text-blue-700 mt-1">
+                    The system uses a pass mark of <strong class="font-bold">50.0%</strong> to suggest promotion. 
+                    You can manually override any decision using the dropdowns below.
+                    Students with fewer than 3 term results are flagged.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Worksheet Table -->
+    <form id="promotionForm" method="POST" action="{% url 'promotions:process_bulk_promotion' %}">
+        {% csrf_token %}
+        <input type="hidden" name="source_class_id" value="{{ source_class.id }}">
+        <input type="hidden" name="target_session_id" value="{{ target_session.id }}">
+
+        <div class="worksheet-card">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 border-b border-gray-100">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Student</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Session Avg</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Recommendation</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Decision</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Target Class</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for item in worksheet_data %}
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="student-avatar">
+                                        {{ item.student.first_name|first }}{{ item.student.last_name|first }}
+                                    </div>
+                                    <div>
+                                        <div class="font-semibold text-gray-800">{{ item.student.full_name }}</div>
+                                        <div class="text-xs text-gray-400 font-mono">{{ item.student.admission_number }}</div>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="student_ids" value="{{ item.student.id }}">
+                                <input type="hidden" name="avg_{{ item.student.id }}" value="{{ item.sessional_avg }}">
+                            </td>
+                            
+                            <td class="px-6 py-4 text-center">
+                                <div class="text-xl font-bold {% if item.sessional_avg >= 50 %}score-high{% else %}score-low{% endif %}">
+                                    {{ item.sessional_avg|floatformat:1 }}%
+                                </div>
+                                <div class="flex items-center justify-center gap-1 mt-1">
+                                    <span class="text-xs text-gray-400">{{ item.results_count }}/3 Terms</span>
+                                    {% if item.results_count < 3 %}
+                                    <span class="warning-badge">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        Incomplete
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            
+                            <td class="px-6 py-4 text-center">
+                                {% if item.proposed_status == 'PROMOTED' %}
+                                <span class="stat-badge stat-promotable">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    Promotable
+                                </span>
+                                {% elif item.proposed_status == 'GRADUATED' %}
+                                <span class="stat-badge stat-graduate">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                    </svg>
+                                    Graduate
+                                </span>
+                                {% else %}
+                                <span class="stat-badge stat-repeat">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    Repeat
+                                </span>
+                                {% endif %}
+                            </td>
+                            
+                            <td class="px-6 py-4">
+                                <select name="decision_{{ item.student.id }}" class="form-select-sm">
+                                    <option value="PROMOTED" {% if item.proposed_status == 'PROMOTED' %}selected{% endif %}>✅ Promoted</option>
+                                    <option value="PROMOTED_TRIAL" {% if item.proposed_status == 'PROMOTED_TRIAL' %}selected{% endif %}>⚠️ Promoted on Trial</option>
+                                    <option value="REPEATED" {% if item.proposed_status == 'REPEATED' %}selected{% endif %}>🔄 Repeat Class</option>
+                                    <option value="GRADUATED" {% if item.proposed_status == 'GRADUATED' %}selected{% endif %}>🎓 Graduate</option>
+                                    <option value="WITHDRAWN" {% if item.proposed_status == 'WITHDRAWN' %}selected{% endif %}>📤 Withdrawn</option>
+                                </select>
+                            </td>
+                            
+                            <td class="px-6 py-4">
+                                <select name="target_class_{{ item.student.id }}" class="form-select-sm">
+                                    <option value="">-- No Enrollment --</option>
+                                    {% for tc in target_classes %}
+                                    <option value="{{ tc.id }}" {% if item.suggested_class and tc.id == item.suggested_class.id %}selected{% endif %}>
+                                        {{ tc.full_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-gray-400">
+                                <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                                <p>No students found in this class.</p>
+                             </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="action-footer mt-6">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-[#851A10]/10 flex items-center justify-center">
+                    <svg class="w-5 h-5" style="color:#851A10;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-800 text-sm">Ready to finalize?</h3>
+                    <p class="text-xs text-gray-500">This will update student enrollments and create promotion history records.</p>
+                </div>
+            </div>
+            <button type="submit" class="btn-finalize">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Finalize & Apply Promotion
+            </button>
+        </div>
+    </form>
+    
+    <!-- Summary Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+        <div class="bg-white rounded-xl p-3 border border-gray-100 text-center">
+            <p class="text-xs text-gray-500">Total Students</p>
+            <p class="text-xl font-bold" style="color:#635E57;">{{ worksheet_data|length }}</p>
+        </div>
+        <div class="bg-white rounded-xl p-3 border border-gray-100 text-center">
+            <p class="text-xs text-gray-500">Promotable</p>
+            <p class="text-xl font-bold text-green-600">{{ promotable_count|default:"0" }}</p>
+        </div>
+        <div class="bg-white rounded-xl p-3 border border-gray-100 text-center">
+            <p class="text-xs text-gray-500">Graduates</p>
+            <p class="text-xl font-bold text-blue-600">{{ graduate_count|default:"0" }}</p>
+        </div>
+        <div class="bg-white rounded-xl p-3 border border-gray-100 text-center">
+            <p class="text-xs text-gray-500">Repeat</p>
+            <p class="text-xl font-bold text-red-600">{{ repeat_count|default:"0" }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

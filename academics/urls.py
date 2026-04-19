@@ -27,6 +27,7 @@ urlpatterns = [
     # Class Arms
     path('classes/', views.class_arm_list, name='class_arm_list'),
     path('classes/create/', views.class_arm_create, name='class_arm_create'),
+    path('classes/clone/', views.duplicate_classes, name='duplicate_classes'),
     path('classes/<int:pk>/edit/', views.class_arm_edit, name='class_arm_edit'),
     path('class-levels/<int:pk>/delete/', views.class_level_delete, name='class_level_delete'),
     path('classes/<int:pk>/delete/', views.class_arm_delete, name='class_arm_delete'),
