@@ -169,14 +169,14 @@
 
 <div class="max-w-3xl mx-auto py-8 px-4">
   <!-- Back Link -->
-  <a href="{% url 'examinations:exam_schedule_list' %}" 
+  <a href="{{ next_url|default:request.META.HTTP_REFERER|default:'/examinations/schedule/' }}" 
      class="inline-flex items-center gap-2 text-gray-500 hover:text-[#851A10] mb-6 transition-colors group">
     <div class="p-2 bg-white rounded-xl border border-gray-100 shadow-sm group-hover:border-[#851A10]/20 group-hover:bg-red-50 transition-all">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
       </svg>
     </div>
-    <span class="text-sm font-semibold">Back to Schedule</span>
+    <span class="text-sm font-semibold">Go Back</span>
   </a>
 
   <!-- Header -->
@@ -256,6 +256,7 @@
       <!-- Form -->
       <form method="post" class="space-y-6">
         {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next_url|default:'' }}">
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- Start Date & Time -->
@@ -311,7 +312,7 @@
 
         <!-- Action Buttons -->
         <div class="flex gap-4 pt-4">
-          <a href="{% url 'examinations:exam_schedule_list' %}" class="btn-cancel">
+          <a href="{{ next_url|default:request.META.HTTP_REFERER|default:'/examinations/schedule/' }}" class="btn-cancel">
             Cancel
           </a>
           <button type="submit" class="btn-submit">

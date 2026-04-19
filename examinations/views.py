@@ -12,13 +12,13 @@ from accounts.decorators import (
     admin_staff_required, teaching_staff_required, examiner_required,
     subject_teacher_required
 )
-from academics.models import AcademicSession, Term, SubjectTeacherAssignment, Subject, ClassArm
+from academics.models import AcademicSession, Term, SubjectTeacherAssignment, Subject, ClassArm, ClassArmSubject
 from students.models import Student, StudentEnrollment
 from staff.models import StaffProfile
 from .models import (
     Exam, ObjectiveQuestion, TheoryQuestion, ExamSubmission,
     StudentAnswer, TheoryScore, ExamResult, ExamDeadlinePenalty,
-    ExamConfiguration, MalpracticeViolation, DailyExamPIN
+    ExamConfiguration, DailyExamPIN
 )
 from .forms import (
     ExamForm, TeacherExamForm, QuestionForm, TheoryQuestionForm,
@@ -2348,7 +2348,9 @@ def exam_schedule_list(request):
     term_id = request.GET.get('term')
     class_arm_id = request.GET.get('class_arm')
 
-    if session_id:
+    if session_id == "":
+        current_session = None
+    elif session_id:
         current_session = get_object_or_404(AcademicSession, pk=session_id)
     else:
         current_session = AcademicSession.get_current()
@@ -2383,8 +2385,8 @@ def exam_schedule_list(request):
         'scheduled_exams': scheduled_exams,
         'unscheduled_exams': unscheduled_exams,
         'sessions': AcademicSession.objects.all().order_by('-start_date'),
-        'terms': Term.objects.all().order_by('id'),
-        'class_arms': ClassArm.objects.all().order_by('name'),
+        'class_arms': ClassArm.objects.filter(session=current_session).order_by('name') if current_session else ClassArm.objects.all().order_by('name'),
+        'terms': Term.objects.filter(session=current_session).order_by('id') if current_session else Term.objects.all().order_by('session', 'id'),
     })
 
 
@@ -2394,6 +2396,13 @@ def exam_schedule_create(request, exam_id):
     """Schedule an approved exam with date and time"""
     exam = get_object_or_404(Exam, pk=exam_id, status=Exam.ExamStatus.APPROVED)
     
+    # Get redirect URL (from next param or referer)
+    next_url = request.GET.get('next') or request.POST.get('next')
+    if not next_url and request.META.get('HTTP_REFERER'):
+        referer = request.META.get('HTTP_REFERER')
+        if request.build_absolute_uri() not in referer:
+            next_url = referer
+
     if request.method == 'POST':
         start_datetime_str = request.POST.get('start_datetime')
         end_datetime_str = request.POST.get('end_datetime')
@@ -2435,7 +2444,7 @@ def exam_schedule_create(request, exam_id):
                 f'{start_datetime.strftime("%b %d, %Y at %I:%M %p")} '
                 f'to {end_datetime.strftime("%I:%M %p")}.'
             )
-            return redirect('examinations:exam_schedule_list')
+            return redirect(next_url) if next_url else redirect('examinations:exam_schedule_list')
         
         except ValueError as e:
             messages.error(request, f'Invalid date/time format. Please use the date/time picker.')
@@ -2446,7 +2455,8 @@ def exam_schedule_create(request, exam_id):
     
     return render(request, 'examinations/exam_schedule_form.html', {
         'exam': exam,
-        'page_title': f'Schedule Exam — {exam.title}'
+        'page_title': f'Schedule Exam — {exam.title}',
+        'next_url': next_url
     })
 
 
@@ -2456,6 +2466,13 @@ def exam_schedule_edit(request, exam_id):
     """Edit an exam's schedule"""
     exam = get_object_or_404(Exam, pk=exam_id, status=Exam.ExamStatus.APPROVED)
     
+    # Get redirect URL (from next param or referer)
+    next_url = request.GET.get('next') or request.POST.get('next')
+    if not next_url and request.META.get('HTTP_REFERER'):
+        referer = request.META.get('HTTP_REFERER')
+        if request.build_absolute_uri() not in referer:
+            next_url = referer
+
     if request.method == 'POST':
         start_datetime_str = request.POST.get('start_datetime')
         end_datetime_str = request.POST.get('end_datetime')
@@ -2491,7 +2508,7 @@ def exam_schedule_edit(request, exam_id):
             exam.save()
             
             messages.success(request, f'Exam schedule updated successfully.')
-            return redirect('examinations:exam_schedule_list')
+            return redirect(next_url) if next_url else redirect('examinations:exam_schedule_list')
         
         except ValueError as e:
             messages.error(request, f'Invalid date/time format.')
@@ -2504,7 +2521,8 @@ def exam_schedule_edit(request, exam_id):
     return render(request, 'examinations/exam_schedule_form.html', {
         'exam': exam,
         'page_title': f'Edit Schedule — {exam.title}',
-        'is_edit': True
+        'is_edit': True,
+        'next_url': next_url
     })
 
 
@@ -2529,15 +2547,25 @@ def examiner_all_exams(request):
     exams_query = Exam.objects.select_related('subject', 'teacher', 'approved_by', 'rejected_by').prefetch_related('class_arms')
     
     # Apply session filter
-    if session_filter:
+    if session_filter == "":
+        # "All Sessions" selected
+        pass
+    elif session_filter:
+        # Specific session selected
         exams_query = exams_query.filter(session_id=session_filter)
+        current_session = AcademicSession.objects.filter(id=session_filter).first()
     elif current_session:
+        # First load, use default current session
         exams_query = exams_query.filter(session=current_session)
     
     # Apply term filter
     if term_filter:
         exams_query = exams_query.filter(term_id=term_filter)
-    elif current_term:
+    elif term_filter == "":
+        # "All Terms" selected
+        pass
+    elif current_term and not session_filter:
+        # Only default to current term on first load if no session was selected
         exams_query = exams_query.filter(term=current_term)
     
     # Apply subject filter
@@ -2557,9 +2585,34 @@ def examiner_all_exams(request):
     
     # Get filter options
     available_sessions = AcademicSession.objects.all().order_by('-start_date')
-    available_terms = Term.objects.all().order_by('session', 'name')
+    
+    # Base subject queryset
     available_subjects = Subject.objects.all().order_by('name')
-    available_class_arms = ClassArm.objects.select_related('level').order_by('level__order', 'name')
+    
+    # If a class arm is selected, filter subjects to only those assigned to that arm
+    if class_arm_filter:
+        try:
+            arm = ClassArm.objects.get(id=class_arm_filter)
+            available_subjects = available_subjects.filter(
+                arm_offerings__class_level=arm.level,
+                arm_offerings__arm_name=arm.name
+            ).distinct()
+        except ClassArm.DoesNotExist:
+            pass
+    
+    # Filter class arms and terms by the session being viewed
+    if session_filter == "":
+        available_class_arms = ClassArm.objects.select_related('level').order_by('level__order', 'name')
+        available_terms = Term.objects.all().order_by('session', 'name')
+    elif session_filter:
+        available_class_arms = ClassArm.objects.filter(session_id=session_filter).select_related('level').order_by('level__order', 'name')
+        available_terms = Term.objects.filter(session_id=session_filter).order_by('name')
+    elif current_session:
+        available_class_arms = ClassArm.objects.filter(session=current_session).select_related('level').order_by('level__order', 'name')
+        available_terms = Term.objects.filter(session=current_session).order_by('name')
+    else:
+        available_class_arms = ClassArm.objects.select_related('level').order_by('level__order', 'name')
+        available_terms = Term.objects.all().order_by('session', 'name')
     
     # Calculate statistics
     total_exams = exams.count()

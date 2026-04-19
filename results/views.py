@@ -774,8 +774,12 @@ def student_report_card_list(request):
         return redirect('accounts:dashboard')
 
     session_id = request.GET.get('session')
-
     term_id = request.GET.get('term')
+
+    # Default to current session if none specified
+    current_session = AcademicSession.get_current()
+    if not session_id and current_session:
+        session_id = str(current_session.id)
 
     published_cards = ReportCard.objects.filter(
 

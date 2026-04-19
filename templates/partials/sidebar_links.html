@@ -1,11 +1,12 @@
 {% url 'accounts:dashboard' as dashboard_url %}
 {% with request.resolver_match.app_name as current_app %}
+{% with request.resolver_match.url_name as current_url %}
 
 <!-- Dashboard -->
 <a href="{{ dashboard_url }}"
    class="flex items-center px-4 py-2.5 transition text-white
-          {% if request.path == dashboard_url %}opacity-100{% else %}opacity-60 hover:opacity-100{% endif %}"
-   {% if request.path == dashboard_url %}
+          {% if current_url == 'dashboard' or current_url == 'principal_dashboard' or current_url == 'student_dashboard' %}opacity-100{% else %}opacity-60 hover:opacity-100{% endif %}"
+   {% if current_url == 'dashboard' or current_url == 'principal_dashboard' or current_url == 'student_dashboard' %}
    style="background:rgba(133,26,16,0.6);border-left:3px solid #C2B0A1;"
    {% endif %}>
   <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -543,3 +544,4 @@
 {% endif %}
 
 {% endwith %}
+{% endwith %}

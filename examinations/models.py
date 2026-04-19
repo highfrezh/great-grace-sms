@@ -394,38 +394,7 @@ class ExamSubmission(models.Model):
         ]
 
 
-class MalpracticeViolation(models.Model):
-    """Log of malpractice violations during exam"""
 
-    class ViolationType(models.TextChoices):
-        TAB_SWITCH = 'TAB_SWITCH', 'Tab Switch'
-        FULLSCREEN_EXIT = 'FULLSCREEN_EXIT', 'Fullscreen Exit'
-        IDLE_TIMEOUT = 'IDLE_TIMEOUT', 'Idle Timeout'
-
-    submission = models.ForeignKey(
-        ExamSubmission,
-        on_delete=models.CASCADE,
-        related_name='violations'
-    )
-    violation_type = models.CharField(
-        max_length=20,
-        choices=ViolationType.choices
-    )
-    violation_count = models.PositiveIntegerField(
-        default=1,
-        help_text="Number of times this violation occurred"
-    )
-    timestamp = models.DateTimeField(auto_now_add=True)
-    details = models.TextField(blank=True)
-
-    class Meta:
-        ordering = ['timestamp']
-        indexes = [
-            models.Index(fields=['submission', 'timestamp']),
-        ]
-
-    def __str__(self):
-        return f"{self.submission.student} — {self.violation_type}"
 
 
 class StudentAnswer(models.Model):

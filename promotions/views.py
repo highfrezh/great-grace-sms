@@ -132,7 +132,46 @@ def process_bulk_promotion(request):
     source_class = get_object_or_404(ClassArm, id=source_class_id)
     target_session = get_object_or_404(AcademicSession, id=target_session_id)
     
+    # 1. Check if target session has terms before starting (Avoid IntegrityError)
+    from academics.models import Term
+    first_term = Term.objects.filter(session=target_session, name=Term.TermName.FIRST).first()
+    if not first_term:
+        first_term = Term.objects.filter(session=target_session).order_by('id').first()
+        
+    if not first_term:
+        messages.error(
+            request, 
+            f"Cannot process promotion: The target session '{target_session.name}' has no terms defined. "
+            "Please create at least one term for this session first."
+        )
+        return redirect('promotions:promotion_worksheet', 
+                        class_arm_id=source_class_id, 
+                        target_session_id=target_session_id)
+    
     student_ids = request.POST.getlist('student_ids')
+    
+    # 2. Pre-validate: Ensure all PROMOTED/REPEATED students have a target class (Avoid data loss/orphaning)
+    missing_class_students = []
+    for student_id in student_ids:
+        decision = request.POST.get(f'decision_{student_id}')
+        target_class_id = request.POST.get(f'target_class_{student_id}')
+        
+        if decision in [PromotionHistory.Status.PROMOTED, PromotionHistory.Status.PROMOTED_TRIAL, PromotionHistory.Status.REPEATED]:
+            if not target_class_id:
+                student = Student.objects.filter(id=student_id).first()
+                if student:
+                    missing_class_students.append(student.full_name)
+    
+    if missing_class_students:
+        names_str = ", ".join(missing_class_students)
+        messages.error(
+            request, 
+            f"Cannot process promotion: The following students are marked for promotion or repeat but have no target class assigned: {names_str}. "
+            "Please assign a class arm for every student staying in the school."
+        )
+        return redirect('promotions:promotion_worksheet', 
+                        class_arm_id=source_class_id, 
+                        target_session_id=target_session_id)
     
     count_success = 0
     
@@ -143,7 +182,7 @@ def process_bulk_promotion(request):
         
         student = get_object_or_404(Student, id=student_id)
         
-        # 1. Create Promotion Record
+        # 3. Create Promotion Record
         target_class = None
         if target_class_id:
             target_class = ClassArm.objects.filter(id=target_class_id).first()
@@ -159,7 +198,7 @@ def process_bulk_promotion(request):
             created_by=request.user
         )
         
-        # 2. Handle Enrollment Updates
+        # 3. Handle Enrollment Updates
         # Deactivate old enrollment
         StudentEnrollment.objects.filter(
             student=student, 
@@ -170,12 +209,6 @@ def process_bulk_promotion(request):
         # Create new enrollment if Promoted or Repeated
         if decision in [PromotionHistory.Status.PROMOTED, PromotionHistory.Status.PROMOTED_TRIAL, PromotionHistory.Status.REPEATED]:
             if target_class:
-                # Get first term of target session
-                from academics.models import Term
-                first_term = Term.objects.filter(session=target_session, name='FIRST').first()
-                if not first_term:
-                    first_term = Term.objects.filter(session=target_session).order_by('id').first()
-                
                 StudentEnrollment.objects.create(
                     student=student,
                     class_arm=target_class,

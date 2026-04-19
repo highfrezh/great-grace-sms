@@ -317,14 +317,24 @@
                             </td>
                             
                             <td class="px-6 py-4">
-                                <select name="target_class_{{ item.student.id }}" class="form-select-sm">
-                                    <option value="">-- No Enrollment --</option>
-                                    {% for tc in target_classes %}
-                                    <option value="{{ tc.id }}" {% if item.suggested_class and tc.id == item.suggested_class.id %}selected{% endif %}>
-                                        {{ tc.full_name }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
+                                <div class="relative">
+                                    <select name="target_class_{{ item.student.id }}" 
+                                            class="form-select-sm {% if not item.suggested_class and item.proposed_status != 'GRADUATED' %}border-amber-400 bg-amber-50{% endif %}">
+                                        <option value="">-- No Enrollment --</option>
+                                        {% for tc in target_classes %}
+                                        <option value="{{ tc.id }}" {% if item.suggested_class and tc.id == item.suggested_class.id %}selected{% endif %}>
+                                            {{ tc.full_name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    {% if not item.suggested_class and item.proposed_status != 'GRADUATED' %}
+                                    <div class="absolute -top-4 right-0">
+                                        <span class="warning-badge" title="No matching arm found in target session">
+                                            ⚠️ No Match
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% empty %}

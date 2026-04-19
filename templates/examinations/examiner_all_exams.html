@@ -254,7 +254,7 @@
 <div class="filter-section">
   <form method="get" class="space-y-4">
     <div class="filter-grid">
-      <select name="session" class="filter-input">
+      <select name="session" onchange="this.form.submit()" class="filter-input">
         <option value="">All Sessions</option>
         {% for session in available_sessions %}
         <option value="{{ session.id }}" {% if session.id|stringformat:"s" == session_filter %}selected{% endif %}>
@@ -272,20 +272,20 @@
         {% endfor %}
       </select>
 
+      <select name="class_arm" onchange="this.form.submit()" class="filter-input">
+        <option value="">All Classes</option>
+        {% for class_arm in available_class_arms %}
+        <option value="{{ class_arm.id }}" {% if class_arm.id|stringformat:"s" == class_arm_filter %}selected{% endif %}>
+          {{ class_arm }}
+        </option>
+        {% endfor %}
+      </select>
+
       <select name="subject" class="filter-input">
         <option value="">All Subjects</option>
         {% for subject in available_subjects %}
         <option value="{{ subject.id }}" {% if subject.id|stringformat:"s" == subject_filter %}selected{% endif %}>
           {{ subject.name }}
-        </option>
-        {% endfor %}
-      </select>
-
-      <select name="class_arm" class="filter-input">
-        <option value="">All Classes</option>
-        {% for class_arm in available_class_arms %}
-        <option value="{{ class_arm.id }}" {% if class_arm.id|stringformat:"s" == class_arm_filter %}selected{% endif %}>
-          {{ class_arm }}
         </option>
         {% endfor %}
       </select>
