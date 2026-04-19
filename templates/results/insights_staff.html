@@ -80,7 +80,7 @@
             
             <div class="flex flex-wrap items-center gap-3">
                 <!-- Session Selector -->
-                <select x-model="selectedSessionId" @change="fetchData()" 
+                <select x-model="selectedSessionId" @change="onSessionChange()" 
                         class="px-3 py-2 border border-gray-200 rounded-xl text-xs font-bold uppercase tracking-wider focus:border-[#851A10] outline-none bg-gray-50">
                     {% for session in sessions %}
                         <option value="{{ session.id }}">{{ session.name }}</option>
@@ -90,9 +90,9 @@
                 <!-- Term Selector -->
                 <select x-model="selectedTermId" @change="fetchData()" 
                         class="px-3 py-2 border border-gray-200 rounded-xl text-xs font-bold uppercase tracking-wider focus:border-[#851A10] outline-none bg-gray-50">
-                    {% for term in terms %}
-                        <option value="{{ term.id }}">{{ term.get_name_display }}</option>
-                    {% endfor %}
+                    <template x-for="term in availableTerms" :key="term.id">
+                        <option :value="term.id" x-text="term.name"></option>
+                    </template>
                 </select>
 
                 <!-- Class Selector -->
@@ -272,12 +272,37 @@ function analyticsDashboard() {
         
         charts: {},
         
+        allTerms: {{ terms_by_session|safe }},
+        availableTerms: [],
+        
         initData() {
+            if (this.selectedSessionId) {
+                this.updateTerms();
+            }
             if (this.selectedClassId) {
                 this.fetchData();
             }
         },
         
+        updateTerms() {
+            this.availableTerms = this.allTerms[this.selectedSessionId] || [];
+            // Reset selected term if it is not in the new list
+            if (this.selectedTermId && !this.availableTerms.find(t => String(t.id) === String(this.selectedTermId))) {
+               if (this.availableTerms.length > 0) {
+                   this.selectedTermId = this.availableTerms[this.availableTerms.length - 1].id;
+               } else {
+                   this.selectedTermId = '';
+               }
+            }
+        },
+        
+        onSessionChange() {
+            this.updateTerms();
+            // Optional: You could fetch data automatically when session changes, provided class is selected
+            if (this.selectedClassId) {
+                this.fetchData();
+            }
+        },
         fetchData() {
             if (!this.selectedClassId) {
                 this.hasData = false;

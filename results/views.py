@@ -1,3 +1,4 @@
+import json
 from .forms import PrincipalReportCardForm
 from django.shortcuts import render, redirect, get_object_or_404
 
@@ -1208,12 +1209,19 @@ def staff_performance_insights(request):
     current_session = AcademicSession.get_current()
     current_term = Term.get_current()
     
+    all_terms = Term.objects.all().order_by('id')
+    terms_by_session = {}
+    for t in all_terms:
+        if t.session_id not in terms_by_session:
+            terms_by_session[t.session_id] = []
+        terms_by_session[t.session_id].append({'id': t.id, 'name': t.get_name_display()})
+
     context = {
         'current_session': current_session,
         'current_term': current_term,
         'page_title': 'Performance Insights',
         'sessions': AcademicSession.objects.all().order_by('-start_date'),
-        'terms': Term.objects.filter(session=current_session).order_by('id'),
+        'terms_by_session': json.dumps(terms_by_session),
     }
 
     if request.user.is_admin_staff:
@@ -1243,13 +1251,20 @@ def student_performance_insights(request):
     current_term = Term.get_current()
     student = request.user.student_profile
     
+    all_terms = Term.objects.all().order_by('id')
+    terms_by_session = {}
+    for t in all_terms:
+        if t.session_id not in terms_by_session:
+            terms_by_session[t.session_id] = []
+        terms_by_session[t.session_id].append({'id': t.id, 'name': t.get_name_display()})
+
     context = {
         'current_session': current_session,
         'current_term': current_term,
         'student': student,
         'page_title': 'My Academic Insights',
         'sessions': AcademicSession.objects.all().order_by('-start_date'),
-        'terms': Term.objects.filter(session=current_session).order_by('id'),
+        'terms_by_session': json.dumps(terms_by_session),
     }
     
     return render(request, 'results/insights_student.html', context)

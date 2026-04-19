@@ -462,12 +462,49 @@ def assignment_list(request):
 def assignment_create(request):
     form = SubjectTeacherAssignmentForm(request.POST or None)
     if form.is_valid():
-        try:
-            form.save()
-            messages.success(request, 'Assignment created successfully.')
-            return redirect('academics:assignment_list')
-        except IntegrityError:
-            messages.error(request, 'This subject is already assigned to a teacher in the selected class.')
+        teacher = form.cleaned_data['teacher']
+        selected_offerings = form.cleaned_data['subject_assignments']
+        
+        created_count = 0
+        skipped_count = 0
+        
+        for offering in selected_offerings:
+            # Check if this assignment already exists for this Level/Arm/Subject
+            existing = SubjectTeacherAssignment.objects.filter(
+                class_level=offering.class_level,
+                arm_name=offering.arm_name,
+                subject=offering.subject
+            ).first()
+            
+            if existing:
+                if existing.teacher != teacher:
+                    # Existing assignment to another teacher - we skip for safety
+                    skipped_count += 1
+                    continue
+                else:
+                    # Already assigned to this teacher anyway
+                    continue
+            
+            # Create the assignment
+            SubjectTeacherAssignment.objects.create(
+                teacher=teacher,
+                class_level=offering.class_level,
+                arm_name=offering.arm_name,
+                subject=offering.subject
+            )
+            created_count += 1
+        
+        if created_count > 0:
+            messages.success(request, f'Successfully assigned {created_count} subjects to {teacher.get_full_name() or teacher.username}.')
+        
+        if skipped_count > 0:
+            messages.warning(request, f'{skipped_count} assignments were skipped because those subjects are already assigned to other teachers in those classes.')
+            
+        if created_count == 0 and skipped_count == 0:
+            messages.info(request, 'No new assignments were created.')
+            
+        return redirect('academics:assignment_list')
+        
     return render(request, 'academics/assignment_form.html', {
         'form': form,
         'page_title': 'Assign Subject Teacher',
@@ -481,11 +518,21 @@ def assignment_edit(request, pk):
     assignment = get_object_or_404(SubjectTeacherAssignment, pk=pk)
     form = SubjectTeacherAssignmentForm(request.POST or None, instance=assignment)
     if form.is_valid():
-        if form.has_changed():
-            form.save()
+        teacher = form.cleaned_data['teacher']
+        selected_offerings = form.cleaned_data['subject_assignments']
+        
+        if selected_offerings:
+            # We take the first one for the edit
+            offering = selected_offerings[0]
+            assignment.teacher = teacher
+            assignment.subject = offering.subject
+            assignment.class_level = offering.class_level
+            assignment.arm_name = offering.arm_name
+            assignment.save()
             messages.success(request, 'Assignment updated successfully.')
         else:
-            messages.info(request, 'No changes were made.')
+            messages.warning(request, 'Please select at least one offering.')
+            
         return redirect('academics:assignment_list')
     return render(request, 'academics/assignment_form.html', {
         'form': form,
@@ -612,4 +659,68 @@ def duplicate_classes(request):
         'sessions': sessions,
         'current_session': current_session,
         'page_title': 'Duplicate Classes'
+    })
+
+
+@login_required
+@admin_staff_required
+def ajax_get_subject_offerings(request):
+    """Fetch ClassArmSubject offerings for a given class level, excluding already assigned ones"""
+    level_id = request.GET.get('level_id')
+    assignment_id = request.GET.get('assignment_id')
+    
+    if not level_id:
+        return JsonResponse({'error': 'Missing level_id'}, status=400)
+    
+    # 1. Fetch all offerings for this level
+    offerings = ClassArmSubject.objects.filter(
+        class_level_id=level_id
+    ).select_related('subject', 'class_level').order_by('arm_name', 'subject__name')
+    
+    # 2. Find which ones are already assigned
+    assigned_qs = SubjectTeacherAssignment.objects.filter(class_level_id=level_id)
+    if assignment_id:
+        assigned_qs = assigned_qs.exclude(pk=assignment_id)
+        
+    assigned_combinations = set(
+        assigned_qs.values_list('class_level_id', 'arm_name', 'subject_id')
+    )
+    
+    # 3. Filter out the assigned ones
+    results = []
+    for o in offerings:
+        comb = (o.class_level_id, o.arm_name, o.subject_id)
+        if comb not in assigned_combinations:
+            results.append({
+                'id': o.pk,
+                'label': f"{o.subject.name} ({o.class_level.name} {o.arm_name})"
+            })
+    
+    return JsonResponse({
+        'success': True,
+        'offerings': results
+    })
+
+
+@login_required
+@admin_staff_required
+def ajax_get_arms_by_level(request):
+    """Fetch unique arm names for a given class level in the current session"""
+    level_id = request.GET.get('level_id')
+    if not level_id:
+        return JsonResponse({'error': 'Missing level_id'}, status=400)
+    
+    current_session = AcademicSession.get_current()
+    if not current_session:
+        return JsonResponse({'error': 'No current session active'}, status=400)
+        
+    # Get unique arm names for this level in current session
+    arm_names = ClassArm.objects.filter(
+        level_id=level_id,
+        session=current_session
+    ).values_list('name', flat=True).distinct().order_by('name')
+    
+    return JsonResponse({
+        'success': True,
+        'arms': list(arm_names)
     })

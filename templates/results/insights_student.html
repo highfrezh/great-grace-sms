@@ -73,7 +73,7 @@
             
             <div class="flex flex-wrap items-center gap-3">
                 <!-- Session Selector -->
-                <select x-model="selectedSessionId" @change="fetchData()" 
+                <select x-model="selectedSessionId" @change="onSessionChange()" 
                         class="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium focus:border-[#851A10] outline-none">
                     <option value="">Select Session</option>
                     {% for session in sessions %}
@@ -81,13 +81,12 @@
                     {% endfor %}
                 </select>
                 
-                <!-- Term Selector -->
                 <select x-model="selectedTermId" @change="fetchData()" 
                         class="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium focus:border-[#851A10] outline-none">
                     <option value="">All Terms</option>
-                    {% for term in terms %}
-                        <option value="{{ term.id }}">{{ term.get_name_display }}</option>
-                    {% endfor %}
+                    <template x-for="term in availableTerms" :key="term.id">
+                        <option :value="term.id" x-text="term.name"></option>
+                    </template>
                 </select>
                 
                 <button @click="fetchData" class="p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition">
@@ -253,10 +252,27 @@ function studentAnalytics() {
         
         charts: {},
         
+        allTerms: {{ terms_by_session|safe }},
+        availableTerms: [],
+        
         initData() {
             if (this.selectedSessionId) {
+                this.updateTerms();
                 this.fetchData();
             }
+        },
+        
+        updateTerms() {
+            this.availableTerms = this.allTerms[this.selectedSessionId] || [];
+            // Reset selected term if it is not in the new list
+            if (this.selectedTermId && !this.availableTerms.find(t => String(t.id) === String(this.selectedTermId))) {
+                this.selectedTermId = '';
+            }
+        },
+        
+        onSessionChange() {
+            this.updateTerms();
+            this.fetchData();
         },
         
         fetchData() {

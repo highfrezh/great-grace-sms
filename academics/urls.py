@@ -45,5 +45,7 @@ urlpatterns = [
     path('assignments/<int:pk>/edit/', views.assignment_edit, name='assignment_edit'),
     path('assignments/<int:pk>/delete/', views.assignment_delete, name='assignment_delete'),
     path('ajax/available-subjects/', views.ajax_available_subjects, name='ajax_available_subjects'),
+    path('ajax/get-arms-by-level/', views.ajax_get_arms_by_level, name='ajax_get_arms_by_level'),
+    path('ajax/get-subject-offerings/', views.ajax_get_subject_offerings, name='ajax_get_subject_offerings'),
 
 ]

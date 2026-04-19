@@ -3,207 +3,326 @@
 {% block title %}{{ page_title }} — Great Grace SMS{% endblock %}
 {% block page_title %}{{ page_title }}{% endblock %}
 
+{% load form_extras %}
+
+{% block extra_css %}
+<style>
+    .assignment-card {
+        background: white;
+        border-radius: 1rem;
+        border: 1px solid #F3F4F6;
+        overflow: hidden;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #6B7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-label .required {
+        color: #851A10;
+        margin-left: 0.25rem;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background: #F9FAFB;
+        border: 1.5px solid #E5E7EB;
+        border-radius: 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+        transition: all 0.2s ease;
+        outline: none;
+    }
+    
+    .form-control:focus {
+        border-color: #851A10;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(133, 26, 16, 0.1);
+    }
+    
+    select.form-control {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 1.25rem;
+        padding-right: 2.5rem;
+    }
+    
+    select[multiple].form-control {
+        background-image: none;
+        padding-right: 1rem;
+        min-height: 200px;
+    }
+    
+    select[multiple].form-control option {
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid #F3F4F6;
+        cursor: pointer;
+    }
+    
+    select[multiple].form-control option:checked {
+        background: #851A10 linear-gradient(0deg, #851A10 0%, #851A10 100%);
+        color: white;
+    }
+    
+    select[multiple].form-control option:hover {
+        background: #FEF2F2;
+    }
+    
+    .help-text {
+        font-size: 0.75rem;
+        color: #268fe6;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .error-message {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: #FEF2F2;
+        border-radius: 0.5rem;
+        font-size: 0.7rem;
+        color: #DC2626;
+        margin-top: 0.5rem;
+        border-left: 3px solid #DC2626;
+    }
+    
+    .btn-cancel {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: white;
+        color: #6B7280;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border-radius: 0.75rem;
+        transition: all 0.2s ease;
+        border: 1px solid #E5E7EB;
+        text-decoration: none;
+    }
+    
+    .btn-cancel:hover {
+        background: #F9FAFB;
+        border-color: #851A10;
+        color: #851A10;
+    }
+    
+    .btn-submit {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 2rem;
+        background: linear-gradient(135deg, #851A10 0%, #A52318 100%);
+        color: white;
+        font-weight: 700;
+        font-size: 0.875rem;
+        border-radius: 0.75rem;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(133, 26, 16, 0.3);
+    }
+    
+    .info-box {
+        background: linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%);
+        border-radius: 1rem;
+        padding: 1rem;
+        border: 1px solid #DBEAFE;
+    }
+    
+    .selection-count {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #6B7280;
+        margin-top: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        background: #F3F4F6;
+        display: inline-block;
+        border-radius: 0.5rem;
+    }
+    
+    @media (max-width: 768px) {
+        .btn-cancel, .btn-submit {
+            flex: 1;
+            justify-content: center;
+        }
+        
+        .form-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-  <div class="max-w-3xl mx-auto">
-    <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-
-      <!-- Form Header -->
-      <div class="px-8 py-6 border-b border-gray-100"
-           style="background: linear-gradient(135deg, #FFF5F3 0%, #FFFFFF 100%);">
-        <div class="flex items-center gap-3">
-          <div class="w-1 h-8 rounded-full" style="background: #851A10;"></div>
-          <div>
-            <h2 class="text-2xl font-bold text-gray-800">{{ page_title }}</h2>
-            <p class="text-sm text-gray-500 mt-1">Please fill in the information below</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Form Body -->
-      <form method="POST" enctype="multipart/form-data" class="px-8 py-6"
-            {% if form.instance.pk %}data-assignment-id="{{ form.instance.pk }}"{% endif %}>
-        {% csrf_token %}
-
-        <style>
-          input:not([type="checkbox"]):not([type="file"]),
-          select,
-          textarea {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1.5px solid #E5E7EB;
-            border-radius: 0.75rem;
-            font-size: 0.95rem;
-            transition: all 0.2s ease;
-            background-color: white;
-            outline: none;
-            color: #374151;
-          }
-
-          input:not([type="checkbox"]):not([type="file"]):focus,
-          select:focus,
-          textarea:focus {
-            border-color: #851A10;
-            box-shadow: 0 0 0 3px rgba(133, 26, 16, 0.1);
-          }
-
-          input:not([type="checkbox"]):not([type="file"]):hover,
-          select:hover,
-          textarea:hover {
-            border-color: #9CA3AF;
-          }
-
-          select {
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
-            background-position: right 1rem center;
-            background-repeat: no-repeat;
-            background-size: 1.25rem;
-            padding-right: 2.5rem;
-          }
-
-          input[type="file"] {
-            width: 100%;
-            padding: 0.5rem;
-            background-color: #F9FAFB;
-            border: 1.5px solid #E5E7EB;
-            border-radius: 0.75rem;
-            outline: none;
-          }
-
-          input[type="file"]::file-selector-button {
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            border: none;
-            background: #851A10;
-            color: white;
-            cursor: pointer;
-            margin-right: 1rem;
-            transition: opacity 0.2s;
-          }
-
-          input[type="file"]::file-selector-button:hover {
-            opacity: 0.9;
-          }
-        </style>
-
-        <div class="space-y-6">
-          {% for field in form %}
-            <div class="group">
-
-              <!-- Label — hidden for checkboxes to avoid duplication -->
-              {% if field.field.widget.input_type != 'checkbox' %}
-                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                  {{ field.label }}
-                  {% if field.field.required %}
-                    <span style="color: #851A10;">*</span>
-                  {% endif %}
-                </label>
-              {% endif %}
-
-              <!-- Checkbox Field -->
-              {% if field.field.widget.input_type == 'checkbox' %}
-                <div class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg
-                            border border-gray-200 w-full">
-                  <input type="checkbox"
-                         name="{{ field.html_name }}"
-                         id="{{ field.id_for_label }}"
-                         {% if field.value %}checked{% endif %}
-                         class="w-5 h-5 rounded shrink-0 cursor-pointer accent-[#851A10]">
-                  <label for="{{ field.id_for_label }}"
-                         class="text-sm text-gray-700 cursor-pointer font-medium">
-                    {{ field.label }}
-                    {% if field.help_text %}
-                      <span class="block text-xs text-gray-400 font-normal mt-0.5">
-                        {{ field.help_text }}
-                      </span>
-                    {% endif %}
-                  </label>
+<div class="min-h-screen py-6 px-4" 
+     x-data="{ 
+        levelId: '{{ form.class_level.value|default:'' }}',
+        assignmentId: '{{ form.instance.pk|default:'' }}',
+        offerings: [],
+        loading: false,
+        selectedCount: 0,
+        async fetchOfferings() {
+            if (!this.levelId) {
+                this.offerings = [];
+                return;
+            }
+            this.loading = true;
+            try {
+                let url = `/academics/ajax/get-subject-offerings/?level_id=${this.levelId}`;
+                if (this.assignmentId && this.assignmentId !== 'None') {
+                    url += `&assignment_id=${this.assignmentId}`;
+                }
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.success) {
+                    this.offerings = data.offerings;
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                this.loading = false;
+                this.$nextTick(() => this.updateCount());
+            }
+        },
+        updateCount() {
+            const select = this.$refs.assignmentsSelect;
+            if (select) {
+                this.selectedCount = Array.from(select.selectedOptions).length;
+            }
+        }
+     }"
+     x-init="if(levelId) fetchOfferings()">
+    <div class="max-w-4xl mx-auto">
+        
+        <!-- Main Card -->
+        <div class="assignment-card">
+            <!-- Header -->
+            <div class="px-6 py-5 border-b border-gray-100" style="background: linear-gradient(135deg, #FFF5F3 0%, #FFFFFF 100%);">
+                <div class="flex items-center gap-3">
+                    <div class="w-1 h-8 rounded-full" style="background: #851A10;"></div>
+                    <div>
+                        <h1 class="text-xl font-bold" style="color:#635E57;">{{ page_title }}</h1>
+                        <p class="text-xs text-gray-500 mt-0.5">Select a teacher and assign subjects from their class</p>
+                    </div>
                 </div>
-
-              <!-- All Other Fields -->
-              {% else %}
-                <div class="relative">
-                  {{ field }}
-
-                  {% if field.help_text %}
-                    <p class="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
-                      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor"
-                           viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                      </svg>
-                      {{ field.help_text }}
-                    </p>
-                  {% endif %}
-                </div>
-              {% endif %}
-
-              <!-- Field Errors -->
-              {% if field.errors %}
-                <div class="mt-2 space-y-1">
-                  {% for error in field.errors %}
-                    <p class="text-sm flex items-center gap-1" style="color: #851A10;">
-                      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor"
-                           viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                      </svg>
-                      {{ error }}
-                    </p>
-                  {% endfor %}
-                </div>
-              {% endif %}
-
             </div>
-          {% endfor %}
+            
+            <!-- Form Body -->
+            <form method="POST" enctype="multipart/form-data" class="p-6">
+                {% csrf_token %}
+                
+                <div class="space-y-6">
+                    {% for field in form %}
+                    <div class="form-group">
+                        <label class="form-label" for="{{ field.id_for_label }}">
+                            {{ field.label }}
+                            {% if field.field.required %}
+                                <span class="required">*</span>
+                            {% endif %}
+                        </label>
+                        
+                        <div>
+                            {% if field.name == 'subject_assignments' %}
+                                <div class="relative">
+                                    <select name="{{ field.html_name }}" 
+                                            id="{{ field.id_for_label }}"
+                                            multiple 
+                                            class="form-control" 
+                                            style="height: 300px;"
+                                            x-ref="assignmentsSelect"
+                                            @change="updateCount()"
+                                            :disabled="loading">
+                                        <template x-for="offering in offerings" :key="offering.id">
+                                            <option :value="offering.id" 
+                                                    x-text="offering.label"
+                                                    :selected="'{{ field.value|default:'' }}'.includes(offering.id)"></option>
+                                        </template>
+                                    </select>
+                                    
+                                    <template x-if="loading">
+                                        <div class="absolute inset-0 bg-white/50 flex items-center justify-center rounded-xl">
+                                            <svg class="animate-spin h-6 w-6 text-[#851A10]" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                        </div>
+                                    </template>
+                                </div>
+                                
+                                <div class="selection-count" 
+                                     :style="selectedCount > 0 ? 'background: #DCFCE7; color: #166534;' : 'background: #F3F4F6; color: #6B7280;'">
+                                    <span x-text="selectedCount"></span> items selected
+                                </div>
+                            {% else %}
+                                {{ field }}
+                            {% endif %}
+                            
+                            {% if field.help_text %}
+                            <div class="help-text">
+                                <svg class="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                {{ field.help_text }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if field.errors %}
+                            {% for error in field.errors %}
+                            <div class="error-message">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                {{ error }}
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Form Actions -->
+                <div class="form-actions mt-8 pt-6 border-t border-gray-100 flex items-center justify-end gap-3">
+                    <a href="{% url back_url %}" class="btn-cancel">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                        </svg>
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn-submit">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Assign Subjects
+                    </button>
+                </div>
+            </form>
         </div>
-
-        <!-- Form Actions -->
-        <div class="mt-8 pt-6 border-t border-gray-100 flex items-center justify-end gap-3">
-          <a href="{% url back_url %}"
-             class="px-6 py-2.5 text-sm font-medium rounded-xl border-2 border-gray-200
-                    text-gray-600 hover:bg-gray-50 hover:border-gray-300
-                    transition-all duration-200 inline-flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-            </svg>
-            Cancel
-          </a>
-          <button type="submit"
-                  class="px-6 py-2.5 text-white text-sm font-medium rounded-xl shadow-md
-                         hover:shadow-lg hover:scale-105 transition-all duration-200
-                         inline-flex items-center gap-2"
-                  style="background: linear-gradient(135deg, #851A10 0%, #A52318 100%);">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M5 13l4 4L19 7"/>
-            </svg>
-            Save
-          </button>
-        </div>
-
-      </form>
+        
+        
     </div>
-
-    <!-- Help Box -->
-    <div class="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
-      <div class="flex items-start gap-3">
-        <svg class="w-5 h-5 text-blue-600 mt-0.5 shrink-0" fill="none"
-             stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        <div class="text-sm text-blue-800">
-          <p class="font-semibold mb-1">Permanent Assignments</p>
-          <p class="text-blue-700">
-            These assignments are <strong>session-agnostic</strong>. Once assigned, this teacher will remain the default for this subject in the specified Level and Arm across all academic sessions.
-          </p>
-        </div>
-      </div>
-    </div>
-
-  </div>
 </div>
 {% endblock %}

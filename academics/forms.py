@@ -124,13 +124,20 @@ class ClassArmForm(forms.ModelForm):
 
 
 class SubjectForm(forms.ModelForm):
-    # We'll use a simplified approach: just manage the subject itself here.
-    # The links to classes (ClassArmSubject) should be managed via a separate view or more advanced form.
-    # For now, I'll remove the session-bound class_arms selection to fix the breakage.
+    class_arms = forms.ModelMultipleChoiceField(
+        queryset=ClassArm.objects.none(),
+        widget=forms.SelectMultiple(attrs={
+            'class': 'form-input',
+            'style': 'height: 120px;'  # Set a taller height for the multiselect
+        }),
+        required=False,
+        label="Offered in Classes",
+        help_text="Hold 'Ctrl' (Windows) or 'Command' (Mac) to select multiple classes."
+    )
     
     class Meta:
         model = Subject
-        fields = ['name', 'description', 'is_active']
+        fields = ['name', 'class_arms', 'description', 'is_active']
         widgets = {
             'name': forms.TextInput(attrs={
                 'placeholder': 'e.g. Mathematics',
@@ -145,27 +152,120 @@ class SubjectForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Fetch current session to show relevant classes
+        current_session = AcademicSession.get_current()
+        if current_session:
+            self.fields['class_arms'].queryset = ClassArm.objects.filter(
+                session=current_session
+            ).select_related('level').order_by('level__order', 'name')
+        
+        # If editing, pre-populate class_arms based on existing ClassArmSubject records
+        if self.instance and self.instance.pk:
+            # We find ClassArms in the current session that match the (Level, ArmName) of ClassArmSubject
+            offerings = ClassArmSubject.objects.filter(subject=self.instance)
+            initial_ids = []
+            for offering in offerings:
+                matching_arms = ClassArm.objects.filter(
+                    session=current_session,
+                    level=offering.class_level,
+                    name=offering.arm_name
+                ).values_list('id', flat=True)
+                initial_ids.extend(list(matching_arms))
+            
+            self.initial['class_arms'] = initial_ids
 
     def save(self, commit=True):
-        return super().save(commit=commit)
+        subject = super().save(commit=commit)
+        if commit:
+            selected_arms = self.cleaned_data.get('class_arms')
+            
+            # Map selected arms to their (Level, ArmName) pairs
+            selected_mappings = set()
+            for arm in selected_arms:
+                selected_mappings.add((arm.level.id, arm.name))
+            
+            # Current mappings for this subject
+            existing_offerings = ClassArmSubject.objects.filter(subject=subject)
+            existing_mappings = { (o.class_level_id, o.arm_name) for o in existing_offerings }
+            
+            # 1. Add new mappings
+            to_add = selected_mappings - existing_mappings
+            for level_id, arm_name in to_add:
+                ClassArmSubject.objects.create(
+                    subject=subject,
+                    class_level_id=level_id,
+                    arm_name=arm_name
+                )
+            
+            # 2. Remove deselected mappings
+            # Note: We only remove mappings that the user could have seen (i.e. those with matching arms in current session)
+            # Fetch all arms in current session to know what the user could have unchecked
+            current_session = AcademicSession.get_current()
+            if current_session:
+                visible_arms = ClassArm.objects.filter(session=current_session)
+                visible_mappings = { (a.level_id, a.name) for a in visible_arms }
+                
+                to_remove = (existing_mappings & visible_mappings) - selected_mappings
+                
+                if to_remove:
+                    for level_id, arm_name in to_remove:
+                        ClassArmSubject.objects.filter(
+                            subject=subject,
+                            class_level_id=level_id,
+                            arm_name=arm_name
+                        ).delete()
+        
+        return subject
 
 
 class SubjectTeacherAssignmentForm(forms.ModelForm):
+    class_level = forms.ModelChoiceField(
+        queryset=ClassLevel.objects.all(),
+        required=False,
+        label="Filter by Class Level",
+        widget=forms.Select(attrs={'class': 'form-control', '@change': 'fetchOfferings()', 'x-model': 'levelId'}),
+        help_text="Select a class level to view its offered subjects."
+    )
+
+    # Consolidate selection into a single field of Subject+Class combinations
+    subject_assignments = forms.ModelMultipleChoiceField(
+        queryset=ClassArmSubject.objects.none(),  # Loaded via AJAX
+        widget=forms.SelectMultiple(attrs={
+            'class': 'form-control',
+            'style': 'height: 300px;'
+        }),
+        label="Offered Subjects",
+        required=True,
+        help_text="Hold Ctrl (Windows) or Cmd (Mac) to select multiple subjects. Note: List only displays subjects that are yet to be assigned."
+    )
+
     class Meta:
         model = SubjectTeacherAssignment
-        fields = ['class_level', 'arm_name', 'subject', 'teacher']
+        fields = ['teacher', 'class_level', 'subject_assignments']
         widgets = {
-            'class_level': forms.Select(attrs={'class': 'form-input'}),
-            'arm_name': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'e.g. A, B, or Science'
-            }),
-            'subject': forms.Select(attrs={'class': 'form-input'}),
-            'teacher': forms.Select(attrs={'class': 'form-input'}),
+            'teacher': forms.Select(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Custom label generator for subject_assignments
+        self.fields['subject_assignments'].label_from_instance = lambda obj: \
+            f"{obj.subject.name} ({obj.class_level.name} {obj.arm_name})"
+            
+        # Handle dynamic filtering for validation
+        if 'class_level' in self.data:
+            try:
+                level_id = int(self.data.get('class_level'))
+                self.fields['subject_assignments'].queryset = ClassArmSubject.objects.filter(
+                    class_level_id=level_id
+                ).select_related('subject', 'class_level').order_by('arm_name', 'subject__name')
+            except (ValueError, TypeError):
+                pass
+        elif self.instance and self.instance.pk:
+            self.fields['subject_assignments'].queryset = ClassArmSubject.objects.filter(
+                class_level=self.instance.class_level
+            ).select_related('subject', 'class_level').order_by('arm_name', 'subject__name')
+            
         # Only show teaching staff in teacher dropdown
         self.fields['teacher'].queryset = User.objects.filter(
             roles__name__in=[
@@ -174,42 +274,29 @@ class SubjectTeacherAssignmentForm(forms.ModelForm):
             ]
         ).distinct()
         
-        # In a real app, we might want to filter subjects based on class_level
-        # but since subjects are now globally offered or per-level+arm, 
-        # we can just show all active subjects or provide a simpler filter.
-        self.fields['subject'].queryset = Subject.objects.filter(is_active=True).order_by('name')
-
-    def _filter_available_subjects(self):
-        """Deprecated: Logic should move to a more session-agnostic validation if needed"""
-        pass
+        # In edit mode, pre-select the current offering
+        if self.instance and self.instance.pk:
+            current_offering = ClassArmSubject.objects.filter(
+                subject=self.instance.subject,
+                class_level=self.instance.class_level,
+                arm_name=self.instance.arm_name
+            ).first()
+            if current_offering:
+                self.fields['subject_assignments'].initial = [current_offering.pk]
 
     def clean(self):
-        """Validate that subject isn't already assigned to another teacher in this class"""
         cleaned_data = super().clean()
-        subject = cleaned_data.get('subject')
-        class_level = cleaned_data.get('class_level')
-        arm_name = cleaned_data.get('arm_name')
+        teacher = cleaned_data.get('teacher')
+        subject_assignments = cleaned_data.get('subject_assignments')
         
-        if subject and class_level and arm_name:
-            # Check if this subject is already assigned to another teacher in this class Level+Arm
-            existing_assignment = SubjectTeacherAssignment.objects.filter(
-                subject=subject,
-                class_level=class_level,
-                arm_name=arm_name
-            )
+        if not teacher or not subject_assignments:
+            return cleaned_data
             
-            # If editing, exclude the current assignment
-            if self.instance and self.instance.pk:
-                existing_assignment = existing_assignment.exclude(pk=self.instance.pk)
-            
-            if existing_assignment.exists():
-                teacher = existing_assignment.first().teacher
-                other_teacher = teacher.get_full_name() or teacher.username
-                raise forms.ValidationError(
-                    f"This subject is already assigned to {other_teacher} in {class_level} {arm_name}."
-                )
-        
         return cleaned_data
+
+    def save(self, commit=True):
+        # Saving logic handled in the view for bulk support
+        return super().save(commit=commit)
 
 
 class SubjectSearchForm(forms.Form):
