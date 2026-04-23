@@ -38,35 +38,78 @@ def report_card_management(request):
 
     """Class teacher dashboard to manage comments and ratings for their class"""
 
-    session = AcademicSession.get_current()
+    # Get session and term from GET or default to current
+    session_id = request.GET.get('session')
+    term_id = request.GET.get('term')
 
-    term = Term.get_current()
+    if term_id:
+        # Term is the authoritative source — session must always match the term's session.
+        # This prevents mismatched session/term URL params from causing integrity errors.
+        term = get_object_or_404(Term, id=term_id)
+        session = term.session
+    elif session_id:
+        # No term specified — use the URL session and pick a term from it
+        session = get_object_or_404(AcademicSession, id=session_id)
+        current_term = Term.get_current()
+        if current_term and current_term.session == session:
+            term = current_term
+        else:
+            term = Term.objects.filter(session=session).order_by('id').first()
+            if not term:
+                term = current_term
+    else:
+        # No params at all — fall back to current session/term
+        session = AcademicSession.get_current()
+        current_term = Term.get_current()
+        if current_term and current_term.session == session:
+            term = current_term
+        else:
+            term = Term.objects.filter(session=session).order_by('id').first() if session else current_term
 
-    # Get the class arm where this user is the class teacher
+    current_session = AcademicSession.get_current()
 
-    class_arm = ClassArm.objects.filter(
-
+    # Get all class arms where this user is the class teacher for this session
+    teacher_classes = ClassArm.objects.filter(
         class_teacher=request.user, 
-
         session=session
+    ).select_related('level').order_by('level__order', 'name')
 
-    ).first()
+    # Get specific class arm from GET or default to first
+    class_arm_id = request.GET.get('class_arm')
+    if class_arm_id:
+        class_arm = teacher_classes.filter(id=class_arm_id).first()
+        if not class_arm:
+             # If ID provided but not valid/not teacher's, fall back
+             class_arm = teacher_classes.first()
+    else:
+        class_arm = teacher_classes.first()
 
     if not class_arm:
-
-        messages.warning(request, "You are not assigned as a class teacher for any class in the current session.")
-
+        if session_id or term_id:
+            messages.warning(request, f"You were not assigned as a class teacher for any class in the {session.name} session.")
+        else:
+            messages.warning(request, "You are not assigned as a class teacher for any class in the current session.")
         return redirect('accounts:dashboard')
 
-    enrollments = StudentEnrollment.objects.filter(
-
-        class_arm=class_arm,
-
-        session=session,
-
-        is_active=True
-
+    # Filter enrollments - Term-agnostic student identification for historical accuracy
+    # This prevents students from being "hidden" if their record is stamped with a different term
+    enrollment_filter = {
+        'class_arm': class_arm,
+        'session': session,
+    }
+    
+    # Get a distinct list of students for this class/session
+    # We use a set of student IDs to ensure uniqueness manually since SQLite doesn't support distinct('student')
+    all_matching_enrollments = StudentEnrollment.objects.filter(
+        **enrollment_filter
     ).select_related('student__user').order_by('student__user__last_name')
+
+    enrollments = []
+    seen_students = set()
+    for enroll in all_matching_enrollments:
+        if enroll.student_id not in seen_students:
+            enrollments.append(enroll)
+            seen_students.add(enroll.student_id)
 
     # Get or create report cards for all students
 
@@ -75,16 +118,15 @@ def report_card_management(request):
     for enroll in enrollments:
 
         rc, created = ReportCard.objects.get_or_create(
-
             student=enroll.student,
-
             session=session,
-
             term=term,
-
-            class_arm=class_arm
-
+            defaults={'class_arm': class_arm}
         )
+
+        if not created and rc.class_arm != class_arm:
+            rc.class_arm = class_arm
+            rc.save()
 
         # Initialize domain ratings if they don't exist
 
@@ -122,15 +164,18 @@ def report_card_management(request):
         report_cards.append(rc)
 
     return render(request, 'results/report_card_management.html', {
-
-        'class_arm': class_arm,
-
+        'enrollments': enrollments,
         'report_cards': report_cards,
-
+        'class_arm': class_arm,
+        'teacher_classes': teacher_classes,
+        'session': session,
         'term': term,
-
-        'page_title': f"Class Management — {class_arm.full_name}"
-
+        'sessions': AcademicSession.objects.all().order_by('-start_date'),
+        'terms': Term.objects.filter(session=session).order_by('id'),
+        'selected_session': session_id,
+        'selected_term': term_id,
+        'selected_class_arm': str(class_arm.id),
+        'page_title': f'Class Management — {class_arm.full_name}'
     })
 
 @login_required
@@ -141,11 +186,22 @@ def update_student_results(request, student_id):
 
     """Update comments and domain ratings for a specific student"""
 
-    term = Term.get_current()
-
-    student = get_object_or_404(Student, pk=student_id)
-
-    report_card = get_object_or_404(ReportCard, student=student, term=term)
+    # Get report card identifying info from GET
+    term_id = request.GET.get('term')
+    
+    if term_id:
+        term = get_object_or_404(Term, id=term_id)
+        report_card = get_object_or_404(ReportCard, student_id=student_id, term=term, session=term.session)
+    else:
+        # Fallback to current term if no specific term requested
+        term = Term.get_current()
+        if term:
+            report_card = get_object_or_404(ReportCard, student_id=student_id, term=term, session=term.session)
+        else:
+            messages.error(request, "No current term defined. Please specify a term.")
+            return redirect('results:report_card_management')
+    
+    student = report_card.student
 
     # Safety Check: Verify this teacher owns this class
 
@@ -237,6 +293,8 @@ def update_student_results(request, student_id):
 
         'psychomotor': report_card.domain_ratings.filter(category=StudentDomainRating.Category.PSYCHOMOTOR),
 
+        'is_third_term': report_card.term.name == 'THIRD',
+
         'page_title': f"Update Results — {student.full_name}"
 
     })
@@ -271,7 +329,7 @@ def generate_class_report_cards(request):
 
         class_arm=class_arm,
 
-        session=session,
+        session=term.session,
 
         term=term
 
@@ -349,11 +407,45 @@ def view_report_card(request, pk):
         'SECOND': None,
         'THIRD': None
     }
-    term_averages = []
-    for sr in session_reports:
-        term_summary[sr.term.name] = float(sr.average)
-        term_averages.append(float(sr.average))
     
+    # 1. Fill from existing report cards
+    for sr in session_reports:
+        # Self-healing: Recalculate if average is 0 but might have results (only if no manual override)
+        if sr.average == 0 and sr.effective_average == 0:
+            sr.recalculate_totals()
+            sr.save()
+        term_summary[sr.term.name] = float(sr.effective_average)
+
+    # 2. Resiliency: For missing OR zeroed report cards, check if ExamResults exist
+    from examinations.models import ExamResult, Exam
+    for term_name in ['FIRST', 'SECOND', 'THIRD']:
+        if term_summary[term_name] is None or term_summary[term_name] == 0:
+            # Check for results in this term
+            results = ExamResult.objects.filter(
+                student=report_card.student,
+                exam__session=report_card.session,
+                exam__term__name=term_name
+            )
+            if results.exists():
+                obtained = 0
+                possible = 0
+                for res in results:
+                    obtained += float(res.total_score)
+                    possible += float(res.exam.total_marks)
+                
+                if possible > 0:
+                    term_summary[term_name] = (obtained / possible) * 100
+    
+    # 2b. Manual Overrides: From the CURRENT report card (takes absolute precedence for this view)
+    if report_card.manual_first_term_average is not None:
+        term_summary['FIRST'] = float(report_card.manual_first_term_average)
+    if report_card.manual_second_term_average is not None:
+        term_summary['SECOND'] = float(report_card.manual_second_term_average)
+    if report_card.manual_third_term_average is not None:
+        term_summary['THIRD'] = float(report_card.manual_third_term_average)
+    
+    # 3. Calculate cumulative average from whatever term data we have
+    term_averages = [v for v in term_summary.values() if v is not None]
     cumulative_avg = sum(term_averages) / len(term_averages) if term_averages else 0
 
     return render(request, 'results/report_card_view.html', {
@@ -509,9 +601,36 @@ def all_student_results(request):
 
     sessions = AcademicSession.objects.all().order_by('-start_date')
 
-    terms = Term.objects.all()
+    # Filter terms by session if session is selected
+    if session_id:
+        terms = Term.objects.filter(session_id=session_id).order_by('id')
+    else:
+        terms = Term.objects.all().order_by('-session__start_date', 'id')
 
-    class_arms = ClassArm.objects.select_related('level').all().order_by('level__order', 'name')
+    # Filter class arms by session when a session is selected
+    if session_id:
+        class_arms = ClassArm.objects.select_related('level').filter(session_id=session_id).order_by('level__order', 'name')
+    else:
+        class_arms = ClassArm.objects.select_related('level').all().order_by('level__order', 'name')
+
+    # Build JSON maps for dynamic client-side filtering
+    import json as _json
+    all_terms = Term.objects.select_related('session').all().order_by('id')
+    all_arms = ClassArm.objects.select_related('level', 'session').all().order_by('level__order', 'name')
+
+    terms_by_session = {}
+    for t in all_terms:
+        sid = str(t.session_id)
+        if sid not in terms_by_session:
+            terms_by_session[sid] = []
+        terms_by_session[sid].append({'id': t.id, 'name': t.get_name_display()})
+
+    arms_by_session = {}
+    for arm in all_arms:
+        sid = str(arm.session_id)
+        if sid not in arms_by_session:
+            arms_by_session[sid] = []
+        arms_by_session[sid].append({'id': arm.id, 'name': arm.full_name})
 
     return render(request, 'results/all_student_results.html', {
 
@@ -530,6 +649,10 @@ def all_student_results(request):
         'terms': terms,
 
         'class_arms': class_arms,
+
+        'terms_by_session': _json.dumps(terms_by_session),
+
+        'arms_by_session': _json.dumps(arms_by_session),
 
         'page_title': "All Student Results"
 
@@ -590,13 +713,9 @@ def manage_releases(request):
     for arm in class_arms:
 
         report_cards = ReportCard.objects.filter(
-
             class_arm=arm, 
-
-            session=current_session, 
-
+            session=current_term.session, 
             term=current_term
-
         )
 
         arm.total_students = report_cards.count()
@@ -629,7 +748,7 @@ def manage_releases(request):
 
     sessions = AcademicSession.objects.all().order_by('-start_date')
 
-    terms = Term.objects.all().order_by('id')
+    terms = Term.objects.filter(session=current_session).order_by('id')
 
     levels = ClassLevel.objects.all().order_by('order')
 

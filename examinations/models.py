@@ -43,8 +43,8 @@ class Exam(models.Model):
         upload_to='exams/theory_files/',
         null=True,
         blank=True,
-        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'docx', 'doc'])],
-        help_text="Upload theory/written questions file for printing (PDF, DOCX, DOC only)"
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'txt'])],
+        help_text="Upload theory/written questions file (PDF or TXT only)"
     )
 
     randomize_questions = models.BooleanField(
@@ -136,6 +136,23 @@ class Exam(models.Model):
     def has_theory_file(self):
         """Check if theory file has been uploaded"""
         return bool(self.theory_attachment)
+
+    @property
+    def is_published(self):
+        """Check if exam is beyond DRAFT status"""
+        return self.status != self.ExamStatus.DRAFT
+
+    @property
+    def get_theory_content(self):
+        """Read and return the content of TXT theory files"""
+        if self.theory_attachment and self.theory_attachment.name.lower().endswith('.txt'):
+            try:
+                # Open and read the file content
+                with self.theory_attachment.open('r') as f:
+                    return f.read()
+            except Exception:
+                return "Unable to read theory content from text file."
+        return None
 
     @property
     def total_marks(self):

@@ -58,6 +58,7 @@ urlpatterns = [
     path('<int:pk>/auto-submit/', views.exam_auto_submit, name='exam_auto_submit'),
     path('<int:pk>/result/', views.exam_result_student, name='exam_result_student'),
     path('<int:pk>/report/', views.exam_submission_report, name='exam_submission_report'),
+    path('<int:pk>/theory-view/', views.exam_theory_view, name='exam_theory_view'),
     path('<int:pk>/verify-pin/', views.verify_exam_pin, name='verify_exam_pin'),
 
     # ── Theory Score Entry (Teacher) ──────────────────

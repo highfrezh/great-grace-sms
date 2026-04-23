@@ -41,7 +41,7 @@ LOCAL_APPS = [
     'results',
     'schemes',
     'promotions',
-    'portal',
+    'portal'
 ]
 
 INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
@@ -56,6 +56,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 ROOT_URLCONF = 'config.urls'
 

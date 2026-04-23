@@ -434,51 +434,96 @@
       </div>
     </div>
 
-    <!-- Theory File -->
+    <!-- Theory Questions & Preview -->
     <div class="section-card">
       <div class="section-header">
-        <div class="section-title">Theory Questions</div>
+        <div class="section-title">Theory Questions & Preview</div>
       </div>
       <div class="p-6">
         {% if exam.theory_attachment %}
-          <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div class="flex items-start gap-3">
-              <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
+          <div class="mb-6">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                  {% if '.pdf' in exam.theory_attachment.name|lower %}
+                    <svg class="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z"/>
+                      <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+                    </svg>
+                  {% else %}
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                  {% endif %}
+                </div>
+                <div>
+                  <p class="text-sm font-bold text-gray-900">{{ exam.theory_attachment.name|default:"theory_questions" }}</p>
+                  <p class="text-xs text-gray-500">Available for on-screen viewing</p>
+                </div>
               </div>
-              <div class="flex-1">
-                <p class="text-sm font-medium text-green-800">File uploaded successfully</p>
-                <p class="text-xs text-green-600 mt-1">{{ exam.theory_attachment.name|default:"theory_file" }}</p>
-                <a href="{{ exam.theory_attachment.url }}" class="inline-flex items-center gap-2 mt-3 text-sm text-green-700 hover:text-green-800 font-medium" download>
+              <div class="flex gap-2">
+                <a href="{{ exam.theory_attachment.url }}" class="btn-secondary text-sm" download>
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                   </svg>
-                  Download File
+                  Download
                 </a>
+                {% if exam.status == 'DRAFT' %}
+                <a href="{% url 'examinations:teacher_exam_edit' exam.pk %}" class="btn-primary text-sm">
+                  Replace File
+                </a>
+                {% endif %}
               </div>
-              {% if exam.status == 'DRAFT' %}
-              <a href="{% url 'examinations:teacher_exam_edit' exam.pk %}" class="text-sm text-green-600 hover:text-green-700">
-                Replace
-              </a>
-              {% endif %}
+            </div>
+
+            <!-- On-screen Preview -->
+            <div class="mt-4 border-2 border-gray-100 rounded-xl overflow-hidden bg-gray-50">
+              <div class="bg-gray-100 px-4 py-2 flex items-center justify-between border-b border-gray-200">
+                <span class="text-xs font-black text-gray-500 uppercase tracking-widest">Live Preview</span>
+                <span class="text-xs text-gray-400">Questions as students will see them</span>
+              </div>
+              
+              <div class="p-4" style="min-height: 400px; max-height: 600px; overflow-y: auto;">
+                {% if '.pdf' in exam.theory_attachment.name|lower %}
+                  <div style="position: relative; width: 100%; height: 850px;">
+                    <object data="{{ exam.theory_attachment.url }}" type="application/pdf" width="100%" height="100%" style="border-radius: 0.5rem; border: 1px solid #E5E7EB;">
+                      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: #F9FAFB; border-radius: 0.5rem;">
+                         <p style="font-size: 0.875rem; color: #6B7280; margin-bottom: 1rem;">Preview unavailable in this browser</p>
+                         <a href="{{ exam.theory_attachment.url }}" target="_blank" style="background: #851A10; color: white; padding: 0.5rem 1.5rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; font-size: 0.875rem;">
+                           Open PDF Separately
+                         </a>
+                      </div>
+                    </object>
+                  </div>
+                {% elif '.txt' in exam.theory_attachment.name|lower %}
+                  <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 font-mono text-sm whitespace-pre-wrap text-gray-800 leading-relaxed">
+                    {{ exam.get_theory_content }}
+                  </div>
+                {% else %}
+                  <div class="flex flex-col items-center justify-center py-12 text-gray-400">
+                    <svg class="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    <p>On-screen preview not available for this format.</p>
+                    <p class="text-xs mt-1">Please use PDF or TXT for the best experience.</p>
+                  </div>
+                {% endif %}
+              </div>
             </div>
           </div>
         {% else %}
-          <div class="text-center py-6">
+          <div class="text-center py-8">
             <svg class="w-16 h-16 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
-            <p class="text-gray-500 text-sm">No theory file uploaded yet</p>
-            <p class="text-xs text-gray-400 mt-1">Upload a PDF or DOCX file for written questions</p>
+            <p class="text-gray-500 text-sm">No theory questions uploaded yet</p>
             {% if exam.status == 'DRAFT' %}
-            <a href="{% url 'examinations:teacher_exam_edit' exam.pk %}" class="inline-flex items-center gap-2 mt-4 btn-primary text-sm">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-              </svg>
-              Upload Theory File
-            </a>
+              <a href="{% url 'examinations:teacher_exam_edit' exam.pk %}" class="mt-4 btn-primary text-sm inline-flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Upload Theory File
+              </a>
             {% endif %}
           </div>
         {% endif %}

@@ -182,43 +182,57 @@ def process_bulk_promotion(request):
         
         student = get_object_or_404(Student, id=student_id)
         
-        # 3. Create Promotion Record
+        # 3. Handle Promotion Record (Idempotent)
         target_class = None
         if target_class_id:
             target_class = ClassArm.objects.filter(id=target_class_id).first()
             
-        PromotionHistory.objects.create(
+        PromotionHistory.objects.update_or_create(
             student=student,
             from_session=source_class.session,
             to_session=target_session,
-            from_class=source_class,
-            to_class=target_class,
-            avg_score=decimal.Decimal(avg_score),
-            status=decision,
-            created_by=request.user
+            defaults={
+                'from_class': source_class,
+                'to_class': target_class,
+                'avg_score': decimal.Decimal(avg_score),
+                'status': decision,
+                'created_by': request.user
+            }
         )
         
-        # 3. Handle Enrollment Updates
-        # Deactivate old enrollment
+        # 4. Handle Enrollment Updates
+        # Deactivate ALL enrollments in the source session (Cleaning up any loose ends)
         StudentEnrollment.objects.filter(
             student=student, 
-            session=source_class.session,
-            is_active=True
+            session=source_class.session
         ).update(is_active=False)
         
-        # Create new enrollment if Promoted or Repeated
+        # Create or Update a SINGLE clean enrollment for the target session
         if decision in [PromotionHistory.Status.PROMOTED, PromotionHistory.Status.PROMOTED_TRIAL, PromotionHistory.Status.REPEATED]:
             if target_class:
-                StudentEnrollment.objects.create(
+                # First, ensure no other conflicting active enrollments exist in the target session
+                StudentEnrollment.objects.filter(
+                    student=student, 
+                    session=target_session
+                ).exclude(term=first_term).update(is_active=False)
+
+                # Now update or create the primary enrollment
+                StudentEnrollment.objects.update_or_create(
                     student=student,
-                    class_arm=target_class,
                     session=target_session,
                     term=first_term,
-                    is_active=True
+                    defaults={
+                        'class_arm': target_class,
+                        'is_active': True
+                    }
                 )
                 count_success += 1
         else:
-            # Graduated or Withdrawn students don't get new enrollments
+            # Graduated or Withdrawn: Ensure they have no active enrollments in target session
+            StudentEnrollment.objects.filter(
+                student=student,
+                session=target_session
+            ).update(is_active=False)
             count_success += 1
 
     messages.success(request, f"Successfully processed promotion for {count_success} students.")

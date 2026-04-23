@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+import json
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -1061,6 +1062,29 @@ def exam_submission_report(request, pk):
     })
 
 
+@login_required
+def exam_theory_view(request, pk):
+    """View theory questions after objective exam is completed"""
+    exam = get_object_or_404(Exam, pk=pk)
+    try:
+        student = request.user.student_profile
+    except Exception:
+        return redirect('accounts:dashboard')
+
+    submission = get_object_or_404(
+        ExamSubmission, exam=exam, student=student
+    )
+
+    if not submission.is_complete:
+        messages.warning(request, "You must complete the objective exam first.")
+        return redirect('examinations:exam_take', pk=pk)
+
+    return render(request, 'examinations/exam_theory_view.html', {
+        'exam': exam,
+        'page_title': f'Theory Questions — {exam.subject.name}'
+    })
+
+
 # ── THEORY & CA SCORE ENTRY ───────────────────────────────────
 
 @login_required
@@ -1228,7 +1252,9 @@ def teacher_exam_create(request):
         messages.error(request, 'Staff profile not found.')
         return redirect('accounts:dashboard')
     
-    # Get teacher's assigned subjects/classes
+    current_session = AcademicSession.get_current()
+    current_term = Term.get_current()
+
     assignments = SubjectTeacherAssignment.objects.filter(
         teacher=request.user
     ).select_related('subject', 'class_level')
@@ -1238,77 +1264,24 @@ def teacher_exam_create(request):
     if form.is_valid():
         try:
             with transaction.atomic():
-                # Extract form data
-                title = form.cleaned_data['title']
-                subject = form.cleaned_data['subject']
-                session = form.cleaned_data['session']
-                term = form.cleaned_data['term']
-                duration_minutes = form.cleaned_data['duration_minutes']
-                theory_attachment = form.cleaned_data.get('theory_attachment')
-                randomize_questions = form.cleaned_data.get('randomize_questions', True)
-                
-                # Get all matching class_arms for this subject from teacher's permanent assignments
-                assignment_combos = SubjectTeacherAssignment.objects.filter(
-                    teacher=request.user,
-                    subject=subject
-                ).values('class_level_id', 'arm_name')
-                
-                # Build a filter to find session-specific ClassArm objects
-                class_arm_filters = Q()
-                for combo in assignment_combos:
-                    class_arm_filters |= Q(level_id=combo['class_level_id'], name=combo['arm_name'])
-                
-                if assignment_combos.exists():
-                    class_arms = ClassArm.objects.filter(
-                        session=session
-                    ).filter(class_arm_filters).distinct()
-                else:
-                    class_arms = ClassArm.objects.none()
-                
-                if not class_arms.exists():
-                    messages.error(request, f'No classes found for {subject}. Check your subject-class assignments.')
-                    form = TeacherExamForm(teacher=request.user)
-                    return render(request, 'examinations/teacher_exam_create.html', {
-                        'form': form,
-                        'assignments': assignments,
-                        'page_title': 'Create New Exam',
-                        'current_session': current_session,
-                        'current_term': current_term,
-                    })
-                
-                # Create ONE exam with all class_arms
-                exam = Exam(
-                    title=title,
-                    subject=subject,
-                    teacher=staff_profile,
-                    session=session,
-                    term=term,
-                    duration_minutes=duration_minutes,
-                    theory_attachment=theory_attachment,
-                    randomize_questions=randomize_questions
-                )
+                exam = form.save(commit=False)
+                exam.teacher = staff_profile
                 exam.save()
                 
-                # Add all class_arms to the exam
-                exam.class_arms.set(class_arms)
-                
-                # Show success message with class count
-                class_count = class_arms.count()
-                class_names = ', '.join(str(ca) for ca in class_arms)
+                # Save the ManyToMany relationship
+                form.save_m2m()
+
                 messages.success(
-                    request, 
-                    f'Exam "{title}" created successfully for {class_count} class{"es" if class_count > 1 else ""}: {class_names}'
+                    request,
+                    f'Exam "{exam.title}" created successfully for the selected subjects/classes.'
                 )
                 return redirect('examinations:teacher_exam_detail', pk=exam.pk)
-        except IntegrityError as e:
+        except IntegrityError:
             messages.error(
-                request, 
-                'An error occurred while creating the exam. The exam may already exist for this subject-session-term combination.'
+                request,
+                'An error occurred while creating the exam. It may already exist for this subject-session-term combination.'
             )
             form = TeacherExamForm(request.POST, teacher=request.user)
-    
-    current_session = AcademicSession.get_current()
-    current_term = Term.get_current()
     
     return render(request, 'examinations/teacher_exam_create.html', {
         'form': form,
@@ -1404,22 +1377,17 @@ def teacher_exam_edit(request, pk):
     
     exam = get_object_or_404(Exam, pk=pk, teacher=staff_profile)
     
-    # Check if exam can be edited (must be in DRAFT status)
-    if exam.status != Exam.ExamStatus.DRAFT:
-        messages.error(
-            request,
-            f'Cannot edit exam. It is currently in "{exam.get_status_display()}" status. '
-            'You can only edit exams in draft status.'
-        )
-        return redirect('examinations:teacher_exam_detail', pk=exam.pk)
-    
-    form = TeacherExamForm(request.POST or None, request.FILES or None, instance=exam)
+    form = TeacherExamForm(request.POST or None, request.FILES or None, instance=exam, teacher=request.user)
     
     if form.is_valid():
-        form.save()
-        messages.success(request, 'Exam updated successfully.')
-        return redirect('examinations:teacher_exam_detail', pk=exam.pk)
-    
+        try:
+            with transaction.atomic():
+                exam = form.save()
+                
+                messages.success(request, f'Exam updated successfully for the selected classes.')
+                return redirect('examinations:teacher_exam_detail', pk=exam.pk)
+        except IntegrityError:
+            messages.error(request, 'An error occurred while updating the exam.')
     return render(request, 'examinations/teacher_exam_edit.html', {
         'form': form,
         'exam': exam,
@@ -1595,7 +1563,6 @@ def teacher_bulk_import_questions(request, exam_pk):
             lines = content.split('\n')
             
             questions_to_create = []
-            
             current_question = ""
             options = {}
             correct_answer = None
@@ -1604,24 +1571,34 @@ def teacher_bulk_import_questions(request, exam_pk):
                 line = line.strip()
                 if not line:
                     continue
+                
+                # Use regex or simple startswith for options (A., A:, A) )
+                import re
+                option_match = re.match(r'^([A-D])[\.\:\)]\s*(.*)$', line, re.IGNORECASE)
+                answer_match = re.match(r'^ANSWER:\s*([A-D])$', line, re.IGNORECASE)
+
+                if answer_match:
+                    correct_answer = answer_match.group(1).upper()
                     
-                # Check for Answer
-                if line.upper().startswith("ANSWER:"):
-                    correct_answer = line.split(":", 1)[1].strip().upper()
-                    
-                    # Validate block (Requires A, B, C, D and correct answer)
-                    if current_question and 'A' in options and 'B' in options and 'C' in options and 'D' in options and correct_answer in ['A', 'B', 'C', 'D']:
+                    # Validate block
+                    if current_question and len(options) >= 4 and correct_answer in options:
                         questions_to_create.append(ObjectiveQuestion(
                             exam=exam,
-                            question_text=current_question,
-                            option_a=options['A'],
-                            option_b=options['B'],
-                            option_c=options['C'],
-                            option_d=options['D'],
+                            question_text=current_question.strip(),
+                            option_a=options.get('A', ''),
+                            option_b=options.get('B', ''),
+                            option_c=options.get('C', ''),
+                            option_d=options.get('D', ''),
                             correct_option=correct_answer
                         ))
                     else:
-                        messages.warning(request, f'Skipped a question near line {index+1} due to missing valid options or answer.')
+                        missing = []
+                        if not current_question: missing.append("Question Text")
+                        for char in ['A', 'B', 'C', 'D']:
+                            if char not in options: missing.append(f"Option {char}")
+                        if not correct_answer: missing.append("Answer")
+                        
+                        messages.warning(request, f'Skipped a question near line {index+1}. Missing: {", ".join(missing)}')
                     
                     # Reset block
                     current_question = ""
@@ -1629,33 +1606,32 @@ def teacher_bulk_import_questions(request, exam_pk):
                     correct_answer = None
                     continue
                 
-                # Check for Options
-                elif (line.startswith("A.") or line.startswith("A)")) and "A" not in options:
-                    options['A'] = line[2:].strip()
-                elif (line.startswith("B.") or line.startswith("B)")) and "B" not in options:
-                    options['B'] = line[2:].strip()
-                elif (line.startswith("C.") or line.startswith("C)")) and "C" not in options:
-                    options['C'] = line[2:].strip()
-                elif (line.startswith("D.") or line.startswith("D)")) and "D" not in options:
-                    options['D'] = line[2:].strip()
+                elif option_match:
+                    letter = option_match.group(1).upper()
+                    text = option_match.group(2).strip()
+                    options[letter] = text
                 else:
                     # Anything else is treated as question text
                     if not options:
                         if current_question:
-                            current_question += "\n" + line
+                            current_question += " " + line
                         else:
                             current_question = line
                     else:
-                        # Malformed, we just ignore extra text after options start
-                        pass
+                        # If we already have options but find text that isn't an answer,
+                        # it might be a continuation of the last option or an error.
+                        # For Aiken, we usually ignore it or append it to the last option.
+                        last_letter = list(options.keys())[-1]
+                        options[last_letter] += " " + line
                         
             if questions_to_create:
+                from django.db import transaction
                 with transaction.atomic():
                     ObjectiveQuestion.objects.bulk_create(questions_to_create)
                 messages.success(request, f'Successfully imported {len(questions_to_create)} questions!')
                 return redirect('examinations:teacher_exam_detail', pk=exam.pk)
             else:
-                messages.error(request, 'No valid questions found. Please check your file formatting matches the Aiken format guide.')
+                messages.error(request, 'No valid questions found. Please ensure your file follows the Aiken format (Question, A., B., C., D., then ANSWER: X).')
                 
         except UnicodeDecodeError:
             messages.error(request, 'The file must be saved with UTF-8 encoding.')
@@ -1815,11 +1791,13 @@ def ca_score_entry(request, pk):
     current_session = AcademicSession.get_current()
     current_term = Term.get_current()
 
+    # IMPORTANT: Use the exam's session, not the global current session
+    # to find students who were present WHEN the exam was created.
+    # We look for students in this session, but use .distinct() to ensure 
+    # they only appear once, even if they have records for multiple terms.
     students = Student.objects.filter(
-        is_active=True,
         enrollments__class_arm__in=exam.class_arms.all(),
-        enrollments__session=current_session,
-        enrollments__is_active=True
+        enrollments__session=exam.session
     ).order_by('last_name', 'first_name').distinct()
 
     if request.method == 'POST':
@@ -1858,7 +1836,7 @@ def ca_score_entry(request, pk):
                 student=student,
                 session=exam.session,
                 term=exam.term,
-                class_arm=student.enrollments.filter(session=exam.session, is_active=True).first().class_arm
+                class_arm=student.enrollments.filter(session=exam.session).first().class_arm
             )
             
             ResultAuditLog.objects.create(
@@ -1895,11 +1873,30 @@ def exam_results(request, pk):
     exam = get_object_or_404(Exam, pk=pk)
     
     # Get all students assigned to this exam via class arms
-    enrollments = StudentEnrollment.objects.filter(
-        class_arm__in=exam.class_arms.all(),
-        session=exam.session,
-        is_active=True
-    ).select_related('student__user', 'class_arm').order_by('class_arm', 'student__user__last_name')
+    # Use exam's session and remove is_active=True to show promoted/historical students
+    # Get all students enrolled in the assigned classes
+    # We filter by the class arms linked to the exam. 
+    # Since class arms are session-specific, this automatically covers the correct session.
+    raw_enrollments = StudentEnrollment.objects.filter(
+        class_arm__in=exam.class_arms.all()
+    ).select_related(
+        'student__user', 
+        'class_arm'
+    ).order_by('student_id', '-term__id')
+    
+    # Manually filter for unique students (SQLite compatible alternative to distinct('student_id'))
+    seen_students = set()
+    enrollments = []
+    for enroll in raw_enrollments:
+        if enroll.student_id not in seen_students:
+            enrollments.append(enroll)
+            seen_students.add(enroll.student_id)
+    
+    # Sort for display: by class arm name, then student name
+    enrollments = sorted(
+        enrollments, 
+        key=lambda e: (str(e.class_arm), e.student.user.last_name, e.student.user.first_name)
+    )
     
     # Map submissions and results for quick lookup
     submissions = {s.student_id: s for s in ExamSubmission.objects.filter(exam=exam)}
@@ -1939,7 +1936,7 @@ def exam_results(request, pk):
         })
     
     # Stats for summary row
-    total_count = enrollments.count()
+    total_count = len(enrollments)
     submitted_count = sum(1 for d in performance_data if d['status'] == 'SUBMITTED')
     in_progress_count = sum(1 for d in performance_data if d['status'] == 'IN_PROGRESS')
     not_started_count = total_count - (submitted_count + in_progress_count)

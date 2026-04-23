@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+import json
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
@@ -97,6 +98,14 @@ def student_create(request):
     enrollment_form = StudentEnrollmentForm(request.POST or None, prefix='enrollment')
     guardian_form = GuardianForm(request.POST or None, prefix='guardian')
     
+    # Build term map for dynamic filtering
+    term_map = {}
+    for session in AcademicSession.objects.all():
+        term_map[str(session.id)] = [
+            {'id': term.id, 'name': term.get_name_display()}
+            for term in Term.objects.filter(session=session)
+        ]
+
     if request.method == 'POST':
         if student_form.is_valid():
             student = student_form.save()
@@ -129,6 +138,7 @@ def student_create(request):
         'student_form': student_form,
         'enrollment_form': enrollment_form,
         'guardian_form': guardian_form,
+        'term_map_json': json.dumps(term_map),
         'page_title': 'Admit New Student',
         'is_edit': False
     })
@@ -172,8 +182,16 @@ def student_edit(request, pk):
     guardian_form = GuardianForm(request.POST or None, instance=guardian, prefix='guardian')
     
     current_enrollment = student.get_current_enrollment()
-    enrollment_form = StudentEnrollmentForm(request.POST or None, instance=current_enrollment)
+    enrollment_form = StudentEnrollmentForm(request.POST or None, instance=current_enrollment, prefix='enrollment')
     
+    # Build term map for dynamic filtering
+    term_map = {}
+    for session in AcademicSession.objects.all():
+        term_map[str(session.id)] = [
+            {'id': term.id, 'name': term.get_name_display()}
+            for term in Term.objects.filter(session=session)
+        ]
+
     if request.method == 'POST':
         if student_form.is_valid() and guardian_form.is_valid() and enrollment_form.is_valid():
             old_phone = guardian.phone if guardian else None
@@ -221,6 +239,37 @@ def student_edit(request, pk):
                         create_guardian_user(new_guardian)
 
             if enrollment_form.cleaned_data.get('class_arm'):
+                cd = enrollment_form.cleaned_data
+                new_session = cd.get('session')
+                new_term = cd.get('term')
+                new_class = cd.get('class_arm')
+                
+                # Professional check: If session/term changed, check for conflict
+                if current_enrollment and (current_enrollment.session != new_session or current_enrollment.term != new_term):
+                    existing = StudentEnrollment.objects.filter(
+                        student=student,
+                        session=new_session,
+                        term=new_term
+                    ).exclude(pk=current_enrollment.pk).first()
+                    
+                    if existing:
+                        messages.warning(request, 
+                            f"Update redirected: {student.full_name} already has a record for {new_session} {new_term}. "
+                            f"We have updated that record to {new_class} and made it active, "
+                            f"deactivating the {current_enrollment.session} record instead."
+                        )
+                        # Switch Active status
+                        existing.class_arm = new_class
+                        existing.is_active = True
+                        existing.save()
+                        
+                        current_enrollment.is_active = False
+                        current_enrollment.save()
+                        
+                        # We don't save the form instance because it's the wrong record
+                        return redirect('students:student_detail', pk=student.pk)
+
+                # No conflict: Save as normal
                 enrollment = enrollment_form.save(commit=False)
                 enrollment.student = student
                 enrollment.save()
@@ -234,6 +283,7 @@ def student_edit(request, pk):
         'student_form': student_form,
         'guardian_form': guardian_form,
         'enrollment_form': enrollment_form,
+        'term_map_json': json.dumps(term_map),
         'page_title': f'Edit — {student.full_name}',
         'is_edit': True,
         'student': student
@@ -503,10 +553,21 @@ def attendance_mark(request, pk=None):
             ClassArm, pk=pk, class_teacher=request.user
         )
     else:
-        class_arm = ClassArm.objects.filter(
+        # All classes this teacher manages in the current session
+        teacher_classes = ClassArm.objects.filter(
             class_teacher=request.user,
             session=current_session
-        ).first()
+        ).select_related('level').order_by('level__order', 'name')
+
+        if teacher_classes.count() == 1:
+            # Only one class — go straight to it
+            class_arm = teacher_classes.first()
+        elif teacher_classes.count() > 1:
+            # Multiple classes — redirect to the first one so the URL has a pk
+            # The template will render a class switcher using all_class_arms
+            class_arm = teacher_classes.first()
+        else:
+            class_arm = None
 
     if not class_arm:
         messages.error(request, 'You are not assigned to any class.')
@@ -520,12 +581,12 @@ def attendance_mark(request, pk=None):
         selected_date = today
 
     # Get students
+    # Get students (including historical ones for this session)
     students = Student.objects.filter(
         is_active=True,
         enrollments__class_arm=class_arm,
         enrollments__session=current_session,
-        enrollments__term=current_term,
-        enrollments__is_active=True
+        enrollments__term=current_term
     ).order_by('last_name', 'first_name').distinct()
 
     # Handle POST — save attendance
@@ -665,8 +726,15 @@ def attendance_mark(request, pk=None):
          'bg-red-100 text-red-700 hover:bg-red-200'),
     ]
 
+    # All classes this teacher manages (for the switcher)
+    all_class_arms = ClassArm.objects.filter(
+        class_teacher=request.user,
+        session=current_session
+    ).select_related('level').order_by('level__order', 'name')
+
     return render(request, 'students/attendance_mark.html', {
         'class_arm': class_arm,
+        'all_class_arms': all_class_arms,
         'students': students,
         'today': today,
         'selected_date': selected_date,
@@ -714,14 +782,42 @@ def student_dashboard(request):
             messages.error(request, 'Student profile not found.')
             return redirect('accounts:dashboard')
     
-    # Get current session and term
-    current_session = AcademicSession.get_current()
-    current_term = Term.get_current()
+    # Get requested session and term from GET params
+    session_id = request.GET.get('session')
+    term_id = request.GET.get('term')
     
+    if session_id:
+        current_session = get_object_or_404(AcademicSession, id=session_id)
+    else:
+        current_session = AcademicSession.get_current()
+        
+    if term_id:
+        current_term = get_object_or_404(Term, id=term_id, session=current_session)
+    else:
+        # Default to current term of the selected session
+        if session_id:
+            current_term = Term.objects.filter(session=current_session, is_current=True).first() or \
+                           Term.objects.filter(session=current_session).first()
+        else:
+            current_term = Term.get_current()
+            
     if not current_session or not current_term:
-        messages.warning(request, 'No active session or term configured.')
-        current_session = None
-        current_term = None
+        # Fallback if nothing set
+        current_session = AcademicSession.objects.filter(is_current=True).first() or AcademicSession.objects.first()
+        current_term = Term.objects.filter(session=current_session, is_current=True).first() or \
+                       Term.objects.filter(session=current_session).first()
+    
+    # Get all sessions the student has ever been enrolled in (for the switcher)
+    all_enrollments = student.enrollments.select_related('session').order_by('-session__start_date')
+    history_sessions = []
+    seen_session_ids = set()
+    for enr in all_enrollments:
+        if enr.session_id not in seen_session_ids:
+            history_sessions.append(enr.session)
+            seen_session_ids.add(enr.session_id)
+            
+    # Terms for the selected session
+    session_terms = Term.objects.filter(session=current_session).order_by('id')
     
     # Get exam configuration
     from examinations.models import ExamConfiguration, Exam, ExamSubmission
@@ -730,9 +826,9 @@ def student_dashboard(request):
         term=current_term
     ).first()
     
-    # Get current enrollment
+    # Get enrollment for specific session
+    # For historical viewing, we look for enrollment in that session regardless of active status
     current_enrollment = student.enrollments.filter(
-        is_active=True,
         session=current_session
     ).select_related('class_arm__level').first()
     
@@ -874,6 +970,8 @@ def student_dashboard(request):
         'exams_completed': exams_completed,
         'results_published': results_published,
         'avg_score': round(avg_score, 2),
+        'history_sessions': history_sessions,
+        'session_terms': session_terms,
         'page_title': 'Student Dashboard'
     }
     
@@ -890,10 +988,17 @@ def my_students_list(request):
         
     class_arms = ClassArm.objects.filter(class_teacher=request.user, session=current_session)
     
-    # We want ALL students who have ever been enrolled in this class during this session.
+    # We want ALL students enrolled in this class during this session, 
+    # but only ONE record per student to avoid duplicates from multiple terms.
+    from django.db.models import OuterRef, Subquery
+    latest_enrollment = StudentEnrollment.objects.filter(
+        student=OuterRef('student'),
+        session=current_session,
+        class_arm__in=class_arms
+    ).order_by('-term__id')
+
     enrollments = StudentEnrollment.objects.filter(
-        class_arm__in=class_arms,
-        session=current_session
+        id=Subquery(latest_enrollment.values('id')[:1])
     ).select_related('student', 'class_arm').order_by('class_arm__name', 'student__last_name')
     
     query = request.GET.get('q', '').strip()

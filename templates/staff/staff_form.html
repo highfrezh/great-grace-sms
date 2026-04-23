@@ -9,6 +9,36 @@
   <form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
 
+    <!-- Error Summary -->
+    {% if user_form.errors or profile_form.errors %}
+    <div class="mb-6 p-4 bg-red-50 border-l-4 border-[#851A10] rounded-r-xl shadow-sm">
+        <div class="flex items-center gap-3 mb-2">
+            <svg class="w-5 h-5 text-[#851A10]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <h3 class="text-sm font-bold text-[#851A10]">Please correct the following:</h3>
+        </div>
+        <ul class="list-disc list-inside text-xs text-[#851A10] space-y-1">
+            {% for error in user_form.non_field_errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+            {% for error in profile_form.non_field_errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+            {% for field in user_form %}
+                {% for error in field.errors %}
+                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+            {% for field in profile_form %}
+                {% for error in field.errors %}
+                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
     <style>
       input:not([type="checkbox"]):not([type="file"]),
       select, textarea {
@@ -126,9 +156,12 @@
             </label>
             <input type="text" 
                    name="phone_number" 
-                   value="{{ user_form.instance.phone_number|default:'' }}"
+                   value="{{ user_form.phone_number.value|default:user_form.instance.phone_number|default:'' }}"
                    placeholder="e.g. 08012345678"
-                   class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#851A10] focus:ring-2 focus:ring-[#851A10]/10">
+                   class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#851A10] focus:ring-2 focus:ring-[#851A10]/10 {% if user_form.phone_number.errors %}is-invalid{% endif %}">
+            {% if user_form.phone_number.errors %}
+              <p class="form-error">{{ user_form.phone_number.errors.0 }}</p>
+            {% endif %}
             <p class="text-xs text-gray-400 mt-1">
               {% if not is_edit %}
               This will be the default login password

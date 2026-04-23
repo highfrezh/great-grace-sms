@@ -75,6 +75,33 @@ class StudentEnrollmentForm(forms.ModelForm):
             session=AcademicSession.get_current()
         ).select_related('level')
 
+    def clean(self):
+        cleaned_data = super().clean()
+        session = cleaned_data.get('session')
+        term = cleaned_data.get('term')
+        
+        # Check for uniqueness if student is already linked (edit mode)
+        student = None
+        try:
+            student = self.instance.student
+        except Student.DoesNotExist:
+            pass
+
+        if student and session and term:
+            duplicate = StudentEnrollment.objects.filter(
+                student=self.instance.student,
+                session=session,
+                term=term
+            ).exclude(pk=self.instance.pk)
+            
+            if duplicate.exists():
+                raise forms.ValidationError(
+                    f"This student already has an enrollment for {session} {term}. "
+                    "You cannot have multiple enrollments for the same period. "
+                    "Please manage history instead of changing the session of this record."
+                )
+        return cleaned_data
+
 
 class StudentSearchForm(forms.Form):
     """Form for searching students"""

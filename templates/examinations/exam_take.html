@@ -492,6 +492,7 @@ class="ml-0 flex-1 flex flex-col transition-all duration-300 ease-in-out"
             <button type="submit" id="hiddenSubmitBtn" style="display: none;"></button>
 
             <div class="question-view" id="questionView">
+                <div id="objective-tab-content">
                 {% for question in questions %}
                 <div class="question-item" id="q-{{ forloop.counter }}" data-index="{{ forloop.counter }}"
                     data-id="{{ question.id }}">
@@ -543,6 +544,7 @@ class="ml-0 flex-1 flex flex-col transition-all duration-300 ease-in-out"
                     </div>
                 </div>
                 {% endfor %}
+                </div>
             </div>
         </form>
 
@@ -633,6 +635,38 @@ class="ml-0 flex-1 flex flex-col transition-all duration-300 ease-in-out"
 {% block extra_js %}
 <script src="{% static 'js/exam-timer.js' %}?v=1.7"></script>
 <script>
+    window.switchExamTab = function(tabName) {
+        const objectiveTab = document.getElementById('objective-tab-content');
+        const theoryTab = document.getElementById('theory-tab-content');
+        const objectiveBtn = document.getElementById('tab-btn-objective');
+        const theoryBtn = document.getElementById('tab-btn-theory');
+
+        if (tabName === 'theory') {
+            objectiveTab.style.display = 'none';
+            theoryTab.style.display = 'block';
+            
+            theoryBtn.classList.add('bg-primary', 'text-white', 'border-primary');
+            theoryBtn.classList.remove('bg-white', 'text-gray-600', 'border-gray-200');
+            
+            objectiveBtn.classList.remove('bg-primary', 'text-white', 'border-primary');
+            objectiveBtn.classList.add('bg-white', 'text-gray-600', 'border-gray-200');
+            
+            // Re-initialize iframe if needed for some browsers
+            const iframe = theoryTab.querySelector('iframe');
+            if (iframe) iframe.src = iframe.src;
+        } else {
+            theoryTab.style.display = 'none';
+            objectiveTab.style.display = 'block';
+            
+            objectiveBtn.classList.add('bg-primary', 'text-white', 'border-primary');
+            objectiveBtn.classList.remove('bg-white', 'text-gray-600', 'border-gray-200');
+            
+            theoryBtn.classList.remove('bg-primary', 'text-white', 'border-primary');
+            theoryBtn.classList.add('bg-white', 'text-gray-600', 'border-gray-200');
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     class ExamNavigator {
         constructor(totalQuestions) {
             this.total = totalQuestions;

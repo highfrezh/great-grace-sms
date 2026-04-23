@@ -16,6 +16,20 @@ class ExamForm(forms.ModelForm):
         label='Classes',
         help_text='Select all classes that will take this exam'
     )
+    theory_attachment = forms.FileField(
+        label='Theory Questions File',
+        required=False,
+        help_text='Upload a PDF or TXT file containing the theory questions.',
+        widget=forms.FileInput(attrs={'accept': '.pdf,.txt'})
+    )
+
+    def clean_theory_attachment(self):
+        file = self.cleaned_data.get('theory_attachment')
+        if file:
+            extension = file.name.split('.')[-1].lower()
+            if extension not in ['pdf', 'txt']:
+                raise forms.ValidationError("Only PDF and TXT files are supported for theory questions.")
+        return file
     
     class Meta:
         model = Exam
@@ -38,7 +52,7 @@ class ExamForm(forms.ModelForm):
             }),
             'theory_attachment': forms.FileInput(attrs={
                 'class': 'form-input',
-                'accept': '.pdf,.docx,.doc'
+                'accept': '.pdf,.txt'
             }),
             'randomize_questions': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 m-0 rounded border-gray-300'
@@ -91,12 +105,19 @@ class ExamForm(forms.ModelForm):
 
 
 class TeacherExamForm(forms.ModelForm):
-    """Form for subject teachers creating exams (without teacher selection)"""
+    """Simplified form for subject teachers creating exams with a single multi-select field"""
     
+    subject_arms = forms.MultipleChoiceField(
+        choices=[],
+        widget=forms.SelectMultiple(attrs={'class': 'form-control', 'style': 'height: 150px;'}),
+        label='Assigned Subjects & Classes',
+        help_text='Hold Ctrl (Cmd on Mac) to select multiple classes for the same subject.'
+    )
+
     class Meta:
         model = Exam
         fields = [
-            'title', 'subject', 'session', 'term',
+            'title', 'session', 'term',
             'duration_minutes', 'theory_attachment', 'randomize_questions',
             'show_results_immediately'
         ]
@@ -105,7 +126,6 @@ class TeacherExamForm(forms.ModelForm):
                 'placeholder': 'e.g. First Term Examination',
                 'class': 'form-control'
             }),
-            'subject': forms.Select(attrs={'class': 'form-control'}),
             'session': forms.Select(attrs={'class': 'form-control'}),
             'term': forms.Select(attrs={'class': 'form-control'}),
             'duration_minutes': forms.NumberInput(attrs={
@@ -113,7 +133,7 @@ class TeacherExamForm(forms.ModelForm):
             }),
             'theory_attachment': forms.FileInput(attrs={
                 'class': 'form-control',
-                'accept': '.pdf,.docx,.doc'
+                'accept': '.pdf,.txt'
             }),
             'randomize_questions': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 m-0 rounded border-gray-300'
@@ -124,97 +144,137 @@ class TeacherExamForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        # Extract teacher from kwargs if provided
         teacher = kwargs.pop('teacher', None)
-        self.teacher = teacher  # Store for later use
+        self.teacher = teacher
         super().__init__(*args, **kwargs)
+        
         current_session = AcademicSession.get_current()
         current_term = Term.get_current()
-        
-        # Set current session and term as defaults
         self.fields['session'].initial = current_session
         self.fields['term'].initial = current_term
         
-        # Apply form-control class to all fields
-        for field_name, field in self.fields.items():
-            field.widget.attrs.update({'class': 'form-control'})
-        
-        # Add data attributes for dynamic filtering
-        self.fields['subject'].widget.attrs['id'] = 'id_subject'
-        
-        # Filter subject based on teacher's assignments
         if teacher:
-            # Get teacher's permanent assignments
-            from academics.models import SubjectTeacherAssignment
+            from academics.models import SubjectTeacherAssignment, ClassArm as _ClassArm
             assignments = SubjectTeacherAssignment.objects.filter(
-                teacher=teacher,
-            ).select_related('subject')
+                teacher=teacher
+            ).select_related('subject', 'class_level').order_by('subject__name', 'class_level__order', 'arm_name')
             
-            # Get unique subjects assigned to teacher
-            assigned_subject_ids = assignments.values_list('subject', flat=True).distinct()
-            
-            # Filter class_arms based on these assignments for current session
-            # Note: TeacherExamForm doesn't explicitly define class_arms field, but we add it if needed
-            # or it's handled in Meta.fields (Wait, I should check if I should add it to Meta.fields)
-            
-            # Identify subjects for which the teacher has already created an exam in this session/term
-            try:
-                staff_profile = StaffProfile.objects.get(user=teacher)
-                existing_exam_subject_ids = Exam.objects.filter(
-                    teacher=staff_profile,
+            choices = []
+            for assignment in assignments:
+                # Find matching arms in current session
+                arms = _ClassArm.objects.filter(
                     session=current_session,
-                    term=current_term
-                ).values_list('subject_id', flat=True)
-            except StaffProfile.DoesNotExist:
-                existing_exam_subject_ids = []
+                    level=assignment.class_level,
+                    name=assignment.arm_name
+                )
+                for arm in arms:
+                    value = f"{assignment.subject_id}:{arm.id}"
+                    label = f"{assignment.subject.name} ({arm.full_name})"
+                    choices.append((value, label))
+            
+            self.fields['subject_arms'].choices = choices
 
-            # Filter subjects
-            if not self.instance.pk:
-                self.fields['subject'].queryset = Subject.objects.filter(
-                    id__in=assigned_subject_ids
-                ).exclude(id__in=existing_exam_subject_ids)
-            else:
-                self.fields['subject'].queryset = Subject.objects.filter(id__in=assigned_subject_ids)
-        
-        # Disable fields if exam is in a published state (not DRAFT)
-        if self.instance and self.instance.pk and self.instance.status != 'DRAFT':
-            # Fields to disable when exam is not in draft
-            fields_to_disable = ['title', 'subject', 'session', 'term', 'duration_minutes']
-            for field_name in fields_to_disable:
-                if field_name in self.fields:
-                    self.fields[field_name].disabled = True
-    
+        if self.instance.pk:
+            # Set initial values for subject_arms if editing
+            initial_choices = []
+            for arm in self.instance.class_arms.all():
+                initial_choices.append(f"{self.instance.subject_id}:{arm.id}")
+            self.fields['subject_arms'].initial = initial_choices
+
+            # Disable fields if not in DRAFT
+            if self.instance.status != 'DRAFT':
+                for field in ['title', 'session', 'term', 'duration_minutes', 'subject_arms']:
+                    if field in self.fields:
+                        self.fields[field].disabled = True
+                        self.fields[field].required = False
+
     def clean(self):
-        """Validate that this subject/session/term combination doesn't already have an exam"""
         cleaned_data = super().clean()
-        subject = cleaned_data.get('subject')
+        subject_arms = cleaned_data.get('subject_arms')
         session = cleaned_data.get('session')
         term = cleaned_data.get('term')
-        
-        if subject and session and term and self.teacher:
-            # Check if exam already exists for this subject-session-term-teacher combination
-            # Note: unique_together is ['subject', 'teacher', 'session', 'term']
-            try:
-                staff_profile = StaffProfile.objects.get(user=self.teacher)
-                existing_exam = Exam.objects.filter(
-                    subject=subject,
-                    teacher=staff_profile,
-                    session=session,
-                    term=term
-                ).exclude(pk=self.instance.pk if self.instance.pk else None).first()
-                
-                if existing_exam:
-                    existing_classes = ', '.join(
-                        str(ca) for ca in existing_exam.class_arms.all()
-                    )
-                    raise forms.ValidationError(
-                        f'An exam already exists for {subject} in {term} — {session}. '
-                        f'Classes: {existing_classes}'
-                    )
-            except StaffProfile.DoesNotExist:
-                pass
-        
+
+        if subject_arms and session and term:
+            # Parse all selected subject:arm pairs
+            selected_subject_ids = set()
+            arm_ids = []
+            
+            for item in subject_arms:
+                try:
+                    s_id, a_id = item.split(':', 1)
+                    selected_subject_ids.add(s_id)
+                    arm_ids.append(a_id)
+                except ValueError:
+                    continue
+            
+            # Validation: All selected combinations MUST belong to the same subject
+            if len(selected_subject_ids) > 1:
+                raise forms.ValidationError(
+                    "You cannot create one exam for multiple different subjects. "
+                    "Please select only classes for a single subject."
+                )
+            
+            if not selected_subject_ids:
+                raise forms.ValidationError("Please select at least one subject-class combination.")
+
+            # Store the resolved subject for the view to use
+            from academics.models import Subject as _Subject, ClassArm as _ClassArm
+            subject = _Subject.objects.get(id=list(selected_subject_ids)[0])
+            cleaned_data['resolved_subject'] = subject
+            cleaned_data['resolved_arm_ids'] = arm_ids
+
+            # Check for existing exams for any of these combinations
+            staff_profile = None
+            if self.teacher:
+                from staff.models import StaffProfile
+                try:
+                    staff_profile = StaffProfile.objects.get(user=self.teacher)
+                except StaffProfile.DoesNotExist:
+                    pass
+
+            if staff_profile:
+                for arm_id in arm_ids:
+                    existing_exam = Exam.objects.filter(
+                        subject=subject,
+                        teacher=staff_profile,
+                        session=session,
+                        term=term,
+                        class_arms__id=arm_id
+                    ).exclude(pk=self.instance.pk if self.instance.pk else None).first()
+
+                    if existing_exam:
+                        arm = _ClassArm.objects.get(id=arm_id)
+                        raise forms.ValidationError(
+                            f'An exam already exists for {subject.name} in {arm.full_name} for this term.'
+                        )
+
         return cleaned_data
+
+    def save(self, commit=True):
+        exam = super().save(commit=False)
+        # Set the resolved subject
+        if 'resolved_subject' in self.cleaned_data:
+            exam.subject = self.cleaned_data['resolved_subject']
+        
+        # Handle file cleanup: If a new theory_attachment is uploaded, delete the old one
+        if self.instance.pk:
+            try:
+                old_exam = Exam.objects.get(pk=self.instance.pk)
+                new_file = self.cleaned_data.get('theory_attachment')
+                
+                # Check if file has changed (and it's not just the same file being re-saved)
+                if new_file and old_exam.theory_attachment and old_exam.theory_attachment != new_file:
+                    import os
+                    if os.path.isfile(old_exam.theory_attachment.path):
+                        os.remove(old_exam.theory_attachment.path)
+            except (Exam.DoesNotExist, ValueError):
+                pass
+
+        if commit:
+            exam.save()
+            # Set ManyToMany class arms
+            if 'resolved_arm_ids' in self.cleaned_data:
+                exam.class_arms.set(self.cleaned_data['resolved_arm_ids'])
         return exam
 
 

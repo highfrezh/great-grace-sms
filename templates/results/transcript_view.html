@@ -250,7 +250,15 @@
     <!-- Header -->
     <div class="school-header">
         <img src="{% static 'images/logo.png' %}" alt="Great Grace School Logo" style="height:80px; width:auto; object-fit:contain; margin-bottom:0.75rem;">
-        <h1 class="school-name">Great Grace Private School</h1>
+        <h1 class="school-name">
+            {% with enrollment=student.get_current_enrollment %}
+                {% if enrollment.class_arm.level.section == 'PRIMARY' %}
+                    Great Grace Nursery and Primary School
+                {% else %}
+                    Great Grace Secondary School
+                {% endif %}
+            {% endwith %}
+        </h1>
         <p class="school-address">13, Harmony Street, Onihale, Ifo, Ogun State</p>
         <p class="school-address">E-mail: greatgraceint2@gmail.com</p>
         <div class="transcript-title">Official Academic Transcript</div>
@@ -315,7 +323,7 @@
 
         <div class="summary-box">
             <span>Term Total: {{ term_data.report_card.total_score|floatformat:0 }}</span>
-            <span>Average: {{ term_data.report_card.average|floatformat:1 }}%</span>
+            <span>Average: {{ term_data.report_card.effective_average|floatformat:1 }}%</span>
         </div>
     </div>
     {% empty %}
@@ -351,7 +359,15 @@
 
             <div style="height: 60px;"></div>
             <div class="sig-line"></div>
-            <div class="sig-label">School Principal</div>
+            <div class="sig-label">
+                {% with enrollment=student.get_current_enrollment %}
+                    {% if enrollment.class_arm.level.section == 'PRIMARY' %}
+                        Head Master/Mistress
+                    {% else %}
+                        School Principal
+                    {% endif %}
+                {% endwith %}
+            </div>
         </div>
     </div>
 

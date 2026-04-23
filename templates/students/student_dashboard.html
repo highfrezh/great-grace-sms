@@ -838,28 +838,47 @@
 
 
 
-            {% if current_session and current_term %}
-
-            <div class="session-info">
-
-                <p class="session-info-item">
-
-                    <span class="session-info-value">{{ current_session }}</span>
-
-                    <small>Session</small>
-
-                </p>
-
-                <p class="session-info-item">
-
-                    <span class="session-info-value">{{ current_term }}</span>
-
-                    <small>Term</small>
-
-                </p>
-
+                        {% if history_sessions %}
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                {% if current_session.is_current and current_term.is_current %}
+                <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(74, 222, 128, 0.2); border-radius: 20px; font-size: 11px; font-weight: 800; color: #4ade80;">
+                    <span style="width: 6px; height: 6px; background: #4ade80; border-radius: 50%; box-shadow: 0 0 10px #4ade80;" class="animate-pulse"></span>
+                    Live Dashboard
+                </div>
+                {% else %}
+                <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(243, 156, 18, 0.2); border-radius: 20px; font-size: 11px; font-weight: 800; color: #f39c12;">
+                    📜 Historical View
+                </div>
+                {% endif %}
+                
+                <form method="GET" action="" style="background: rgba(255,255,255,0.15); padding: 6px; border-radius: 12px; backdrop-filter: blur(10px); display: flex; gap: 2px; border: 1px solid rgba(255,255,255,0.2);">
+                    {% if student_id %}<input type="hidden" name="student_id" value="{{ student_id }}">{% endif %}
+                    
+                    <div style="display: flex; flex-direction: column; align-items: center; padding: 0 10px;">
+                        <span style="font-size: 9px; text-transform: uppercase; font-weight: 900; color: rgba(255,255,255,0.6); margin-bottom: 2px;">Session</span>
+                        <select name="session" onchange="this.form.submit()" style="background: transparent; color: white; border: none; font-weight: 800; font-size: 0.85rem; padding: 2px 5px; cursor: pointer; outline: none; appearance: none;">
+                            {% for sess in history_sessions %}
+                            <option value="{{ sess.id }}" {% if sess.id == current_session.id %}selected{% endif %} style="background: #851A10; color: white;">
+                                {{ sess.name }} {% if sess.is_current %}(Current){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div style="width: 1px; background: rgba(255,255,255,0.1); margin: 5px 0;"></div>
+                    
+                    <div style="display: flex; flex-direction: column; align-items: center; padding: 0 10px;">
+                        <span style="font-size: 9px; text-transform: uppercase; font-weight: 900; color: rgba(255,255,255,0.6); margin-bottom: 2px;">Term</span>
+                        <select name="term" onchange="this.form.submit()" style="background: transparent; color: white; border: none; font-weight: 800; font-size: 0.85rem; padding: 2px 5px; cursor: pointer; outline: none; appearance: none;">
+                            {% for term in session_terms %}
+                            <option value="{{ term.id }}" {% if term.id == current_term.id %}selected{% endif %} style="background: #851A10; color: white;">
+                                {{ term.get_name_display }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
             </div>
-
             {% endif %}
 
         </div>
@@ -1164,7 +1183,12 @@
 
                 {% else %}
 
-                No subjects or exams available at this time.
+                <div class="text-gray-900 font-extrabold text-xl mb-2">No active records for {{ current_session.name }} {{ current_term.get_name_display }}</div>
+                <div class="text-gray-500 max-w-sm mx-auto">You might not have been enrolled in any subjects for this term yet. 
+                {% if history_sessions|length > 1 %}
+                Use the switcher in the header to view your previous academic performance.
+                {% endif %}
+                </div>
 
                 {% endif %}
 

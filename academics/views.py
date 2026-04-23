@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.db import transaction
 from accounts.decorators import admin_staff_required
 from .models import AcademicSession, Term, ClassLevel, ClassArm, Subject, ClassArmSubject, SubjectTeacherAssignment
 from django.db.models import Q
@@ -18,9 +19,19 @@ from .forms import (
 @login_required
 @admin_staff_required
 def session_list(request):
-    sessions = AcademicSession.objects.all()
+    query = request.GET.get('q', '')
+    sessions_list = AcademicSession.objects.all().order_by('-start_date')
+    
+    if query:
+        sessions_list = sessions_list.filter(Q(name__icontains=query))
+    
+    paginator = Paginator(sessions_list, 10)  # Show 10 sessions per page
+    page = request.GET.get('page')
+    sessions = paginator.get_page(page)
+    
     return render(request, 'academics/session_list.html', {
         'sessions': sessions,
+        'query': query,
         'page_title': 'Academic Sessions'
     })
 
@@ -152,12 +163,27 @@ def term_edit(request, pk):
 
 @login_required
 @admin_staff_required
+@transaction.atomic
 def term_set_current(request, pk):
     term = get_object_or_404(Term, pk=pk)
+    
+    # 1. Update Global Term Status
     Term.objects.update(is_current=False)
     term.is_current = True
     term.save()
-    messages.success(request, f'{term} is now the current term.')
+    
+    # 2. Professional Sync: Update all active enrollments in this session to the new term
+    from students.models import StudentEnrollment
+    updated_count = StudentEnrollment.objects.filter(
+        session=term.session,
+        is_active=True
+    ).update(term=term)
+    
+    messages.success(
+        request, 
+        f'{term} is now the current term. '
+        f'Successfully synchronized {updated_count} student enrollments.'
+    )
     return redirect('academics:term_list')
 
 
@@ -209,17 +235,53 @@ def class_level_edit(request, pk):
 @login_required
 @admin_staff_required
 def class_arm_list(request):
+    from collections import defaultdict
     current_session = AcademicSession.get_current()
     sessions = AcademicSession.objects.all().order_by('-start_date')
+
+    selected_session_id = request.GET.get('session')
+    if selected_session_id:
+        view_session = get_object_or_404(AcademicSession, id=selected_session_id)
+    else:
+        view_session = current_session
+
     class_arms = ClassArm.objects.filter(
-        session=current_session
+        session=view_session
     ).select_related(
         'level', 'class_teacher', 'session'
-    ) if current_session else ClassArm.objects.none()
+    ).order_by('level__order', 'name') if view_session else ClassArm.objects.none()
+
+    # Group by teacher (mirrors assignment_list grouping)
+    grouped = defaultdict(list)
+    for arm in class_arms:
+        grouped[arm.class_teacher].append(arm)
+
+    # Sort teachers: Assigned first (alphabetical), then Unassigned
+    sorted_teachers = sorted(
+        [t for t in grouped.keys() if t is not None],
+        key=lambda x: x.get_full_name()
+    )
+
+    teacher_groups = []
+    for teacher in sorted_teachers:
+        teacher_groups.append({
+            'teacher': teacher,
+            'arms': grouped[teacher],
+            'count': len(grouped[teacher])
+        })
     
+    if None in grouped:
+        teacher_groups.append({
+            'teacher': None,
+            'arms': grouped[None],
+            'count': len(grouped[None])
+        })
+
     return render(request, 'academics/class_arm_list.html', {
+        'teacher_groups': teacher_groups,
         'class_arms': class_arms,
         'current_session': current_session,
+        'view_session': view_session,
         'sessions': sessions,
         'page_title': 'Classes'
     })

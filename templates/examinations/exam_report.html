@@ -307,9 +307,18 @@ class="ml-0 flex-1 flex flex-col transition-all duration-300 ease-in-out"
 
 
     <div class="action-buttons">
-        <a href="{% url 'accounts:logout' %}" class="btn-primary-custom">
-            Logout and Finish
-        </a>
+        {% if exam.theory_attachment %}
+            <a href="{% url 'examinations:exam_theory_view' exam.pk %}" class="btn-primary-custom" style="display: flex; align-items: center; gap: 8px;">
+                Proceed to Theory Questions
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                </svg>
+            </a>
+        {% else %}
+            <a href="{% url 'accounts:dashboard' %}" class="btn-primary-custom">
+                Finish and Return to Dashboard
+            </a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

@@ -296,32 +296,24 @@
 <!-- Form -->
 <div class="">
   <div class="section-card">
-    <form method="post" enctype="multipart/form-data" id="examForm">
+    <form method="post" enctype="multipart/form-data" id="examForm" novalidate>
       {% csrf_token %}
 
-      <!-- Subject Selection -->
       <div class="section-header">
         <div class="section-title">Subject</div>
       </div>
       <div class="section-content">
-        <div class="grid grid-cols-1 gap-5">  
-          
+        <div class="grid grid-cols-1 gap-5">
+
           <div class="form-group">
             <label class="form-label">
-              Subject <span class="required">*</span>
+              Assigned Subjects & Classes <span class="required">*</span>
             </label>
-            {{ form.subject }}
-            {% if form.subject.errors %}
-              <p class="form-error">{{ form.subject.errors.0 }}</p>
+            {{ form.subject_arms }}
+            {% if form.subject_arms.errors %}
+              <p class="form-error">{{ form.subject_arms.errors.0 }}</p>
             {% endif %}
-            <p class="form-hint">Select the subject • Exam will automatically be created for all classes you teach this subject</p>
-            
-            <!-- Auto-selection notice -->
-            <div style="margin-top: 1rem; padding: 0.75rem; background-color: #F0FDF4; border: 1px solid #D1FAE5; border-radius: 0.5rem;">
-              <p style="font-size: 0.8125rem; color: #047857; margin: 0;">
-                ✓ Classes are automatically selected based on your subject-class assignments
-              </p>
-            </div>
+            <p class="form-hint">Hold Ctrl (or Cmd) to select multiple classes taking this same exam questions.</p>
           </div>
 
         </div>
@@ -476,10 +468,6 @@
         </li>
         <li class="flex gap-2 items-start">
           <span class="text-green-600 font-bold">2.</span>
-          <span>Upload theory file (PDF or DOCX) if needed</span>
-        </li>
-        <li class="flex gap-2 items-start">
-          <span class="text-green-600 font-bold">3.</span>
           <span>Review and publish when ready</span>
         </li>
       </ol>
@@ -515,80 +503,67 @@
 </div>
 
 <script>
-// Add CSS classes to form inputs
+
 document.addEventListener('DOMContentLoaded', function() {
   // Add form-control class to all select and input elements
   const selects = document.querySelectorAll('select');
-  const inputs = document.querySelectorAll('input[type="text"], input[type="number"]');
+  const inputs  = document.querySelectorAll('input[type="text"], input[type="number"]');
   const textarea = document.querySelector('textarea');
-  
-  selects.forEach(select => {
-    select.classList.add('form-control');
-  });
-  
-  inputs.forEach(input => {
-    input.classList.add('form-control');
-  });
-  
-  if (textarea) {
-    textarea.classList.add('form-control');
-  }
-  
+
+  selects.forEach(function(s) { s.classList.add('form-control'); });
+  inputs.forEach(function(i)  { i.classList.add('form-control'); });
+  if (textarea) textarea.classList.add('form-control');
+
   // Duration validation
   const durationInput = document.querySelector('#id_duration_minutes');
   if (durationInput) {
     durationInput.addEventListener('change', function() {
       const value = parseInt(this.value);
-      if (value < 1) {
-        this.value = 1;
-      } else if (value > 180) {
-        this.value = 180;
-        alert('Duration should not exceed 180 minutes (3 hours)');
-      }
+      if (value < 1)        this.value = 1;
+      else if (value > 180) { this.value = 180; alert('Duration should not exceed 180 minutes (3 hours)'); }
     });
   }
-  
+
   // Pass mark validation
   const passMarkInput = document.querySelector('#id_pass_mark');
   if (passMarkInput) {
     passMarkInput.addEventListener('change', function() {
       const value = parseInt(this.value);
-      if (value < 0) {
-        this.value = 0;
-      } else if (value > 100) {
-        this.value = 100;
-        alert('Pass mark cannot exceed 100%');
-      }
+      if (value < 0)        this.value = 0;
+      else if (value > 100) { this.value = 100; alert('Pass mark cannot exceed 100%'); }
     });
   }
-  
-  // Advanced Options Toggle
-  const advancedToggle = document.getElementById('advancedToggle');
-  const advancedContent = document.getElementById('advancedContent');
-  const advancedIcon = document.getElementById('advancedIcon');
-  
-  if (advancedToggle) {
-    advancedToggle.addEventListener('click', function() {
-      if (advancedContent.style.display === 'none') {
-        advancedContent.style.display = 'block';
-        advancedIcon.style.transform = 'rotate(180deg)';
-      } else {
-        advancedContent.style.display = 'none';
-        advancedIcon.style.transform = 'rotate(0deg)';
-      }
-    });
-  }
-});
+
+    // Advanced Options Toggle
+    const advancedToggle = document.getElementById('advancedToggle');
+    const advancedContent = document.getElementById('advancedContent');
+    const advancedIcon = document.getElementById('advancedIcon');
+    
+    if (advancedToggle) {
+      advancedToggle.addEventListener('click', function() {
+        if (advancedContent.style.display === 'none') {
+          advancedContent.style.display = 'block';
+          advancedIcon.style.transform = 'rotate(180deg)';
+        } else {
+          advancedContent.style.display = 'none';
+          advancedIcon.style.transform = 'rotate(0deg)';
+        }
+      });
+    }
+
+    console.log('✅ Form initialization complete');
+  });
 
 // Form submission with validation
 document.getElementById('examForm')?.addEventListener('submit', function(e) {
-  const title = document.querySelector('#id_title')?.value;
-  const subject = document.querySelector('#id_subject')?.value;
+  const title    = document.querySelector('#id_title')?.value;
+  const subject  = document.querySelector('#id_subject_arms')?.value;
   const duration = document.querySelector('#id_duration_minutes')?.value;
-  
+
   if (!title || !subject || !duration) {
     e.preventDefault();
-    alert('Please fill in all required fields (title, subject, duration)');
+    alert('Please fill in all required fields (title, assigned subjects/classes, duration)');
+    return;
   }
 });
 </script>

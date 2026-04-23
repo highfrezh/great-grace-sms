@@ -264,6 +264,38 @@
                     <p class="text-xs text-gray-400 mt-1">Optional comment about student's performance</p>
                 </div>
             </div>
+            
+            <!-- Manual Term Overrides -->
+            <div class="mb-8 p-6 bg-orange-50/50 rounded-2xl border border-orange-100">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <div class="section-title-icon" style="background:#FFF7ED; color:#EA580C;">📊</div>
+                        Manual Term Overrides
+                    </h3>
+                    <p class="text-xs text-orange-600 ml-12 -mt-2">
+                        Use these fields to manually set the average for any term. 
+                        <strong>Note:</strong> If entered, these values will be used on report cards and cumulative calculations instead of the automatically calculated averages.
+                    </p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                    <div>
+                        <label class="form-label" style="color:#EA580C;">1st Term Manual Avg (%)</label>
+                        {{ form.manual_first_term_average }}
+                    </div>
+                    <div>
+                        <label class="form-label" style="color:#EA580C;">2nd Term Manual Avg (%)</label>
+                        {{ form.manual_second_term_average }}
+                    </div>
+                    <div>
+                        <label class="form-label" style="color:#EA580C;">3rd Term Manual Avg (%)</label>
+                        {{ form.manual_third_term_average }}
+                    </div>
+                </div>
+                <p class="text-[10px] text-orange-400 mt-4 px-2 italic">
+                    * Leave these fields blank to allow the system to use automatically calculated scores from CBT and Theory exams.
+                </p>
+            </div>
 
             <!-- Affective Domain Section -->
             <div class="mb-8">

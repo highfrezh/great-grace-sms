@@ -89,8 +89,9 @@ class ClassArmForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Only show staff in class teacher dropdown
+        # Only show active staff in class teacher dropdown
         self.fields['class_teacher'].queryset = User.objects.filter(
+            is_active=True,
             roles__name__in=[
                 'SUBJECT_TEACHER', 'CLASS_TEACHER',
                 'VICE_PRINCIPAL', 'PRINCIPAL', 'EXAMINER'
@@ -102,25 +103,7 @@ class ClassArmForm(forms.ModelForm):
         self.fields['name'].required = False
 
     def clean(self):
-        cleaned_data = super().clean()
-        class_teacher = cleaned_data.get('class_teacher')
-        session = cleaned_data.get('session')
-        
-        if class_teacher and session:
-            existing = ClassArm.objects.filter(
-                class_teacher=class_teacher,
-                session=session
-            )
-            if self.instance and self.instance.pk:
-                existing = existing.exclude(pk=self.instance.pk)
-            
-            if existing.exists():
-                other_class = existing.first()
-                raise forms.ValidationError(
-                    f"{class_teacher.get_full_name() or class_teacher.username} is already class teacher for {other_class} in {session}."
-                )
-        
-        return cleaned_data
+        return super().clean()
 
 
 class SubjectForm(forms.ModelForm):

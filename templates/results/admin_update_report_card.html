@@ -85,7 +85,14 @@
     <div class="mb-8 flex items-center justify-between">
         <div>
             <h1 class="text-3xl font-bold text-gray-900">Official Remark</h1>
-            <p class="text-gray-500 mt-2">Principal/Vice-Principal evaluation for {{ student.full_name }}</p>
+            <p class="text-gray-500 mt-2">
+                {% if report_card.class_arm.level.section == 'PRIMARY' %}
+                    Head Master/Mistress
+                {% else %}
+                    Principal/Vice-Principal
+                {% endif %}
+                evaluation for {{ student.full_name }}
+            </p>
         </div>
         <a href="{% url 'results:all_student_results' %}" class="text-sm font-semibold text-gray-500 hover:text-gray-700 flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

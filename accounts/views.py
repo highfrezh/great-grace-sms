@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.decorators import login_required
@@ -92,62 +92,64 @@ def dashboard_view(request):
 
     # If the user is teaching staff, gather academic metrics
     if user.is_teaching_staff or user.is_principal or user.is_vice_principal:
-        current_session = AcademicSession.get_current()
-        current_term = Term.get_current()
+        # Reverted back to always showing Current Session on the main dashboard
+        view_session = AcademicSession.get_current()
+        view_term = Term.get_current()
 
         # Get staff profile
         staff_profile = StaffProfile.objects.filter(user=user).first()
 
-        # 1. Assigned Subjects & Classes (Contextualized to Current Session)
+        # 1. Assigned Subjects & Classes (Contextualized to Selected Session)
         assignments = SubjectTeacherAssignment.objects.filter(
             teacher=user,
         ).select_related('subject', 'class_level')
 
         subject_ids = set(assignments.values_list('subject_id', flat=True).distinct())
         
-        # Map permanent assignments (Level + Arm Name) to session-specific ClassArms
+        # Map assignments to session-specific ClassArms
         class_arms_map = {
             (ca.level_id, ca.name): ca
-            for ca in ClassArm.objects.filter(session=current_session).select_related('level')
+            for ca in ClassArm.objects.filter(session=view_session).select_related('level')
         }
 
         assigned_class_ids = set()
         for assignment in assignments:
-            # Attach the session-specific ClassArm object to the assignment
             assignment.class_arm = class_arms_map.get((assignment.class_level_id, assignment.arm_name))
             if assignment.class_arm:
                 assigned_class_ids.add(assignment.class_arm.id)
 
         # Add managed classes (if Class Teacher) to the class IDs list
-        managed_classes = ClassArm.objects.filter(class_teacher=user, session=current_session)
+        managed_classes = ClassArm.objects.filter(class_teacher=user, session=view_session)
         managed_class_ids = set(managed_classes.values_list('id', flat=True))
         
-        all_class_ids = assigned_class_ids.union(managed_class_ids)
-
-        # Managed students (only in the class they are Class Teacher of)
+        # Managed students count (including historical records for this session)
+        student_filter = {
+            'class_arm_id__in': managed_class_ids, 
+            'session': view_session,
+            'student__is_active': True  # Only count students still in the school
+        }
         managed_students = StudentEnrollment.objects.filter(
-            class_arm_id__in=managed_class_ids,
-            session=current_session,
-            is_active=True
+            **student_filter
         ).values('student_id').distinct().count()
 
         # 2. Total Students 
         if user.is_class_teacher:
-            # If they are a class teacher, 'Total Students' stat refers strictly to their class
             total_students = managed_students
         else:
-            # If they are strictly a subject teacher, it's the students across all their assigned classes
+            total_student_filter = {
+                'class_arm_id__in': assigned_class_ids, 
+                'session': view_session,
+                'student__is_active': True
+            }
             total_students = StudentEnrollment.objects.filter(
-                class_arm_id__in=assigned_class_ids,
-                session=current_session,
-                is_active=True
+                **total_student_filter
             ).values('student_id').distinct().count()
 
         # 3. Exam Stats
         teacher_exams = Exam.objects.filter(
             teacher=staff_profile,
-            session=current_session,
-            term=current_term
+            session=view_session,
+            term=view_term
         )
         exam_stats = {
             'draft': teacher_exams.filter(status='DRAFT').count(),
@@ -156,21 +158,22 @@ def dashboard_view(request):
             'total': teacher_exams.count(),
         }
 
-        # 4. Today's Attendance (Only if Class Teacher)
+        # 4. Today's Attendance (Only relevant for current session)
         attendance_marked_today = False
         managed_class_names = ""
         if user.is_class_teacher:
             if managed_classes.exists():
                 managed_class_names = ", ".join([str(c) for c in managed_classes])
-                attendance_marked_today = Attendance.objects.filter(
-                    class_arm__in=managed_classes,
-                    date=timezone.now().date(),
-                    session=current_session
-                ).exists()
+                if view_session:
+                    attendance_marked_today = Attendance.objects.filter(
+                        class_arm__in=managed_classes,
+                        date=timezone.now().date(),
+                        session=view_session
+                    ).exists()
 
         context.update({
-            'current_session': current_session,
-            'current_term': current_term,
+            'current_session': view_session,
+            'current_term': view_term,
             'assigned_subjects_count': len(subject_ids),
             'assigned_classes_count': len(assigned_class_ids),
             'total_students_count': total_students,
@@ -188,50 +191,52 @@ def dashboard_view(request):
 @admin_staff_required
 def principal_dashboard(request):
     """Dedicated executive dashboard for Principal and Vice Principal"""
-    current_session = AcademicSession.get_current()
-    current_term = Term.get_current()
+    # Reverted back to always showing Current Session on the main dashboard
+    view_session = AcademicSession.get_current()
+    view_term = Term.get_current()
     today = timezone.now().date()
 
     # ── KPI: School-wide Student Count ──────────────────────────
     total_students = StudentEnrollment.objects.filter(
-        session=current_session,
-        is_active=True
+        session=view_session,
+        student__is_active=True
     ).values('student_id').distinct().count()
 
-    # ── KPI: Total Active Classes ────────────────────────────────
-    total_classes = ClassArm.objects.filter(session=current_session).count()
+    # ── KPI: Total Classes ──────────────────────────────────────
+    total_classes = ClassArm.objects.filter(session=view_session).count()
 
     # ── KPI: Total Teaching Staff ────────────────────────────────
     total_staff = StaffProfile.objects.filter(is_active=True).count()
 
     # ── KPI: Exams Awaiting Approval ─────────────────────────────
     exams_awaiting = Exam.objects.filter(
-        session=current_session,
-        term=current_term,
+        session=view_session,
+        term=view_term,
         status='AWAITING_APPROVAL'
     ).count()
 
     # ── Report Cards Progress ─────────────────────────────────────
     total_report_cards = ReportCard.objects.filter(
-        session=current_session,
-        term=current_term
+        session=view_session,
+        term=view_term
     ).count()
     published_report_cards = ReportCard.objects.filter(
-        session=current_session,
-        term=current_term,
+        session=view_session,
+        term=view_term,
         is_published=True
     ).count()
     report_card_pct = round((published_report_cards / total_report_cards * 100), 1) if total_report_cards > 0 else 0
 
-    # ── Attendance Today ──────────────────────────────────────────
+    # ── Attendance Summary ──────────────────────────────────────────
+    # Attendance is usually checked for today or current session
     classes_with_attendance_today = Attendance.objects.filter(
         date=today,
-        session=current_session
+        session=view_session
     ).values('class_arm_id').distinct().count()
     attendance_pct = round((classes_with_attendance_today / total_classes * 100), 1) if total_classes > 0 else 0
 
     # ── Exam Stats Overview ───────────────────────────────────────
-    all_exams = Exam.objects.filter(session=current_session, term=current_term)
+    all_exams = Exam.objects.filter(session=view_session, term=view_term)
     exam_summary = {
         'total': all_exams.count(),
         'draft': all_exams.filter(status='DRAFT').count(),
@@ -246,16 +251,16 @@ def principal_dashboard(request):
 
     # ── Gender Breakdown ──────────────────────────────────────────
     male_count = StudentEnrollment.objects.filter(
-        session=current_session,
-        is_active=True,
-        student__gender='M'
+        student__gender='M',
+        session=view_session,
+        is_active=True
     ).values('student_id').distinct().count()
     female_count = total_students - male_count
 
     context = {
         'page_title': 'Principal Dashboard',
-        'current_session': current_session,
-        'current_term': current_term,
+        'current_session': view_session,
+        'current_term': view_term,
         'today': today,
         # KPIs
         'total_students': total_students,
@@ -305,4 +310,4 @@ def password_change_view(request):
         'form': form,
         'page_title': 'Change Password'
     })
-
+

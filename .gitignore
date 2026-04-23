@@ -19,6 +19,7 @@ env/
 db.sqlite3
 media/
 staticfiles/
+scratch/
 
 # Environment Variables - NEVER commit this
 .env

@@ -146,9 +146,9 @@ class ClassArm(models.Model):
 
     @property
     def student_count(self):
-        # Return 0 until Student/Enrollment model is implemented
         try:
-            return self.enrollments.filter(is_active=True).count()
+            # Count unique students enrolled in this specific class arm across the session
+            return self.enrollments.values('student').distinct().count()
         except AttributeError:
             return 0
 

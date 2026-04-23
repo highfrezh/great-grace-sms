@@ -247,6 +247,47 @@
             <div class="stat-value">{{ exam.obj_marks|floatformat:0 }}</div>
         </div>
     </div>
+    <!-- Theory Preview Toggle (Bonus Feature) -->
+    {% if exam.theory_attachment %}
+    <div class="mb-6" x-data="{ showPreview: false }">
+        <button @click="showPreview = !showPreview" 
+                class="w-full flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl shadow-sm hover:bg-gray-50 transition-all">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-primary">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div class="text-left">
+                    <p class="text-sm font-bold text-gray-800">Exam Theory Questions</p>
+                    <p class="text-xs text-gray-500">Click to view questions while marking</p>
+                </div>
+            </div>
+            <svg class="w-5 h-5 text-gray-400 transition-transform" :class="showPreview ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+
+        <div x-show="showPreview" x-collapse x-cloak class="mt-2 p-4 bg-white border border-gray-100 rounded-xl shadow-inner overflow-hidden">
+            {% if '.pdf' in exam.theory_attachment.name|lower %}
+                <div class="w-full h-[500px] rounded-lg overflow-hidden border border-gray-200">
+                    <object data="{{ exam.theory_attachment.url }}" type="application/pdf" width="100%" height="100%">
+                        <div class="flex flex-col items-center justify-center h-full p-8 text-center bg-gray-50">
+                            <p class="text-gray-600 font-bold mb-4">Preview unavailable in browser</p>
+                            <a href="{{ exam.theory_attachment.url }}" target="_blank" class="px-6 py-2 bg-primary text-white rounded-lg font-bold shadow-md">
+                                Open PDF in New Tab
+                            </a>
+                        </div>
+                    </object>
+                </div>
+            {% elif '.txt' in exam.theory_attachment.name|lower %}
+                <div class="p-6 bg-gray-50 rounded-lg border border-gray-200 font-mono text-sm whitespace-pre-wrap text-gray-800 max-h-[500px] overflow-y-auto">
+                    {{ exam.get_theory_content }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Scores Table -->
     <div class="score-table-container">

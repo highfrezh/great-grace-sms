@@ -420,7 +420,13 @@
                 <img src="{% static 'images/logo.png' %}" alt="Great Grace School Logo"
                     style="width:100%; height:100%; object-fit:contain;">
             </div>
-            <h1 class="school-name">Great Grace Private School</h1>
+            <h1 class="school-name">
+                {% if rc.class_arm.level.section == 'PRIMARY' %}
+                    Great Grace Nursery and Primary School
+                {% else %}
+                    Great Grace Secondary School
+                {% endif %}
+            </h1>
             <p class="school-address">13, Harmony Street, Onihale, Ifo, Ogun State</p>
             <p class="school-address">E-mail: greatgraceint2@gmail.com</p>
             <div
@@ -496,7 +502,7 @@
                 <tr style="background: #F1F5F9;">
                     <td colspan="5" style="text-align: right; font-weight: 700;">Termly Total / Average</td>
                     <td style="font-weight: 800;">{{ rc.total_score|floatformat:0|default:"—" }}</td>
-                    <td colspan="2" style="font-weight: 700;">Average: {{ rc.average|floatformat:1|default:"0" }}%</td>
+                    <td colspan="2" style="font-weight: 700;">Average: {{ rc.effective_average|floatformat:1|default:"0" }}%</td>
                 </tr>
             </tfoot>
         </table>
@@ -591,9 +597,9 @@
                 <tbody>
                     <tr>
                         <td class="term-label">Term Average (%)</td>
-                        <td class="summary-value">{% if term_summary.FIRST %}{{ term_summary.FIRST|floatformat:1 }}%{% else %}—{% endif %}</td>
-                        <td class="summary-value">{% if term_summary.SECOND %}{{ term_summary.SECOND|floatformat:1 }}%{% else %}—{% endif %}</td>
-                        <td class="summary-value">{% if term_summary.THIRD %}{{ term_summary.THIRD|floatformat:1 }}%{% else %}—{% endif %}</td>
+                        <td class="summary-value">{% if term_summary.FIRST is not None %}{{ term_summary.FIRST|floatformat:1 }}%{% else %}—{% endif %}</td>
+                        <td class="summary-value">{% if term_summary.SECOND is not None %}{{ term_summary.SECOND|floatformat:1 }}%{% else %}—{% endif %}</td>
+                        <td class="summary-value">{% if term_summary.THIRD is not None %}{{ term_summary.THIRD|floatformat:1 }}%{% else %}—{% endif %}</td>
                     </tr>
                 </tbody>
             </table>
@@ -631,10 +637,14 @@
             <p class="comment-text">"{{ rc.teacher_comment|default:"No comment provided." }}"</p>
         </div>
 
-        <!-- Principal's Comment -->
+        <!-- Principal's/Headmaster's Comment -->
         <div class="comment-box">
             <span class="comment-title">
-                Principal's Comment
+                {% if rc.class_arm.level.section == 'PRIMARY' %}
+                    Head Master/Mistress's Comment
+                {% else %}
+                    Principal's Comment
+                {% endif %}
             </span>
             <p class="comment-text">"{{ rc.principal_comment|default:"Good performance. Keep it up." }}"</p>
         </div>

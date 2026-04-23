@@ -220,18 +220,40 @@
 
 {% block content %}
 <div class="management-container">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+    <!-- Filters & Header -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
         <div>
             <div class="flex items-center gap-3 mb-2">
                 <div class="w-1 h-8 rounded-full" style="background:#851A10;"></div>
                 <h1 class="text-2xl font-bold" style="color:#635E57;">{{ class_arm.full_name }} Management</h1>
             </div>
             <p class="text-sm text-gray-500 ml-4">
-                Class Teacher Dashboard · {{ term.get_name_display }} · {{ term.session.name }}
+                Class Teacher Dashboard · {{ term.get_name_display }} · {{ session.name }}
             </p>
-        </div>    
-        
+        </div>
+
+        <form method="GET" class="flex flex-wrap items-center gap-3">
+            {% if teacher_classes|length > 1 %}
+            <select name="class_arm" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#851A10] outline-none" onchange="this.form.submit()">
+                {% for arm in teacher_classes %}
+                <option value="{{ arm.id }}" {% if arm.id|stringformat:"s" == selected_class_arm %}selected{% endif %}>{{ arm.full_name }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
+            <select name="session" id="session-select" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#851A10] outline-none" onchange="onSessionChange(this)">
+                {% for s in sessions %}
+                <option value="{{ s.id }}" {% if s.id|stringformat:"s" == selected_session|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="term" id="term-select" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#851A10] outline-none" onchange="this.form.submit()">
+                {% for t in terms %}
+                <option value="{{ t.id }}" {% if t.id|stringformat:"s" == selected_term|stringformat:"s" %}selected{% endif %}>{{ t.get_name_display }}</option>
+                {% endfor %}
+            </select>
+            {% if selected_session or selected_term %}
+            <a href="{% url 'results:report_card_management' %}" class="text-xs text-[#851A10] hover:underline font-medium">Reset Filters</a>
+            {% endif %}
+        </form>
     </div>
 
     <!-- Students List -->
@@ -263,6 +285,14 @@
                     </div>
                 </div>
                 
+                <!-- Average Score -->
+                <div class="hidden sm:flex flex-col items-center">
+                    <span class="text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider mb-1">Average</span>
+                    <span class="text-sm font-extrabold {% if rc.effective_average < 50 %}text-red-600{% else %}text-gray-800{% endif %}">
+                        {{ rc.effective_average|floatformat:1 }}%
+                    </span>
+                </div>
+
                 <!-- Comment Status -->
                 <div class="hidden lg:flex flex-col items-center">
                     <span class="text-[0.65rem] font-bold text-gray-400 uppercase tracking-wider mb-1">Comment</span>
@@ -285,7 +315,7 @@
 
                 <!-- Action Buttons -->
                 <div class="action-buttons">
-                    <a href="{% url 'results:update_student_results' rc.student.id %}" class="btn-primary" title="Update Domain Ratings & Comments">
+                    <a href="{% url 'results:update_student_results' rc.student.id %}?term={{ term.id }}" class="btn-primary" title="Update Domain Ratings & Comments">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                         </svg>
@@ -328,6 +358,18 @@
 </div>
 
 <script>
+    function onSessionChange(selectEl) {
+        // Clear the term selection so the server picks the correct first term for the new session.
+        // Prevents submitting a term that belongs to a different session.
+        var termSelect = document.getElementById('term-select');
+        if (termSelect) {
+            termSelect.value = '';
+            // Remove the name so the term param is not sent
+            termSelect.removeAttribute('name');
+        }
+        selectEl.form.submit();
+    }
+
     function selectAllStudents() {
         // Future enhancement: Add bulk select functionality
         alert('Bulk actions feature coming soon!');

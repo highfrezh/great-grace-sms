@@ -16,6 +16,11 @@ class ReportCard(models.Model):
     total_score = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     average = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     
+    # Manual historical averages (for schools starting mid-session e.g. in 3rd term)
+    manual_first_term_average = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    manual_second_term_average = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    manual_third_term_average = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    
     # Comments & Attendance
     attendance_present = models.PositiveIntegerField(default=0)
     attendance_total = models.PositiveIntegerField(default=0)
@@ -31,8 +36,25 @@ class ReportCard(models.Model):
         unique_together = ['student', 'session', 'term']
         ordering = ['class_arm', 'student']
 
+    def save(self, *args, **kwargs):
+        # Enforce consistency: ReportCard session MUST match its term's session
+        if self.term and self.session != self.term.session:
+            self.session = self.term.session
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"Report Card — {self.student.full_name} ({self.term})"
+
+    @property
+    def effective_average(self):
+        """Returns manual override if exists for the current term, otherwise calculated average"""
+        if self.term.name == 'FIRST' and self.manual_first_term_average is not None:
+            return self.manual_first_term_average
+        if self.term.name == 'SECOND' and self.manual_second_term_average is not None:
+            return self.manual_second_term_average
+        if self.term.name == 'THIRD' and self.manual_third_term_average is not None:
+            return self.manual_third_term_average
+        return self.average
 
     @property
     def get_subject_results(self):
@@ -85,13 +107,16 @@ class ReportCard(models.Model):
             exam__term=self.term
         )
         
-        aggs = results.aggregate(
-            total=Sum('total_score'),
-            avg_pct=Avg('percentage')
-        )
+        from examinations.models import ExamConfiguration
+        config = ExamConfiguration.objects.filter(session=self.session, term=self.term).first()
+        max_marks = config.total_marks if config else 100
         
-        self.total_score = aggs['total'] or 0
-        self.average = aggs['avg_pct'] or 0
+        count = results.count()
+        obtained = results.aggregate(total_obtained=Sum('total_score'))['total_obtained'] or 0
+        possible = count * max_marks
+        
+        self.total_score = obtained
+        self.average = (float(obtained) / float(possible) * 100) if possible > 0 else 0
         self.save()
 
 class StudentDomainRating(models.Model):

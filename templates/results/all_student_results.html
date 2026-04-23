@@ -294,7 +294,11 @@
             </div>
         </div>
 
-        <form method="GET" class="filter-container">
+        <form method="GET" class="filter-container" id="results-filter-form">
+            <!-- Hidden JSON data for dynamic filtering -->
+            <script id="terms-data" type="application/json">{{ terms_by_session|safe }}</script>
+            <script id="arms-data" type="application/json">{{ arms_by_session|safe }}</script>
+
             <!-- Search -->
             <div class="filter-group" style="flex: 2;">
                 <label class="filter-label">Search Student</label>
@@ -309,7 +313,7 @@
             <!-- Session Filter -->
             <div class="filter-group">
                 <label class="filter-label">Session</label>
-                <select name="session" class="filter-select">
+                <select name="session" id="session-select" class="filter-select" onchange="onSessionChange(this)">
                     <option value="">All Sessions</option>
                     {% for session in sessions %}
                     <option value="{{ session.id }}" {% if selected_session == session.id|stringformat:"s" %}selected{% endif %}>
@@ -319,10 +323,10 @@
                 </select>
             </div>
 
-            <!-- Term Filter -->
+            <!-- Term Filter (dynamically populated) -->
             <div class="filter-group">
                 <label class="filter-label">Term</label>
-                <select name="term" class="filter-select">
+                <select name="term" id="term-select" class="filter-select">
                     <option value="">All Terms</option>
                     {% for term in terms %}
                     <option value="{{ term.id }}" {% if selected_term == term.id|stringformat:"s" %}selected{% endif %}>
@@ -332,10 +336,10 @@
                 </select>
             </div>
 
-            <!-- Class Arm Filter -->
+            <!-- Class Arm Filter (dynamically populated) -->
             <div class="filter-group">
                 <label class="filter-label">Class</label>
-                <select name="class_arm" class="filter-select">
+                <select name="class_arm" id="class-select" class="filter-select">
                     <option value="">All Classes</option>
                     {% for arm in class_arms %}
                     <option value="{{ arm.id }}" {% if selected_class_arm == arm.id|stringformat:"s" %}selected{% endif %}>
@@ -455,4 +459,70 @@
     {% endif %}
 
 </div>
+
+<script>
+(function () {
+    const termsBySession = JSON.parse(document.getElementById('terms-data').textContent);
+    const armsBySession  = JSON.parse(document.getElementById('arms-data').textContent);
+
+    const sessionSelect = document.getElementById('session-select');
+    const termSelect    = document.getElementById('term-select');
+    const classSelect   = document.getElementById('class-select');
+
+    // Rebuild a <select> with an "All" option plus the given items
+    function repopulate(selectEl, items, selectedId, allLabel) {
+        const currentVal = selectedId || selectEl.value;
+        selectEl.innerHTML = '<option value="">' + allLabel + '</option>';
+        items.forEach(function (item) {
+            const opt = document.createElement('option');
+            opt.value = item.id;
+            opt.textContent = item.name;
+            if (String(item.id) === String(currentVal)) opt.selected = true;
+            selectEl.appendChild(opt);
+        });
+    }
+
+    function onSessionChange(selectEl) {
+        const sid = selectEl.value;
+        const terms = sid ? (termsBySession[sid] || []) : [];
+        const arms  = sid ? (armsBySession[sid]  || []) : [];
+
+        if (sid) {
+            repopulate(termSelect,  terms, '', 'All Terms');
+            repopulate(classSelect, arms,  '', 'All Classes');
+        } else {
+            // No session selected — show all options (let server handle it)
+            termSelect.innerHTML  = '<option value="">All Terms</option>';
+            classSelect.innerHTML = '<option value="">All Classes</option>';
+            // Collect all unique terms/arms across sessions
+            Object.values(termsBySession).flat().forEach(function(t) {
+                const o = document.createElement('option'); o.value = t.id; o.textContent = t.name;
+                termSelect.appendChild(o);
+            });
+            Object.values(armsBySession).flat().forEach(function(a) {
+                const o = document.createElement('option'); o.value = a.id; o.textContent = a.name;
+                classSelect.appendChild(o);
+            });
+        }
+
+        // Auto-submit after updating dropdowns
+        selectEl.form.submit();
+    }
+
+    // Expose globally so inline onchange can call it
+    window.onSessionChange = onSessionChange;
+
+    // On page load, if a session is already selected, make sure dropdowns match
+    (function init() {
+        const sid = sessionSelect.value;
+        if (!sid) return;
+        const terms = termsBySession[sid] || [];
+        const arms  = armsBySession[sid]  || [];
+        const selTerm  = '{{ selected_term }}';
+        const selClass = '{{ selected_class_arm }}';
+        repopulate(termSelect,  terms, selTerm,  'All Terms');
+        repopulate(classSelect, arms,  selClass, 'All Classes');
+    })();
+})();
+</script>
 {% endblock %}

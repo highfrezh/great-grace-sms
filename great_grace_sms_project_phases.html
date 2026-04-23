@@ -1,30 +1,25 @@
 
 <style>
-  .phase-container { padding: 1rem 0; font-family: var(--font-sans); }
-  .phase-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); margin-bottom: 1rem; overflow: hidden; }
-  .phase-header { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .phase-container { padding: 1rem 0; font-family: sans-serif; }
+  .phase-card { background: white; border: 0.5px solid #eee; border-radius: 12px; margin-bottom: 1rem; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .phase-header { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 0.5px solid #eee; }
   .phase-badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
   .badge-done { background: #EAF3DE; color: #3B6D11; }
   .badge-next { background: #E6F1FB; color: #185FA5; }
   .badge-pending { background: #F1EFE8; color: #5F5E5A; }
-  .phase-title { font-size: 15px; font-weight: 500; color: var(--color-text-primary); }
-  .phase-subtitle { font-size: 12px; color: var(--color-text-secondary); margin-left: auto; }
+  .phase-title { font-size: 15px; font-weight: 600; color: #333; }
+  .phase-subtitle { font-size: 12px; color: #666; margin-left: auto; }
   .phase-body { padding: 12px 18px; }
-  .task-row { display: flex; align-items: flex-start; gap: 10px; padding: 5px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .task-row { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 0.5px solid #f5f5f5; }
   .task-row:last-child { border-bottom: none; }
   .task-icon { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
   .icon-done { background: #EAF3DE; }
   .icon-done svg { stroke: #3B6D11; }
-  .icon-partial { background: #FAEEDA; }
-  .icon-partial svg { stroke: #854F0B; }
   .icon-pending { background: #F1EFE8; }
   .icon-pending svg { stroke: #888780; }
-  .task-text { font-size: 13px; color: var(--color-text-primary); line-height: 1.5; flex: 1; }
-  .task-note { font-size: 11px; color: var(--color-text-secondary); display: block; margin-top: 1px; }
-  .progress-bar-wrap { height: 4px; background: var(--color-background-secondary); border-radius: 2px; margin: 10px 0 4px; }
-  .progress-bar-fill { height: 4px; border-radius: 2px; }
-  .progress-label { font-size: 11px; color: var(--color-text-secondary); text-align: right; }
-  .section-divider { font-size: 11px; font-weight: 500; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 0 6px; }
+  .task-text { font-size: 13px; color: #444; line-height: 1.5; flex: 1; }
+  .progress-bar-wrap { height: 6px; background: #f0f0f0; border-radius: 3px; margin: 0; }
+  .progress-bar-fill { height: 6px; border-radius: 3px; }
 </style>
 
 <div class="phase-container">
@@ -33,19 +28,13 @@
   <div class="phase-card">
     <div class="phase-header">
       <span class="phase-badge badge-done">Completed</span>
-      <span class="phase-title">Phase 1 — Foundation & Setup</span>
+      <span class="phase-title">Phase 1 — Foundation & Roles</span>
       <span class="phase-subtitle">100%</span>
     </div>
-    <div class="progress-bar-wrap" style="margin: 0;"><div class="progress-bar-fill" style="width:100%;background:#639922;"></div></div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:100%;background:#639922;"></div></div>
     <div class="phase-body">
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Django project structure & all apps created</span></div>
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Custom User model with multiple roles (M2M)</span></div>
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Role-based access — decorators & mixins</span></div>
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Login / logout with role-based dashboard routing</span></div>
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Tailwind CSS v4, Alpine.js, base template</span></div>
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Collapsible sidebar with school brand colors</span></div>
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Git setup & GitHub repository</span></div>
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Delete confirmation modal (reusable Alpine pattern)</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Project structure & core apps</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Role-based access (Principal, Teacher, Parent, Student)</span></div>
     </div>
   </div>
 
@@ -53,203 +42,118 @@
   <div class="phase-card">
     <div class="phase-header">
       <span class="phase-badge badge-done">Completed</span>
-      <span class="phase-title">Phase 2 — Academics Module</span>
+      <span class="phase-title">Phase 2 — Academic Setup</span>
       <span class="phase-subtitle">100%</span>
     </div>
-    <div class="progress-bar-wrap" style="margin: 0;"><div class="progress-bar-fill" style="width:100%;background:#639922;"></div></div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:100%;background:#639922;"></div></div>
     <div class="phase-body">
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Academic sessions — full CRUD</span></div>
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Terms — full CRUD with resumption date</span></div>
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Class levels — full CRUD with promotion paths</span></div>
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Class arms — full CRUD with capacity tracking</span></div>
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Subjects — full CRUD with activate/deactivate</span></div>
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Academics sidebar dropdown with active states</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Sessions, Terms, Class Arms & Levels</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Subject management & Teacher assignments</span></div>
     </div>
   </div>
 
   <!-- PHASE 3 -->
   <div class="phase-card">
     <div class="phase-header">
-      <span class="phase-badge badge-next">In Progress</span>
-      <span class="phase-title">Phase 3 — Staff Management</span>
-      <span class="phase-subtitle">60%</span>
+      <span class="phase-badge badge-done">Completed</span>
+      <span class="phase-title">Phase 3 — Staff & Teachers</span>
+      <span class="phase-subtitle">100%</span>
     </div>
-    <div class="progress-bar-wrap" style="margin: 0;"><div class="progress-bar-fill" style="width:60%;background:#378ADD;"></div></div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:100%;background:#639922;"></div></div>
     <div class="phase-body">
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">StaffProfile model with all fields</span></div>
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Auto-generated Staff ID (GGS/0001)</span></div>
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Staff list, create, edit, detail, deactivate views</span></div>
-      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Auto-create login with phone as default password</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Staff list & detail templates<span class="task-note">Templates generated, needs testing</span></span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Subject-teacher assignment per class</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Staff sidebar dropdown</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Staff Profiles & Auto-generated IDs</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Teacher results entry & publishing dashboard</span></div>
     </div>
   </div>
 
   <!-- PHASE 4 -->
   <div class="phase-card">
     <div class="phase-header">
-      <span class="phase-badge badge-pending">Pending</span>
+      <span class="phase-badge badge-done">Completed</span>
       <span class="phase-title">Phase 4 — Student Management</span>
-      <span class="phase-subtitle">0%</span>
+      <span class="phase-subtitle">100%</span>
     </div>
-    <div class="progress-bar-wrap" style="margin: 0;"><div class="progress-bar-fill" style="width:0%;background:#888780;"></div></div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:100%;background:#639922;"></div></div>
     <div class="phase-body">
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Student model — admission number, guardian info, medical</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Student enrollment into class arms</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Student list, create, edit, detail pages</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Auto-create student login (admission number + DOB)</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Bulk student import via Excel/CSV</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Attendance — daily marking by class teacher</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Parent account auto-created & linked to student</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Student Admission, Enrollment & Bulk Import</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Attendance tracking & report syncing</span></div>
     </div>
   </div>
 
   <!-- PHASE 5 -->
   <div class="phase-card">
     <div class="phase-header">
-      <span class="phase-badge badge-pending">Pending</span>
+      <span class="phase-badge badge-done">Completed</span>
       <span class="phase-title">Phase 5 — Examination System</span>
-      <span class="phase-subtitle">0%</span>
+      <span class="phase-subtitle">100%</span>
     </div>
-    <div class="progress-bar-wrap" style="margin: 0;"><div class="progress-bar-fill" style="width:0%;background:#888780;"></div></div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:100%;background:#639922;"></div></div>
     <div class="phase-body">
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Question bank — CBT with LaTeX & Yoruba support</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Theory questions — PDF/DOC attachment with auto-rename</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Exam configuration — OBJ + Theory + CA</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Exam submission deadline & penalty logging</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Examiner vetting & approval workflow</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">CBT exam taking — timer, auto-save, connection recovery</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Malpractice prevention — fullscreen, tab detection</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Theory score entry & bulk entry</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Teacher exam preview mode</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">CBT Engine with LaTeX & Yoruba support</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Exam Vetting, Scheduling & Approval Workflow</span></div>
     </div>
   </div>
 
   <!-- PHASE 6 -->
   <div class="phase-card">
     <div class="phase-header">
-      <span class="phase-badge badge-pending">Pending</span>
-      <span class="phase-title">Phase 6 — Results & Report Cards</span>
-      <span class="phase-subtitle">0%</span>
+      <span class="phase-badge badge-done">Completed</span>
+      <span class="phase-title">Phase 6 — Results & Grading</span>
+      <span class="phase-subtitle">100%</span>
     </div>
-    <div class="progress-bar-wrap" style="margin: 0;"><div class="progress-bar-fill" style="width:0%;background:#888780;"></div></div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:100%;background:#639922;"></div></div>
     <div class="phase-body">
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">CA1, CA2 & exam score entry per subject</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Grade calculation A–F with remarks</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Class position & per-subject position</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Report card — Principal & teacher comments</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Next term resumption date on report card</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">PDF report card export — school branded</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Transcript generation across sessions</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Audit log — who changed what result & when</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Automated Ranking & Position calculation</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Report Card PDF generation & Transcripts</span></div>
     </div>
   </div>
 
   <!-- PHASE 7 -->
   <div class="phase-card">
     <div class="phase-header">
-      <span class="phase-badge badge-pending">Pending</span>
-      <span class="phase-title">Phase 7 — Scheme of Work</span>
-      <span class="phase-subtitle">0%</span>
+      <span class="phase-badge badge-done">Completed</span>
+      <span class="phase-title">Phase 7 — Promotion & Curriculum</span>
+      <span class="phase-subtitle">100%</span>
     </div>
-    <div class="progress-bar-wrap" style="margin: 0;"><div class="progress-bar-fill" style="width:0%;background:#888780;"></div></div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:100%;background:#639922;"></div></div>
     <div class="phase-body">
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">VP uploads scheme per class, subject & term</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">PDF/DOC material attachment</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Teacher downloads & student views scheme</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Bulk Promotion & Sessional Summary verification</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Scheme of Work management system</span></div>
     </div>
   </div>
 
   <!-- PHASE 8 -->
   <div class="phase-card">
     <div class="phase-header">
-      <span class="phase-badge badge-pending">Pending</span>
-      <span class="phase-title">Phase 8 — Timetable</span>
-      <span class="phase-subtitle">0%</span>
+      <span class="phase-badge badge-next">In Progress</span>
+      <span class="phase-title">Phase 8 — Portals & Dashboards</span>
+      <span class="phase-subtitle">85%</span>
     </div>
-    <div class="progress-bar-wrap" style="margin: 0;"><div class="progress-bar-fill" style="width:0%;background:#888780;"></div></div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:85%;background:#378ADD;"></div></div>
     <div class="phase-body">
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Period slot configuration</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Weekly timetable builder per class</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Clash detection</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Teacher personal schedule view</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">PDF timetable export</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Multi-Child Parent Dashboard</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">Student Portal with result history</span></div>
+      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">News Board & Announcements</span></div>
     </div>
   </div>
 
   <!-- PHASE 9 -->
   <div class="phase-card">
     <div class="phase-header">
-      <span class="phase-badge badge-pending">Pending</span>
-      <span class="phase-title">Phase 9 — Promotion System</span>
-      <span class="phase-subtitle">0%</span>
+      <span class="phase-badge badge-next">In Progress</span>
+      <span class="phase-title">Phase 9 — Deployment & Backups</span>
+      <span class="phase-subtitle">20%</span>
     </div>
-    <div class="progress-bar-wrap" style="margin: 0;"><div class="progress-bar-fill" style="width:0%;background:#888780;"></div></div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:20%;background:#378ADD;"></div></div>
     <div class="phase-body">
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Promotion rules per class — min average & attendance</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Auto-promotion processing — bulk & individual</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Outcomes — promoted, retained, graduated, withdrawn</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Student academic journey timeline</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Promotion report — promoted vs retained list</span></div>
-    </div>
-  </div>
-
-  <!-- PHASE 10 -->
-  <div class="phase-card">
-    <div class="phase-header">
-      <span class="phase-badge badge-pending">Pending</span>
-      <span class="phase-title">Phase 10 — Parent & Student Portal</span>
-      <span class="phase-subtitle">0%</span>
-    </div>
-    <div class="progress-bar-wrap" style="margin: 0;"><div class="progress-bar-fill" style="width:0%;background:#888780;"></div></div>
-    <div class="phase-body">
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Parent dashboard — child profiles, results, attendance</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Student dashboard — exams, results, scheme of work</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">School announcements & calendar</span></div>
-    </div>
-  </div>
-
-  <!-- PHASE 11 -->
-  <div class="phase-card">
-    <div class="phase-header">
-      <span class="phase-badge badge-pending">Pending</span>
-      <span class="phase-title">Phase 11 — Reporting, Backup & Analytics</span>
-      <span class="phase-subtitle">0%</span>
-    </div>
-    <div class="progress-bar-wrap" style="margin: 0;"><div class="progress-bar-fill" style="width:0%;background:#888780;"></div></div>
-    <div class="phase-body">
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Class & subject performance reports</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">At-risk students dashboard</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Excel & CSV bulk data export</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Daily automatic backup + manual trigger</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Google Drive backup option</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Full audit log — results & student record changes</span></div>
-    </div>
-  </div>
-
-  <!-- PHASE 12 -->
-  <div class="phase-card">
-    <div class="phase-header">
-      <span class="phase-badge badge-pending">Pending</span>
-      <span class="phase-title">Phase 12 — Testing & Deployment</span>
-      <span class="phase-subtitle">0%</span>
-    </div>
-    <div class="progress-bar-wrap" style="margin: 0;"><div class="progress-bar-fill" style="width:0%;background:#888780;"></div></div>
-    <div class="phase-body">
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">User acceptance testing with school staff</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Switch to PostgreSQL for production</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Deploy to cloud (PythonAnywhere / DigitalOcean)</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Staff & teacher training</span></div>
-      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Go live</span></div>
+      <div class="task-row"><div class="task-icon icon-done"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="task-text">MySQL compatibility configuration (cPanel)</span></div>
+      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Daily Automatic Backup (Local + Google Drive)</span></div>
+      <div class="task-row"><div class="task-icon icon-pending"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><span class="task-text">Final Production Deployment & WSGI Setup</span></div>
     </div>
   </div>
 
 </div>
 
-
-
-✨ Phase 2: Teacher dashboard (view student scores, publish results)
-✨ Phase 3: Theory score entry (individual & bulk)
-✨ Phase 4: Exam scheduling for examiners
-Ready to build anything else, or test the dashboa
+<div style="font-size: 10px; color: #999; margin-top: 1rem; border-top: 1px solid #f0f0f0; padding-top: 0.5rem">
+  💡 Status Update: Timetable module removed per client request (April 19, 2026).
+</div>
