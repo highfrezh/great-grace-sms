@@ -394,33 +394,16 @@
             </div>
             {% endif %}
 
-            <!-- Action Button -->
-            <form action="{% url 'results:toggle_release' %}" method="POST">
-                {% csrf_token %}
-                <input type="hidden" name="class_arm_id" value="{{ arm.id }}">
-                <input type="hidden" name="session_id" value="{{ current_session.id }}">
-                <input type="hidden" name="term_id" value="{{ current_term.id }}">
-                
-                {% if arm.is_fully_published %}
-                    <button type="submit" name="action" value="unpublish" class="btn-action btn-unpublish">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-                        </svg>
-                        Unpublish Class
-                    </button>
-                {% else %}
-                    <button type="submit" name="action" value="publish" class="btn-action btn-publish" {% if arm.total_students == 0 %}disabled{% endif %}>
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        {% if arm.is_fully_commented %}
-                            Publish Results
-                        {% else %}
-                            Publish Anyway
-                        {% endif %}
-                    </button>
-                {% endif %}
-            </form>
+            <!-- Action Buttons -->
+            <div class="mt-auto">
+                <a href="{% url 'results:manage_class_student_releases' arm.id %}?session={{ current_session.id }}&term={{ current_term.id }}" 
+                   class="btn-action bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100 hover:text-[#851A10] hover:border-[#851A10] no-underline">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                    Manage Student Results
+                </a>
+            </div>
         </div>
         {% empty %}
         <div class="empty-state col-span-full">

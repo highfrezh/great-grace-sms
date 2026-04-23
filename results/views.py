@@ -843,20 +843,76 @@ def toggle_release(request):
         messages.success(request, f"Successfully unpublished results for {class_arm.full_name}")
 
     # Build redirect URL with existing filters
-
-    redirect_url = reverse('results:manage_releases')
-
+    redirect_to = request.POST.get('redirect_to')
+    if redirect_to == 'detail':
+        redirect_url = reverse('results:manage_class_student_releases', args=[class_arm.id])
+    else:
+        redirect_url = reverse('results:manage_releases')
     params = []
-
     if session_id: params.append(f"session={session_id}")
-
     if term_id: params.append(f"term={term_id}")
-
+    
     if params:
-
         redirect_url += "?" + "&".join(params)
-
+    
     return redirect(redirect_url)
+
+
+@login_required
+@admin_staff_required
+def manage_class_student_releases(request, class_arm_id):
+    """
+    Detailed view for Principal/VP to manage result releases for individual students in a class.
+    """
+    class_arm = get_object_or_404(ClassArm, pk=class_arm_id)
+    session_id = request.GET.get('session')
+    term_id = request.GET.get('term')
+
+    if session_id:
+        session = get_object_or_404(AcademicSession, pk=session_id)
+    else:
+        session = AcademicSession.get_current()
+
+    if term_id:
+        term = get_object_or_404(Term, pk=term_id)
+    else:
+        term = Term.get_current()
+
+    # Get all report cards for this class/session/term
+    report_cards = ReportCard.objects.filter(
+        class_arm=class_arm,
+        session=session,
+        term=term
+    ).select_related('student__user').order_by('student__user__last_name', 'student__user__first_name')
+
+    return render(request, 'results/manage_student_releases.html', {
+        'class_arm': class_arm,
+        'report_cards': report_cards,
+        'session': session,
+        'term': term,
+        'page_title': f'Student Releases — {class_arm.full_name}'
+    })
+
+
+@login_required
+@admin_staff_required
+@require_POST
+def toggle_student_release(request):
+    """
+    AJAX view to toggle publication status for a single student's report card.
+    """
+    report_card_id = request.POST.get('report_card_id')
+    report_card = get_object_or_404(ReportCard, pk=report_card_id)
+    
+    report_card.is_published = not report_card.is_published
+    report_card.save()
+    
+    return JsonResponse({
+        'success': True,
+        'is_published': report_card.is_published,
+        'student_name': report_card.student.full_name
+    })
+
 
 @login_required
 

@@ -12,6 +12,8 @@ urlpatterns = [
     path('all-results/', views.all_student_results, name='all_student_results'),
     path('releases/', views.manage_releases, name='manage_releases'),
     path('releases/toggle/', views.toggle_release, name='toggle_release'),
+    path('releases/student-toggle/', views.toggle_student_release, name='toggle_student_release'),
+    path('releases/class/<int:class_arm_id>/students/', views.manage_class_student_releases, name='manage_class_student_releases'),
     path('card/<int:pk>/admin-update/', views.admin_update_report_card, name='admin_update_report_card'),
     path('my-results/', views.student_report_card_list, name='student_report_card_list'),
 

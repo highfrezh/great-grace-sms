@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Student Releases — {{ class_arm.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .management-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+    
+    .student-row {
+        background: white;
+        border-radius: 1rem;
+        padding: 1rem 1.25rem;
+        border: 1px solid #F3F4F6;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.2s ease;
+        margin-bottom: 0.75rem;
+    }
+    
+    .student-row:hover {
+        border-color: #FECACA;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .student-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .avatar {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 0.75rem;
+        background: #851A10;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.875rem;
+    }
+
+    .name {
+        font-weight: 700;
+        color: #374151;
+        font-size: 0.9375rem;
+    }
+
+    .admission {
+        font-size: 0.7rem;
+        color: #6B7280;
+        font-family: monospace;
+    }
+
+    /* Toggle Switch Styles */
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 48px;
+        height: 24px;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #E5E7EB;
+        transition: .4s;
+        border-radius: 24px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    input:checked + .slider {
+        background-color: #059669;
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(24px);
+    }
+
+    .status-text {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        min-width: 80px;
+        text-align: right;
+    }
+
+    .btn-bulk {
+        padding: 0.5rem 1rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+    }
+
+    .btn-bulk-publish {
+        background: #059669;
+        color: white;
+        border: none;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-bulk-publish:hover {
+        background: #047857;
+        transform: translateY(-1px);
+    }
+
+    .btn-bulk-unpublish {
+        color: white;
+        background: #DC2626;
+        border: 1px solid #FECACA;
+    }
+
+    .btn-bulk-unpublish:hover {
+        background: #a70000;
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="management-container">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'results:manage_releases' %}?session={{ session.id }}&term={{ term.id }}" class="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:text-[#851A10] hover:border-[#851A10] transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">{{ class_arm.full_name }} Students</h1>
+                <p class="text-sm text-gray-500">
+                    Manage individual result releases for {{ term.get_name_display }} · {{ session.name }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div class="bg-gray-50 rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4 border border-gray-100">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-[#851A10] shadow-sm border border-gray-100">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+            <div>
+                <p class="text-sm font-bold text-gray-700">Class-wide Actions</p>
+                <p class="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Release or recall all results for this class</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <form action="{% url 'results:toggle_release' %}" method="POST" class="inline-flex gap-2">
+                {% csrf_token %}
+                <input type="hidden" name="class_arm_id" value="{{ class_arm.id }}">
+                <input type="hidden" name="session_id" value="{{ session.id }}">
+                <input type="hidden" name="term_id" value="{{ term.id }}">
+                <input type="hidden" name="redirect_to" value="detail">
+                
+                <button type="submit" name="action" value="publish" class="btn-bulk btn-bulk-publish">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Publish All
+                </button>
+                <button type="submit" name="action" value="unpublish" class="btn-bulk btn-bulk-unpublish">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                    </svg>
+                    Unpublish All
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Student List -->
+    <div class="space-y-2">
+        {% for rc in report_cards %}
+        <div class="student-row">
+            <div class="student-info">
+                <div class="avatar">
+                    {{ rc.student.first_name|first }}{{ rc.student.last_name|first }}
+                </div>
+                <div>
+                    <p class="name">{{ rc.student.full_name }}</p>
+                    <p class="admission">{{ rc.student.admission_number }}</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <span id="status-text-{{ rc.id }}" class="status-text {% if rc.is_published %}text-green-600{% else %}text-gray-400{% endif %}">
+                    {% if rc.is_published %}Published{% else %}Draft{% endif %}
+                </span>
+                <label class="switch">
+                    <input type="checkbox" 
+                           {% if rc.is_published %}checked{% endif %}
+                           onchange="toggleStudentRelease({{ rc.id }}, this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+        {% empty %}
+        <div class="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center">
+            <p class="text-gray-400 font-medium">No results found for this class yet.</p>
+            <p class="text-sm text-gray-400 mt-1">Teachers must enter remarks/ratings before results appear here.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function toggleStudentRelease(rcId, checkbox) {
+    const statusText = document.getElementById(`status-text-${rcId}`);
+    const originalChecked = !checkbox.checked;
+    
+    // Optimistic UI update
+    statusText.innerText = checkbox.checked ? 'Publishing...' : 'Unpublishing...';
+    
+    const formData = new FormData();
+    formData.append('report_card_id', rcId);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+    fetch("{% url 'results:toggle_student_release' %}", {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusText.innerText = data.is_published ? 'Published' : 'Draft';
+            statusText.className = `status-text ${data.is_published ? 'text-green-600' : 'text-gray-400'}`;
+        } else {
+            // Revert on failure
+            checkbox.checked = originalChecked;
+            alert('Failed to update status. Please try again.');
+        }
+    })
+    .catch(error => {
+        checkbox.checked = originalChecked;
+        alert('An error occurred. Please check your connection.');
+    });
+}
+</script>
+{% endblock %}
