@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.db.models import Q
 from accounts.decorators import admin_staff_required
 from academics.models import AcademicSession, Term, ClassArm, Subject
+from students.models import Student
 from .models import SchemeOfWork
 from .forms import SchemeOfWorkForm
 
@@ -20,21 +21,38 @@ def scheme_list(request):
     
     schemes = SchemeOfWork.objects.select_related('session', 'term', 'class_arm', 'subject', 'uploaded_by')
     
-    # Student Restriction: Only see their own class arm schemes
-    if not request.user.is_admin_staff and request.user.is_student:
-        try:
-            student_profile = request.user.student_profile
-            # Get current enrollment class arm
-            current_enrollment = student_profile.enrollments.filter(is_active=True, session=current_session).first()
-            if current_enrollment:
-                schemes = schemes.filter(class_arm=current_enrollment.class_arm)
-            else:
-                schemes = schemes.none()
-        except AttributeError:
+    # Permission Restriction
+    session_id = request.GET.get('session')
+    student_id = request.GET.get('student_id')
+    student_profile = None
+    
+    if student_id and (request.user.is_parent or request.user.is_superuser):
+        student_profile = get_object_or_404(Student, id=student_id)
+        if request.user.is_parent:
+            if not request.user.guardian_profiles.filter(student=student_profile, phone=request.user.phone_number).exists():
+                messages.error(request, "Access denied.")
+                return redirect('accounts:dashboard')
+    elif request.user.is_student:
+        student_profile = getattr(request.user, 'student_profile', None)
+
+    if student_profile:
+        # Get current enrollment class arm for the student
+        # If a session/term filter is active, use that, otherwise use current
+        target_session = current_session
+        if session_id:
+            try: target_session = AcademicSession.objects.get(id=session_id)
+            except: pass
+            
+        enrollment = student_profile.enrollments.filter(session=target_session).first()
+        if enrollment:
+            schemes = schemes.filter(class_arm=enrollment.class_arm)
+        else:
             schemes = schemes.none()
+    elif not request.user.is_admin_staff and not request.user.is_teaching_staff:
+        # If not student/parent and not staff, see nothing
+        schemes = schemes.none()
 
     # Filtering
-    session_id = request.GET.get('session')
     term_id = request.GET.get('term')
     class_arm_id = request.GET.get('class_arm')
     
@@ -44,8 +62,24 @@ def scheme_list(request):
     
     # Filter data for dropdowns
     available_sessions = AcademicSession.objects.all().order_by('-start_date')
-    available_terms = Term.objects.all()
-    available_class_arms = ClassArm.objects.filter(session=current_session) if current_session else ClassArm.objects.all()
+    
+    # Base query for terms and arms
+    if session_id:
+        available_terms = Term.objects.filter(session_id=session_id)
+        available_class_arms = ClassArm.objects.filter(session_id=session_id)
+    else:
+        available_terms = Term.objects.filter(session=current_session) if current_session else Term.objects.all()
+        available_class_arms = ClassArm.objects.filter(session=current_session) if current_session else ClassArm.objects.all()
+
+    # Restricted view for Students/Parents: Only show their own class in the dropdown
+    if student_profile:
+        # Get enrollment for the session being viewed
+        view_session_id = session_id or (current_session.id if current_session else None)
+        if view_session_id:
+            enrolled_arms = student_profile.enrollments.filter(session_id=view_session_id).values_list('class_arm_id', flat=True)
+            available_class_arms = available_class_arms.filter(id__in=enrolled_arms)
+        else:
+            available_class_arms = available_class_arms.none()
 
     return render(request, 'schemes/scheme_list.html', {
         'schemes': schemes,
@@ -56,6 +90,7 @@ def scheme_list(request):
         'selected_session': session_id,
         'selected_term': term_id,
         'selected_class_arm': class_arm_id,
+        'student_id': student_id,
     })
 
 @login_required

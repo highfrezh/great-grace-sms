@@ -156,7 +156,7 @@ def process_bulk_promotion(request):
         decision = request.POST.get(f'decision_{student_id}')
         target_class_id = request.POST.get(f'target_class_{student_id}')
         
-        if decision in [PromotionHistory.Status.PROMOTED, PromotionHistory.Status.PROMOTED_TRIAL, PromotionHistory.Status.REPEATED]:
+        if decision in [PromotionHistory.Status.PROMOTED, PromotionHistory.Status.REPEATED]:
             if not target_class_id:
                 student = Student.objects.filter(id=student_id).first()
                 if student:
@@ -208,7 +208,7 @@ def process_bulk_promotion(request):
         ).update(is_active=False)
         
         # Create or Update a SINGLE clean enrollment for the target session
-        if decision in [PromotionHistory.Status.PROMOTED, PromotionHistory.Status.PROMOTED_TRIAL, PromotionHistory.Status.REPEATED]:
+        if decision in [PromotionHistory.Status.PROMOTED, PromotionHistory.Status.REPEATED]:
             if target_class:
                 # First, ensure no other conflicting active enrollments exist in the target session
                 StudentEnrollment.objects.filter(
@@ -228,11 +228,17 @@ def process_bulk_promotion(request):
                 )
                 count_success += 1
         else:
-            # Graduated or Withdrawn: Ensure they have no active enrollments in target session
+            # Graduated: Ensure they have no active enrollments in target session
+            # AND Deactivate the main student record (Alumni status)
             StudentEnrollment.objects.filter(
                 student=student,
                 session=target_session
             ).update(is_active=False)
+            
+            if decision == PromotionHistory.Status.GRADUATED:
+                student.is_active = False
+                student.save()
+                
             count_success += 1
 
     messages.success(request, f"Successfully processed promotion for {count_success} students.")

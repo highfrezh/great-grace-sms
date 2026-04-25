@@ -128,25 +128,21 @@
     <div x-show="!loading && hasData && selectedClassId" x-cloak>
         
         <!-- Quick Stats Row -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <div class="stat-card">
+        <div class="flex flex-row items-stretch gap-4 mb-6">
+            <div class="stat-card flex-1">
                 <p class="text-xs text-gray-500">Total Students</p>
                 <p class="text-2xl font-bold" style="color:#635E57;" x-text="stats.totalStudents">0</p>
             </div>
-            <div class="stat-card">
+            <div class="stat-card flex-1">
                 <p class="text-xs text-gray-500">Class Average</p>
-                <p class="text-2xl font-bold text-blue-600" x-text="stats.classAverage + '%'">0%</p>
+                <p class="text-2xl font-bold" style="color:#635E57;" x-text="stats.classAverage + '%'">0%</p>
             </div>
-            <div class="stat-card">
-                <p class="text-xs text-gray-500">Pass Rate</p>
-                <p class="text-2xl font-bold text-green-600" x-text="stats.passRate + '%'">0%</p>
-            </div>
-            <div class="stat-card">
+            <div class="stat-card flex-1">
                 <p class="text-xs text-gray-500">Top Student</p>
                 <p class="text-sm font-bold truncate" x-text="stats.topStudent.name">-</p>
                 <p class="text-xs text-green-600" x-text="stats.topStudent.score + '%'">-</p>
             </div>
-            <div class="stat-card">
+            <div class="stat-card flex-1">
                 <p class="text-xs text-gray-500">Needs Support</p>
                 <p class="text-sm font-bold truncate" x-text="stats.bottomStudent.name">-</p>
                 <p class="text-xs text-red-600" x-text="stats.bottomStudent.score + '%'">-</p>
@@ -159,7 +155,7 @@
             <!-- Subject Performance Bar Chart -->
             <div class="bg-white p-6 rounded-xl border border-gray-100">
                 <h3 class="text-sm font-bold text-gray-800 mb-4">Subject Performance</h3>
-                <div class="h-80">
+                <div style="height: 450px;">
                     <canvas id="subjectBarChart"></canvas>
                 </div>
                 <p class="text-xs text-gray-500 text-center mt-4">Average score per subject</p>
@@ -168,7 +164,7 @@
             <!-- Grade Distribution -->
             <div class="bg-white p-6 rounded-xl border border-gray-100">
                 <h3 class="text-sm font-bold text-gray-800 mb-4">Grade Distribution</h3>
-                <div class="h-80">
+                <div style="height: 450px;">
                     <canvas id="gradeDistributionChart"></canvas>
                 </div>
                 <p class="text-xs text-gray-500 text-center mt-4">Student performance breakdown</p>
@@ -188,9 +184,12 @@
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-bold text-gray-500">#</th>
                             <th class="px-6 py-3 text-left text-xs font-bold text-gray-500">Student Name</th>
-                            <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">Average</th>
-                             <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">Grade</th>
-                             <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">Trend</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">1st Term</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">2nd Term</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">3rd Term</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">Session Avg</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">Grade</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold text-gray-500">Trend</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -198,16 +197,35 @@
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 text-gray-500" x-text="idx + 1"></td>
                                 <td class="px-6 py-4 font-semibold text-gray-800" x-text="student.name"></td>
-                                <td class="px-6 py-4 text-center font-bold" :class="student.average >= 70 ? 'text-green-600' : (student.average >= 50 ? 'text-blue-600' : 'text-red-600')" x-text="student.average + '%'"></td>
-                                 <td class="px-6 py-4 text-center">
-                                     <span class="grade-badge" :class="'grade-' + student.grade.charAt(0)" x-text="student.grade"></span>
-                                 </td>
-                                 <td class="px-6 py-4 text-center">
-                                     <span x-show="student.trend > 0" class="text-green-600">↑</span>
-                                     <span x-show="student.trend < 0" class="text-red-600">↓</span>
-                                     <span x-show="student.trend === 0" class="text-gray-400">→</span>
-                                     <span class="text-xs ml-1" x-text="Math.abs(student.trend) + '%'"></span>
-                                 </td>
+                                <td class="px-6 py-4 text-center">
+                                    <span x-show="student.term1 !== null" x-text="student.term1 + '%'" class="text-gray-600"></span>
+                                    <span x-show="student.term1 === null" class="text-gray-300">-</span>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <span x-show="student.term2 !== null" x-text="student.term2 + '%'" class="text-gray-600"></span>
+                                    <span x-show="student.term2 === null" class="text-gray-300">-</span>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <span x-show="student.term3 !== null" x-text="student.term3 + '%'" class="text-gray-600"></span>
+                                    <span x-show="student.term3 === null" class="text-gray-300">-</span>
+                                </td>
+                                <td class="px-6 py-4 text-center font-bold text-[#851A10]">
+                                    <span x-show="student.session_average > 0" x-text="student.session_average + '%'"></span>
+                                    <span x-show="student.session_average === 0" class="text-gray-300">-</span>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <span x-show="student.grade !== '-'" class="grade-badge" :class="'grade-' + student.grade.charAt(0)" x-text="student.grade"></span>
+                                    <span x-show="student.grade === '-'" class="text-gray-300">-</span>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <div x-show="student.average !== null">
+                                        <span x-show="student.trend > 0" class="text-green-600">↑</span>
+                                        <span x-show="student.trend < 0" class="text-red-600">↓</span>
+                                        <span x-show="student.trend === 0" class="text-gray-400">→</span>
+                                        <span class="text-xs ml-1" x-text="Math.abs(student.trend) + '%'"></span>
+                                    </div>
+                                    <span x-show="student.average === null" class="text-gray-300">-</span>
+                                </td>
                             </tr>
                         </template>
                     </tbody>
@@ -247,7 +265,7 @@
 <script>
 function analyticsDashboard() {
     return {
-        selectedSessionId: '{{ current_session.id }}',
+        selectedSessionId: '{{ selected_session_id }}',
         selectedTermId: '{{ current_term.id }}',
         selectedClassId: '{{ default_class_id|default_if_none:"" }}',
         selectedSubject: '',
@@ -297,11 +315,8 @@ function analyticsDashboard() {
         },
         
         onSessionChange() {
-            this.updateTerms();
-            // Optional: You could fetch data automatically when session changes, provided class is selected
-            if (this.selectedClassId) {
-                this.fetchData();
-            }
+            // Redirect to reload the page with the new session ID to refresh class arms list
+            window.location.href = `?session=${this.selectedSessionId}`;
         },
         fetchData() {
             if (!this.selectedClassId) {
@@ -381,7 +396,14 @@ function analyticsDashboard() {
                         responsive: true,
                         maintainAspectRatio: false,
                         scales: {
-                            y: { beginAtZero: true, max: 100, title: { display: true, text: 'Percentage (%)' } }
+                            y: { 
+                                beginAtZero: true, 
+                                max: 100, 
+                                ticks: {
+                                    stepSize: 10
+                                },
+                                title: { display: true, text: 'Percentage (%)' } 
+                            }
                         },
                         plugins: { legend: { position: 'top' } }
                     }

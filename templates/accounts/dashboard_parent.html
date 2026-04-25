@@ -7,132 +7,394 @@
 
 {% block extra_css %}
 <style>
-    .bg-brand-brown { background-color: #635E57; }
-    .bg-brand-red { background-color: #851A10; }
-    .bg-brand-light { background-color: #f8f0ee; }
-    .bg-brand-red-light { background-color: rgba(133, 26, 16, 0.1); }
+    :root {
+        --primary: #851A10;
+        --primary-dark: #6B140C;
+        --primary-light: #A52318;
+        --secondary: #F59E0B;
+        --success: #059669;
+        --danger: #DC2626;
+        --info: #3B82F6;
+        --gray-50: #F9FAFB;
+        --gray-100: #F3F4F6;
+        --gray-200: #E5E7EB;
+        --gray-300: #D1D5DB;
+        --gray-400: #9CA3AF;
+        --gray-500: #6B7280;
+        --gray-600: #4B5563;
+        --gray-700: #374151;
+        --gray-800: #1F2937;
+        --gray-900: #111827;
+    }
     
-    .hover-bg-brand-red:hover { 
-        background-color: #851A10 !important;
-        color: white !important;
-        border-color: #851A10 !important;
+    .welcome-card {
+        background: white;
+        border-radius: 1rem;
+        border: 1px solid var(--gray-100);
+        padding: 1.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .welcome-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+    }
+    
+    .child-card {
+        background: white;
+        border-radius: 1rem;
+        border: 1px solid var(--gray-100);
+        overflow: hidden;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .child-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        border-color: #FECACA;
+    }
+    
+    .child-card-header {
+        background: linear-gradient(135deg, var(--gray-50) 0%, white 100%);
+        padding: 1rem;
+        border-bottom: 1px solid var(--gray-100);
+    }
+    
+    .child-avatar {
+        width: 3rem;
+        height: 3rem;
+        border-radius: 0.75rem;
+        background: linear-gradient(135deg, #FEF2F2 0%, #FFF5F3 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+    
+    .stat-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.5rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        background: var(--gray-100);
+        color: var(--gray-600);
+    }
+    
+    .quick-action {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        background: white;
+        border: 1px solid var(--gray-200);
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+    
+    .quick-action:hover {
+        background: var(--primary);
+        border-color: var(--primary);
+        transform: translateY(-2px);
+    }
+    
+    .quick-action:hover .action-icon,
+    .quick-action:hover .action-label {
+        color: white;
+    }
+    
+    .action-icon {
+        font-size: 1.25rem;
+        transition: color 0.2s ease;
+    }
+    
+    .action-label {
+        font-size: 0.6rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--gray-500);
+        transition: color 0.2s ease;
+    }
+    
+    .support-card {
+        background: linear-gradient(135deg, #635E57 0%, #4a4640 100%);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .support-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 200px;
+        height: 200px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 50%;
+    }
+    
+    .support-item {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        background: white;
+        border-radius: 1rem;
+        border: 2px dashed var(--gray-200);
+    }
+    
+    @media (max-width: 768px) {
+        .welcome-card {
+            padding: 1rem;
+        }
+        
+        .child-card {
+            margin-bottom: 1rem;
+        }
+        
+        .support-card {
+            padding: 1rem;
+        }
+        
+        .support-item {
+            padding: 0.5rem;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="space-y-8">
+<div class="space-y-6">
+    
     <!-- Welcome Section -->
-    <div class="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm relative overflow-hidden">
-        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div class="welcome-card">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-                <h2 class="text-3xl font-bold text-gray-900">Welcome, {{ request.user.first_name }}!</h2>
-                <p class="text-gray-500 mt-2 text-lg">Manage and monitor your children's academic progress from here.</p>
+                <h1 class="text-2xl font-bold" style="color:#635E57;">Welcome, {{ request.user.first_name }}!</h1>
+                <p class="text-sm text-gray-500 mt-1">Monitor your children's academic progress from one dashboard</p>
             </div>
-            <div class="flex items-center gap-3 bg-brand-light px-4 py-2 rounded-xl">
-                <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
-                    <span class="text-xl">👪</span>
+            <div class="flex items-center gap-3 px-4 py-2 rounded-xl" style="background:#FFF5F3;">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center shadow-sm" style="background:#851A10;">
+                    <span class="text-white text-sm font-bold">{{ children|length }}</span>
                 </div>
                 <div>
-                    <p class="text-xs text-[#851A10] font-bold uppercase tracking-wider">Total Children</p>
-                    <p class="text-lg font-bold text-[#851A10]">{{ children|length }}</p>
+                    <p class="text-xs font-bold uppercase tracking-wider" style="color:#851A10;">Children Enrolled</p>
+                    <p class="text-sm font-bold" style="color:#635E57;">{{ children|length }} Student{{ children|length|pluralize }}</p>
                 </div>
             </div>
         </div>
-        <!-- Decorative background element -->
-        <div class="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-brand-light rounded-full opacity-50"></div>
     </div>
-
-    <!-- Children Overview Section -->
-    <section>
-        <div class="flex items-center justify-between mb-6">
-            <h3 class="text-xl font-bold text-gray-800">My Children</h3>
+    
+    <!-- Quick Stats Row -->
+    {% if children %}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="bg-white rounded-xl p-3 border border-gray-100 text-center">
+            <p class="text-xs text-gray-500">Total Children</p>
+            <p class="text-xl font-bold" style="color:#635E57;">{{ children|length }}</p>
         </div>
-
+        <div class="bg-white rounded-xl p-3 border border-gray-100 text-center">
+            <p class="text-xs text-gray-500">Active Classes</p>
+            <p class="text-xl font-bold text-blue-600">{{ active_classes|default:"0" }}</p>
+        </div>
+        <div class="bg-white rounded-xl p-3 border border-gray-100 text-center">
+            <p class="text-xs text-gray-500">Subjects Enrolled</p>
+            <p class="text-xl font-bold text-green-600">{{ total_subjects|default:"0" }}</p>
+        </div>
+        <div class="bg-white rounded-xl p-3 border border-gray-100 text-center">
+            <p class="text-xs text-gray-500">Avg. Performance</p>
+            <p class="text-xl font-bold text-purple-600">{{ avg_performance|default:"0" }}%</p>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Children Section -->
+    <section>
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold" style="color:#635E57;">My Children</h2>
+            <span class="text-xs text-gray-400">{{ children|length }} record(s)</span>
+        </div>
+        
         {% if children %}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {% for child in children %}
-            <div class="group bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-[#851A10]/20 transition-all duration-500 overflow-hidden flex flex-col">
-                <div class="h-2 bg-brand-red-light group-hover:bg-[#851A10] transition-colors duration-500"></div>
-                <div class="p-8 flex-1">
-                    <div class="flex items-start justify-between mb-6">
-                        <div class="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-500">
-                            {% if child.gender == 'M' %}👦{% else %}👧{% endif %}
+            <div class="child-card">
+                <!-- Card Header -->
+                <div class="child-card-header">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="child-avatar">
+                                {% if child.gender == 'MALE' or child.gender == 'M' %}👨‍🎓{% else %}👩‍🎓{% endif %}
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-800">{{ child.full_name }}</h3>
+                                <p class="text-xs text-gray-500 font-mono">{{ child.admission_number }}</p>
+                            </div>
                         </div>
-                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter bg-gray-100 text-gray-600">
-                            {{ child.admission_number }}
-                        </span>
-                    </div>
-                    
-                    <h4 class="text-xl font-bold text-gray-900 group-hover:text-[#851A10] transition-colors duration-300">
-                        {{ child.full_name }}
-                    </h4>
-                    
-                    {% with enrollment=child.get_current_enrollment %}
-                    <p class="text-gray-500 text-sm mt-1">
+                        {% with enrollment=child.get_current_enrollment %}
                         {% if enrollment %}
-                            {{ enrollment.class_arm.full_name }}
+                        <span class="stat-badge">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Active
+                        </span>
                         {% else %}
-                            Not currently enrolled
+                        <span class="stat-badge">
+                            <svg class="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Inactive
+                        </span>
                         {% endif %}
-                    </p>
+                        {% endwith %}
+                    </div>
+                </div>
+                
+                <!-- Card Body -->
+                <div class="p-4">
+                    {% with enrollment=child.get_current_enrollment %}
+                    <div class="mb-4">
+                        <p class="text-xs text-gray-500 mb-1">Current Class</p>
+                        <p class="text-sm font-semibold text-gray-800">
+                            {% if enrollment %}
+                                {{ enrollment.class_arm.full_name }}
+                            {% else %}
+                                <span class="text-gray-400">Not enrolled</span>
+                            {% endif %}
+                        </p>
+                    </div>
                     {% endwith %}
-
-                    <div class="mt-8 space-y-4">
-                        <div class="flex items-center gap-3 text-sm text-gray-600">
-                            <span class="w-5 text-center opacity-50">📅</span>
-                            <span>Admitted: {{ child.date_admitted|date:"M Y" }}</span>
+                    
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2 text-xs text-gray-500">
+                            <svg class="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <span>Admitted: {{ child.date_admitted|date:"M d, Y"|default:"N/A" }}</span>
                         </div>
-                        <div class="flex items-center gap-3 text-sm text-gray-600">
-                            <span class="w-5 text-center opacity-50">📍</span>
-                            <span class="truncate">{{ child.address|default:"Address not set" }}</span>
+                        <div class="flex items-center gap-2 text-xs text-gray-500">
+                            <svg class="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin" round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                            <span>{{ child.email|default:"No email" }}</span>
                         </div>
                     </div>
                 </div>
                 
-                <div class="p-6 bg-gray-50/50 border-t border-gray-50">
+                <!-- Card Footer -->
+                <div class="p-4 pt-0 space-y-3">
                     <a href="{% url 'students:student_dashboard' %}?student_id={{ child.id }}" 
-                       class="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-white border border-gray-200 text-sm font-bold text-gray-700 hover-bg-brand-red shadow-sm transition-all duration-300">
-                        View Portal
+                       class="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold text-sm transition-all"
+                       style="background:#851A10; color:white;">
+                        Enter Portal
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
                         </svg>
                     </a>
+                    
+                    <div class="grid grid-cols-3 gap-2">
+                        <a href="{% url 'results:student_report_card_list' %}?student_id={{ child.id }}" 
+                           class="quick-action">
+                            <span class="action-icon">📊</span>
+                            <span class="action-label">Results</span>
+                        </a>
+                        <a href="{% url 'results:student_performance_insights' %}?student_id={{ child.id }}" 
+                           class="quick-action">
+                            <span class="action-icon">📈</span>
+                            <span class="action-label">Insights</span>
+                        </a>
+                        <a href="{% url 'schemes:scheme_list' %}?student_id={{ child.id }}" 
+                           class="quick-action">
+                            <span class="action-icon">📖</span>
+                            <span class="action-label">Schemes</span>
+                        </a>
+                    </div>
                 </div>
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <div class="text-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
-            <div class="text-6xl mb-4">📭</div>
-            <h4 class="text-xl font-bold text-gray-900">No children linked</h4>
-            <p class="text-gray-500 mt-2">If you have children at this school, please contact the administration to link your account.</p>
+        <div class="empty-state">
+            <div class="text-4xl mb-3">👨‍👩‍👧‍👦</div>
+            <h3 class="text-lg font-bold text-gray-800 mb-1">No Children Linked</h3>
+            <p class="text-sm text-gray-500">If you have children at this school, please contact the administration to link your account.</p>
         </div>
         {% endif %}
     </section>
-
-    <!-- Quick Support Section -->
+    
+    <!-- Recent Activity / Quick Access Section -->
     {% if children %}
-    <div class="bg-brand-brown rounded-3xl p-8 text-white relative overflow-hidden">
-        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-            <div class="max-w-xl">
-                <h3 class="text-2xl font-bold">Need Help?</h3>
-                <p class="text-gray-400 mt-2 text-lg">If you notice any errors in your child's data or results, please reach out to the school administration using the contact details below.</p>
-            </div>
-            <div class="flex flex-col sm:flex-row gap-4">
-                <div class="bg-white/10 px-6 py-4 rounded-2xl border border-white/5">
-                    <p class="text-xs font-bold text-white/50 uppercase tracking-widest mb-1">Phone</p>
-                    <p class="font-bold text-lg">+234 800 000 0000</p>
+    <div class="bg-white rounded-xl border border-gray-100 p-5">
+        <h3 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Quick Tips
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div class="flex items-start gap-2 p-2 rounded-lg hover:bg-gray-50 transition">
+                <span class="text-lg">📚</span>
+                <div>
+                    <p class="font-semibold text-gray-800">Check Results</p>
+                    <p class="text-xs text-gray-500">View your child's latest exam scores and grades</p>
                 </div>
-                <div class="bg-white/10 px-6 py-4 rounded-2xl border border-white/5">
-                    <p class="text-xs font-bold text-white/50 uppercase tracking-widest mb-1">Email</p>
-                    <p class="font-bold text-lg">info@greatgrace.edu</p>
+            </div>
+            <div class="flex items-start gap-2 p-2 rounded-lg hover:bg-gray-50 transition">
+                <span class="text-lg">📈</span>
+                <div>
+                    <p class="font-semibold text-gray-800">Track Progress</p>
+                    <p class="text-xs text-gray-500">Monitor performance trends across terms</p>
+                </div>
+            </div>
+            <div class="flex items-start gap-2 p-2 rounded-lg hover:bg-gray-50 transition">
+                <span class="text-lg">📖</span>
+                <div>
+                    <p class="font-semibold text-gray-800">Download Materials</p>
+                    <p class="text-xs text-gray-500">Access schemes of work and study materials</p>
                 </div>
             </div>
         </div>
-        <!-- Decorative background element -->
-        <div class="absolute bottom-0 right-0 -mb-16 -mr-16 w-64 h-64 bg-white opacity-[0.03] rounded-full"></div>
     </div>
     {% endif %}
+    
+    <!-- Support Section -->
+    <div class="support-card">
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+                <h3 class="text-xl font-bold text-white">Need Help?</h3>
+                <p class="text-gray-300 text-sm mt-1 max-w-md">
+                    If you notice any errors in your child's data or results, please reach out to the school administration.
+                </p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="support-item">
+                    <p class="text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">Email</p>
+                    <p class="text-white font-bold">info@greatgrace.edu</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

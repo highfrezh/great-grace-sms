@@ -9,10 +9,8 @@ class PromotionHistory(models.Model):
     """
     class Status(models.TextChoices):
         PROMOTED = 'PROMOTED', 'Promoted'
-        PROMOTED_TRIAL = 'PROMOTED_TRIAL', 'Promoted on Trial'
         REPEATED = 'REPEATED', 'Repeated'
         GRADUATED = 'GRADUATED', 'Graduated'
-        WITHDRAWN = 'WITHDRAWN', 'Withdrawn'
 
     student = models.ForeignKey(
         Student, 

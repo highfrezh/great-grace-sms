@@ -825,11 +825,22 @@
                     <h1>{{ student.full_name }}</h1>
 
                     <div class="profile-meta">
-
                         <strong>Admission #:</strong> {{ student.admission_number }}
-
                         {% if class_arm %}<br><strong>Class:</strong> {{ class_arm }}{% endif %}
-
+                        
+                        {% if not request.GET.student_id %}
+                        <div style="margin-top: 15px;">
+                            <a href="{% url 'accounts:password_change' %}" 
+                               style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 10px; color: white; text-decoration: none; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; transition: all 0.2s ease; backdrop-filter: blur(5px);"
+                               onmouseover="this.style.background='rgba(255,255,255,0.3)'; this.style.transform='translateY(-2px)'"
+                               onmouseout="this.style.background='rgba(255,255,255,0.2)'; this.style.transform='none'">
+                                <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                                Change Password
+                            </a>
+                        </div>
+                        {% endif %}
                     </div>
 
                 </div>
@@ -947,8 +958,8 @@
                 <div style="color: rgba(255,255,255,0.75); font-size: 0.875rem; margin-top: 4px; max-width: 400px;">See exactly how you compare to your class in each subject. Track your academic trend across the session with interactive charts.</div>
             </div>
         </div>
-        <a href="{% url 'results:student_performance_insights' %}" style="flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; background: white; color: #851A10; font-weight: 800; font-size: 0.875rem; padding: 12px 24px; border-radius: 8px; text-decoration: none; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.2);" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
-            View My Insights
+        <a href="{% url 'results:student_performance_insights' %}{% if student_id %}?student_id={{ student_id }}{% endif %}" style="flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; background: white; color: #851A10; font-weight: 800; font-size: 0.875rem; padding: 12px 24px; border-radius: 8px; text-decoration: none; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.2);" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+            View Full Insights
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
         </a>
     </div>
@@ -1036,37 +1047,19 @@
     </div>
     {% endif %}
 
-
-
-
-
     <!-- Subjects Section -->
-
     {% if subjects_data %}
-
     <div class="section">
-
         <h2 class="section-title">📚 My Subjects</h2>
-
-        
-
-        {% if subjects_data %}
-
         <table class="subjects-table">
-
             <thead>
-
                 <tr>
                     <th>Subject</th>
                     <th>Teacher</th>
                 </tr>
-
             </thead>
-
             <tbody>
-
                 {% for subject_info in subjects_data %}
-
                 <tr>
                     <td>
                         <div class="subject-name">{{ subject_info.subject.name }}</div>
@@ -1081,88 +1074,81 @@
                         {% endif %}
                     </td>
                 </tr>
-
                 {% endfor %}
-
             </tbody>
-
         </table>
-
-        {% else %}
-
-        <div class="empty-state">
-
-            <div class="empty-state-icon">📚</div>
-
-            <p class="empty-state-text">No subjects assigned for this session.</p>
-
-        </div>
-
-        {% endif %}
-
     </div>
-
     {% endif %}
 
-
-
     <!-- Recent Results Section -->
-
     {% if recent_results %}
-
     <div class="section">
-
-        <h2 class="section-title">📊 Recent Results</h2>
-
+        <div class="flex items-center justify-between mb-6 pb-4 border-b-2 border-gray-50">
+            <h2 class="text-xl font-black text-gray-800 flex items-center gap-3">
+                <span class="text-2xl">📊</span> Recent Results
+            </h2>
+            <a href="{% url 'results:student_report_card_list' %}{% if student_id %}?student_id={{ student_id }}{% endif %}" class="text-xs font-black text-[#851A10] uppercase tracking-widest hover:underline">
+                View Full History →
+            </a>
+        </div>
         
-
-        {% if recent_results %}
-
         <div class="results-list">
-
             {% for result in recent_results %}
-
             <div class="result-card">
-
                 <div class="result-subject">{{ result.exam.subject.name }}</div>
-
                 <div class="result-score">{{ result.total_score|floatformat:0 }}/{{ result.exam.total_marks }}</div>
-
                 {% if result.grade %}
-
                 <span class="result-grade">Grade: {{ result.grade }}</span>
-
                 {% endif %}
-
                 <div class="result-meta">
-
                     📅 {{ result.exam.term }}<br>
-
                     Remark: {{ result.remark|default:"—" }}
-
                 </div>
-
             </div>
-
             {% endfor %}
-
         </div>
-
-        {% else %}
-
-        <div class="empty-state">
-
-            <div class="empty-state-icon">📊</div>
-
-            <p class="empty-state-text">No published results yet.</p>
-
-        </div>
-
-        {% endif %}
-
     </div>
+    {% endif %}
 
-    {% endif %}    
+    <!-- Scheme of Work Section -->
+    <div class="section">
+        <div class="flex items-center justify-between mb-6 pb-4 border-b-2 border-gray-50">
+            <h2 class="text-xl font-black text-gray-800 flex items-center gap-3">
+                <span class="text-2xl">📖</span> Scheme of Work
+            </h2>
+            {% if schemes %}
+            <a href="{% url 'schemes:scheme_list' %}{% if student_id %}?student_id={{ student_id }}{% endif %}" class="text-xs font-black text-[#851A10] uppercase tracking-widest hover:underline">
+                All Materials →
+            </a>
+            {% endif %}
+        </div>
+
+        {% if schemes %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for scheme in schemes %}
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-[#851A10]/30 hover:bg-white transition-all duration-300 group">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform">
+                        {% if 'pdf' in scheme.attachment.name|lower %}📕{% elif 'doc' in scheme.attachment.name|lower %}📘{% else %}📙{% endif %}
+                    </div>
+                    <div>
+                        <div class="font-bold text-gray-900">{{ scheme.subject.name }}</div>
+                        <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ scheme.term }}</div>
+                    </div>
+                </div>
+                <a href="{{ scheme.attachment.url }}" download class="p-3 rounded-xl bg-white border border-gray-200 text-[#851A10] hover:bg-[#851A10] hover:text-white hover:border-[#851A10] transition-all shadow-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+            <div class="text-4xl mb-3">📂</div>
+            <p class="text-sm font-bold text-gray-500 uppercase tracking-widest">No materials uploaded for this term yet</p>
+        </div>
+        {% endif %}
+    </div>
 
 
     <!-- Empty State if no data -->

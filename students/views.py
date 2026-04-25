@@ -202,35 +202,53 @@ def student_edit(request, pk):
                 new_guardian = guardian_form.save(commit=False)
                 new_phone = new_guardian.phone
                 
-                if new_phone != old_phone and guardian and guardian.user:
-                    # Sibling-Aware Logic: Update existing or Split away?
-                    user = guardian.user
-                    is_shared = user.guardian_profiles.count() > 1
+                if new_phone != old_phone:
+                    # 1. Check if the NEW phone already belongs to an existing parent account
+                    existing_user = User.objects.filter(phone_number=new_phone).first()
                     
-                    if is_shared:
-                        # SPLIT: Move this student to a different account
-                        # Clear the user link on the database record first
-                        guardian.user = None
-                        guardian.save()
+                    if existing_user:
+                        # MERGE: Link this student to the existing parent account
+                        if guardian and guardian.user:
+                            old_user = guardian.user
+                            # Thoroughly unlink this student from the old user
+                            student.guardians.filter(user=old_user).update(user=None)
+                            
+                            if old_user.guardian_profiles.count() == 0:
+                                # If the old user has no more students, delete it
+                                old_user.delete()
                         
-                        # Now update the local object and create the new user
-                        new_guardian.user = None 
+                        new_guardian.user = existing_user
                         new_guardian.save()
-                        create_guardian_user(new_guardian)
-                        messages.info(request, f"Separated parent account for {new_phone}")
+                        messages.success(request, f"Student linked to existing parent dashboard for {new_phone}")
                     else:
-                        # UPDATE: Only child, just update the existing account info
-                        new_username = new_phone
-                        if User.objects.filter(username=new_username).exclude(id=user.id).exists():
-                            new_username = f"{new_phone}_rev"
-                        
-                        user.username = new_username
-                        user.phone_number = new_phone
-                        user.save()
-                        new_guardian.save()
-                        messages.info(request, f"Parent portal login updated to {new_username}")
+                        # No existing user: Either UPDATE current account or CREATE new one
+                        if guardian and guardian.user:
+                            user = guardian.user
+                            if user.guardian_profiles.count() > 1:
+                                # SPLIT: Moving to new phone, siblings stay on old phone
+                                # Unlink this student from the old user first
+                                student.guardians.filter(user=user).update(user=None)
+                                
+                                new_guardian.user = None
+                                new_guardian.save()
+                                create_guardian_user(new_guardian)
+                                messages.info(request, f"Created new parent account for {new_phone}")
+                            else:
+                                # UPDATE: Only child, just update their existing account
+                                user.username = new_phone
+                                user.phone_number = new_phone
+                                user.save()
+                                new_guardian.save()
+                                messages.info(request, f"Parent portal login updated to {new_phone}")
+                        else:
+                            # First time guardian setup
+                            if not guardian:
+                                new_guardian.student = student
+                                new_guardian.is_primary = True
+                            new_guardian.save()
+                            create_guardian_user(new_guardian)
                 else:
-                    # No phone change or first-time guardian setup
+                    # Phone didn't change, just save other details (name, etc)
                     if not guardian:
                         new_guardian.student = student
                         new_guardian.is_primary = True
@@ -819,8 +837,10 @@ def student_dashboard(request):
     # Terms for the selected session
     session_terms = Term.objects.filter(session=current_session).order_by('id')
     
-    # Get exam configuration
+    # Get exam configuration and schemes
     from examinations.models import ExamConfiguration, Exam, ExamSubmission
+    from schemes.models import SchemeOfWork
+    
     exam_config = ExamConfiguration.objects.filter(
         session=current_session,
         term=current_term
@@ -960,6 +980,12 @@ def student_dashboard(request):
         'subjects_data': subjects_data,
         'recent_results': recent_results,
         'upcoming_exams': upcoming_exams,
+        'schemes': SchemeOfWork.objects.filter(
+            class_arm=class_arm,
+            session=current_session,
+            term=current_term
+        ).select_related('subject') if class_arm else [],
+        'student_id': student.id, # Pass student_id for parent context links
         'can_view_exams': can_view_exams,
         'exam_start_date': exam_config.exam_start_date if exam_config else None,
         'exam_end_date': exam_config.exam_end_date if exam_config else None,

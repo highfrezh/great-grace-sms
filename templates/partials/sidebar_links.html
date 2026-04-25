@@ -506,7 +506,7 @@
 {% endif %}
 {% if request.user.is_student or request.user.is_parent %}
 <!-- Student/Guardian Portal -->
-<div x-data="{ portalOpen: true }">
+<div x-data="{ portalOpen: {% if current_url == 'student_report_card_list' or current_url == 'student_performance_insights' %}true{% else %}false{% endif %} }">
   <button @click="portalOpen = !portalOpen"
           class="flex items-center w-full px-4 py-2.5 text-sm text-white transition opacity-70 hover:opacity-100">
     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -527,10 +527,10 @@
   <div x-show="portalOpen" x-transition x-cloak class="mt-1 space-y-0.5">
     <a href="{% url 'results:student_report_card_list' %}"
        class="flex items-center gap-2 py-2 text-xs text-white transition
-              {% if request.resolver_match.url_name == 'student_report_card_list' %}
+              {% if current_url == 'student_report_card_list' %}
               opacity-100{% else %}opacity-50 hover:opacity-90{% endif %}"
        style="padding-left:3.25rem;
-              {% if request.resolver_match.url_name == 'student_report_card_list' %}
+              {% if current_url == 'student_report_card_list' %}
               background:rgba(133,26,16,0.4);border-left:2px solid #C2B0A1;
               {% else %}border-left:2px solid rgba(255,255,255,0.1);{% endif %}">
       <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -539,9 +539,24 @@
       </svg>
       <span x-show="sidebarOpen" class="whitespace-nowrap">My Results</span>
     </a>
+
+    <a href="{% url 'results:student_performance_insights' %}"
+       class="flex items-center gap-2 py-2 text-xs text-white transition
+              {% if current_url == 'student_performance_insights' %}
+              opacity-100{% else %}opacity-50 hover:opacity-90{% endif %}"
+       style="padding-left:3.25rem;
+              {% if current_url == 'student_performance_insights' %}
+              background:rgba(133,26,16,0.4);border-left:2px solid #C2B0A1;
+              {% else %}border-left:2px solid rgba(255,255,255,0.1);{% endif %}">
+      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+      </svg>
+      <span x-show="sidebarOpen" class="whitespace-nowrap">Academic Insights</span>
+    </a>
   </div>
 </div>
 {% endif %}
 
 {% endwith %}
-{% endwith %}
+{% endwith %}

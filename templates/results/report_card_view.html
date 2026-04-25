@@ -20,10 +20,16 @@
 
     /* Print Optimization */
     @media print {
-        body {
+        @page {
+            size: portrait;
+            margin: 10mm;
+        }
+
+        body, html {
             background: white !important;
-            margin: 0 !important;
             padding: 0 !important;
+            margin: 0 !important;
+            overflow: visible !important;
         }
 
         /* Hide everything by default */
@@ -35,6 +41,16 @@
         .report-card-wrapper,
         .report-card-wrapper * {
             visibility: visible;
+        }
+
+        /* Override global layout offsets from base.html */
+        .flex.min-h-screen > div {
+            margin-left: 0 !important;
+            padding: 0 !important;
+        }
+
+        aside, header, footer, .no-print, .btn-print-hide {
+            display: none !important;
         }
 
         /* Position the card at the top-left for the print layout */
@@ -49,6 +65,7 @@
             border: none !important;
             padding: 0 !important;
             margin: 0 !important;
+            border-radius: 0 !important;
         }
 
         /* Preserve background colors and graphics */
@@ -61,15 +78,11 @@
         /* Performance Table Tweaks for Printing */
         .performance-table th {
             background: #f1f5f9 !important;
+            padding: 4px !important;
         }
-
-        /* Hide buttons definitively */
-        .btn-print-hide,
-        .no-print,
-        nav,
-        header,
-        footer {
-            display: none !important;
+        
+        .performance-table td {
+            padding: 4px !important;
         }
     }
 

@@ -70,8 +70,16 @@ def dashboard_view(request):
         return redirect('students:student_dashboard')
     elif primary_role == 'PARENT':
         # Fetch all children linked to this parent via the Guardian model
-        guardian_links = user.guardian_profiles.all().select_related('student')
-        children = [link.student for link in guardian_links]
+        # Strict check: Must match the user's current phone number to avoid ghost links
+        guardian_links = user.guardian_profiles.filter(phone=user.phone_number).select_related('student')
+        
+        # Use a dictionary to keep only unique students (prevents same child showing twice)
+        unique_children = {}
+        for link in guardian_links:
+            if link.student and link.student.is_active:
+                unique_children[link.student.id] = link.student
+        
+        children = list(unique_children.values())
         
         context = {
             'page_title': 'Parent Dashboard',

@@ -130,7 +130,7 @@
     <!-- ── SIDEBAR ─────────────────────────────────── -->
     {% block sidebar %}
     <aside :class="sidebarOpen ? 'w-64' : 'w-16'"
-      class="min-h-screen flex flex-col transition-all duration-300 ease-in-out fixed top-0 left-0 z-50"
+      class="min-h-screen flex flex-col transition-all duration-300 ease-in-out fixed top-0 left-0 z-50 no-print"
       style="background-color:#635E57;">
 
       <!-- Logo -->
@@ -202,7 +202,7 @@
 
       <!-- Top Navbar -->
       <header class="bg-white border-b border-gray-200 h-16 flex items-center
-                   justify-between px-6 sticky top-0 z-40">
+                   justify-between px-6 sticky top-0 z-40 no-print">
 
         <h1 class="text-lg font-semibold" style="color:#635E57;">
           {% block page_title %}Dashboard{% endblock %}

@@ -284,9 +284,15 @@ function studentAnalytics() {
             this.loading = true;
             this.error = '';
             
-            let url = `/results/api/student-performance/${this.selectedSessionId}/`;
+            let url = `/results/api/student-performance/${this.selectedSessionId}/?`;
+            const params = new URLSearchParams(window.location.search);
+            const studentId = params.get('student_id');
+            
+            if (studentId) {
+                url += `student_id=${studentId}&`;
+            }
             if (this.selectedTermId) {
-                url += `?term_id=${this.selectedTermId}`;
+                url += `term_id=${this.selectedTermId}`;
             }
             
             fetch(url)

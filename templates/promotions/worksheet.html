@@ -309,10 +309,8 @@
                             <td class="px-6 py-4">
                                 <select name="decision_{{ item.student.id }}" class="form-select-sm">
                                     <option value="PROMOTED" {% if item.proposed_status == 'PROMOTED' %}selected{% endif %}>✅ Promoted</option>
-                                    <option value="PROMOTED_TRIAL" {% if item.proposed_status == 'PROMOTED_TRIAL' %}selected{% endif %}>⚠️ Promoted on Trial</option>
                                     <option value="REPEATED" {% if item.proposed_status == 'REPEATED' %}selected{% endif %}>🔄 Repeat Class</option>
                                     <option value="GRADUATED" {% if item.proposed_status == 'GRADUATED' %}selected{% endif %}>🎓 Graduate</option>
-                                    <option value="WITHDRAWN" {% if item.proposed_status == 'WITHDRAWN' %}selected{% endif %}>📤 Withdrawn</option>
                                 </select>
                             </td>
                             

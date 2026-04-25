@@ -28,10 +28,13 @@
         <!-- Filters Bar -->
         <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8 backdrop-blur-sm bg-white/80">
             <form method="get" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
+                {% if student_id %}
+                <input type="hidden" name="student_id" value="{{ student_id }}">
+                {% endif %}
                 <!-- Session Filter -->
                 <div>
                     <label for="session" class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Academic Session</label>
-                    <select name="session" id="session" class="w-full bg-gray-50 border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#851A10] focus:border-transparent outline-none transition-all">
+                    <select name="session" id="session" onchange="this.form.submit()" class="w-full bg-gray-50 border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#851A10] focus:border-transparent outline-none transition-all">
                         <option value="">All Sessions</option>
                         {% for s in available_sessions %}
                             <option value="{{ s.id }}" {% if selected_session == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
@@ -69,7 +72,7 @@
                         Filter
                     </button>
                     {% if selected_session or selected_term or selected_class_arm %}
-                    <a href="{% url 'schemes:scheme_list' %}" class="px-4 py-3 bg-gray-100 text-gray-600 font-semibold rounded-xl hover:bg-gray-200 transition-colors">
+                    <a href="{% url 'schemes:scheme_list' %}{% if student_id %}?student_id={{ student_id }}{% endif %}" class="px-4 py-3 bg-gray-100 text-gray-600 font-semibold rounded-xl hover:bg-gray-200 transition-colors">
                         Reset
                     </a>
                     {% endif %}
