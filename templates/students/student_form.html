@@ -143,6 +143,17 @@
       </div>
     </div>
     <div class="p-6">
+      <div class="mb-6 pb-6 border-b border-gray-100">
+        <label class="form-label">
+          Admission Number <span class="required">*</span>
+        </label>
+        {{ student_form.admission_number }}
+        {% if student_form.admission_number.errors %}
+          <p class="form-error">{{ student_form.admission_number.errors.0 }}</p>
+        {% endif %}
+        <p class="form-hint">Enter the student's unique admission number</p>
+      </div>
+
       <div class="two-col-grid">
         <div>
           <label class="form-label">

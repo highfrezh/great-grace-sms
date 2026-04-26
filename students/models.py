@@ -3,23 +3,6 @@ from django.conf import settings
 from academics.models import ClassArm, AcademicSession, Term
 
 
-def generate_admission_number():
-    """Generate unique admission number: GG/YYYY/XXXXX"""
-    year = AcademicSession.get_current()
-    year_str = year.name.split('/')[0] if year else '2024'
-    
-    prefix = f"GGS/{year_str}/"
-    last_student = Student.objects.filter(
-        admission_number__startswith=prefix
-    ).order_by('-admission_number').first()
-    
-    if last_student:
-        last_num = int(last_student.admission_number.split('/')[-1])
-        new_num = last_num + 1
-    else:
-        new_num = 1
-    
-    return f"{prefix}{new_num:03d}"
 
 
 class Student(models.Model):
@@ -38,8 +21,7 @@ class Student(models.Model):
     admission_number = models.CharField(
         max_length=20,
         unique=True,
-        default=generate_admission_number,
-        help_text="Auto-generated: GG/YYYY/XXXXX"
+        help_text="Enter the student's unique admission number"
     )
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)

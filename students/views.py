@@ -11,7 +11,7 @@ from accounts.decorators import admin_staff_required, class_teacher_required
 from academics.models import AcademicSession, Term, ClassArm, SubjectTeacherAssignment, Subject
 from accounts.models import User
 from staff.models import StaffProfile
-from .models import Student, Guardian, StudentEnrollment, Attendance, generate_admission_number
+from .models import Student, Guardian, StudentEnrollment, Attendance
 from .forms import StudentForm, GuardianForm, StudentEnrollmentForm, StudentSearchForm, BulkStudentImportForm
 
 User = get_user_model()
@@ -483,8 +483,14 @@ def student_bulk_import(request):
                 
                 for idx, row in df.iterrows():
                     try:
-                        # Generate admission number using the same function as manual creation
-                        admission_number = generate_admission_number()
+                        # Get admission number from Excel
+                        admission_number = str(row.get('admission_number', '')).strip()
+                        if not admission_number or admission_number == 'nan':
+                            # Try 'admission_no' as fallback
+                            admission_number = str(row.get('admission_no', '')).strip()
+                            
+                        if not admission_number or admission_number == 'nan':
+                            raise Exception("Admission Number is missing in the Excel file.")
                         
                         # Create student
                         student = Student.objects.create(
