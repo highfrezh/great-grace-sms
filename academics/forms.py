@@ -103,7 +103,23 @@ class ClassArmForm(forms.ModelForm):
         self.fields['name'].required = False
 
     def clean(self):
-        return super().clean()
+        cleaned_data = super().clean()
+        level = cleaned_data.get('level')
+        name = cleaned_data.get('name', '')
+        session = cleaned_data.get('session')
+        
+        if level and session:
+            # Check for uniqueness manually to prevent IntegrityError
+            qs = ClassArm.objects.filter(level=level, name=name, session=session)
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+                
+            if qs.exists():
+                raise forms.ValidationError(
+                    "A class with this Level, Name, and Session already exists."
+                )
+                
+        return cleaned_data
 
 
 class SubjectForm(forms.ModelForm):

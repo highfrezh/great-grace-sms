@@ -145,6 +145,15 @@ class StaffProfileForm(forms.ModelForm):
 
 class StaffSelfUpdateForm(forms.ModelForm):
     """Form for staff to update their own limited profile info"""
+    username = forms.CharField(
+        max_length=150,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'Enter your desired username'
+        })
+    )
+
     class Meta:
         model = StaffProfile
         fields = ['profile_picture', 'address']
@@ -155,3 +164,23 @@ class StaffSelfUpdateForm(forms.ModelForm):
                 'placeholder': 'Home address'
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.user:
+            self.fields['username'].initial = self.instance.user.username
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if User.objects.filter(username=username).exclude(pk=self.instance.user.pk).exists():
+            raise forms.ValidationError("This username is already taken. Please choose another.")
+        return username
+
+    def save(self, commit=True):
+        profile = super().save(commit=False)
+        user = profile.user
+        user.username = self.cleaned_data.get('username')
+        if commit:
+            user.save()
+            profile.save()
+        return profile

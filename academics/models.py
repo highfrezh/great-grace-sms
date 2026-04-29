@@ -196,31 +196,6 @@ class ClassArmSubject(models.Model):
         return f"{self.subject.name} — {self.class_level.name} {self.arm_name}"
 
 
-class ClassSubject(models.Model):
-    """
-    [DEPRECATED - Kept for backward compatibility]
-    Which subjects are offered in which class level
-    Use ClassArmSubject instead for per-arm customization
-    """
-    class_level = models.ForeignKey(
-        ClassLevel,
-        on_delete=models.CASCADE,
-        related_name='level_subjects'
-    )
-    subject = models.ForeignKey(
-        Subject,
-        on_delete=models.CASCADE,
-        related_name='class_levels'
-    )
-    is_compulsory = models.BooleanField(default=True)
-
-    class Meta:
-        unique_together = ['class_level', 'subject']
-
-    def __str__(self):
-        return f"{self.subject.name} — {self.class_level.name}"
-
-
 class SubjectTeacherAssignment(models.Model):
     """
     Which teacher teaches which subject in which class level and arm.

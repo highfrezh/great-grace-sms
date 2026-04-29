@@ -237,9 +237,15 @@ def student_edit(request, pk):
                                 # UPDATE: Only child, just update their existing account
                                 user.username = new_phone
                                 user.phone_number = new_phone
+                                
+                                password_msg = ""
+                                if user.is_first_login:
+                                    user.set_password(new_phone)
+                                    password_msg = " Default password synced."
+                                    
                                 user.save()
                                 new_guardian.save()
-                                messages.info(request, f"Parent portal login updated to {new_phone}")
+                                messages.info(request, f"Parent portal login updated to {new_phone}.{password_msg}")
                         else:
                             # First time guardian setup
                             if not guardian:
