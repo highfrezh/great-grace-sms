@@ -1031,7 +1031,7 @@ def my_students_list(request):
 
     enrollments = StudentEnrollment.objects.filter(
         id=Subquery(latest_enrollment.values('id')[:1])
-    ).select_related('student', 'class_arm').order_by('class_arm__name', 'student__last_name')
+    ).select_related('student', 'class_arm', 'class_arm__level').order_by('class_arm__level__order', 'class_arm__name', 'student__last_name')
     
     query = request.GET.get('q', '').strip()
     if query:

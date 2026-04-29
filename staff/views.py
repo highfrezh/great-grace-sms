@@ -108,6 +108,9 @@ def staff_edit(request, pk):
     profile = get_object_or_404(StaffProfile, pk=pk)
     user = profile.user
 
+    # Store old phone number to check if it changed
+    old_phone = user.phone_number
+
     user_form = StaffUserForm(
         request.POST or None,
         instance=user
@@ -120,12 +123,31 @@ def staff_edit(request, pk):
 
     if request.method == 'POST':
         if user_form.is_valid() and profile_form.is_valid():
-            user_form.save()
+            new_phone = user_form.cleaned_data.get('phone_number', '').strip()
+            
+            updated_user = user_form.save(commit=False)
+            
+            # If phone number changed and they haven't changed their default password
+            password_updated = False
+            if old_phone != new_phone and updated_user.is_first_login:
+                updated_user.set_password(new_phone if new_phone else 'changeme123')
+                password_updated = True
+                
+            updated_user.save()
+            user_form.save_m2m() # Save ManyToMany relationships (roles)
+            
             profile_form.save()
-            messages.success(
-                request,
-                f'{user.get_full_name()} updated successfully.'
-            )
+            
+            if password_updated:
+                messages.success(
+                    request,
+                    f'{user.get_full_name()} updated successfully. Their default password was also updated to their new phone number.'
+                )
+            else:
+                messages.success(
+                    request,
+                    f'{user.get_full_name()} updated successfully.'
+                )
             return redirect('staff:staff_detail', pk=profile.pk)
         else:
             messages.error(request, 'Please fix the errors below.')
