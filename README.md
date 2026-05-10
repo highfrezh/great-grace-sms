@@ -205,11 +205,6 @@ Users navigate to the main portal and log in using their assigned credentials. T
 **Live URL:** [https://great-grace-sms.onrender.com](https://great-grace-sms.onrender.com)
 *(Note: Hosted on Render's free tier — please allow 30–60 seconds for the initial cold start.)*
 
-**Demo Credentials:**
-* **Username:** `principal`
-* **Password:** `password@me`
-
-> [IMAGE PLACEHOLDER: "Add a Loom demo video thumbnail here linked to your demo video URL"]
 
 ---
 
