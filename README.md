@@ -72,7 +72,7 @@ Great Grace SMS is a comprehensive and scalable School Management System built t
 
 ## 📸 Screenshots
 
-> [IMAGE PLACEHOLDER: "Screenshot of Dashboard (Principal view) — add image here: /screenshots/principal_dashboard.png"]
+![Principal Dashboard](screenshots/principal_dashboard.png)
 
 > [IMAGE PLACEHOLDER: "Screenshot of Student Portal — add image here: /screenshots/student_portal.png"]
 
